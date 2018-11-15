@@ -1,0 +1,66 @@
+{
+  "name": "rollup-plugin-dts",
+  "version": "0.0.0",
+  "description": "An experiment to generate .d.ts rollup files",
+  "keywords": [
+    "rollup-plugin"
+  ],
+  "author": "Arpad Borsos <arpad.borsos@googlemail.com>",
+  "license": "LGPL-3.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Swatinem/rollup-plugin-dts.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Swatinem/rollup-plugin-dts/issues"
+  },
+  "homepage": "https://github.com/Swatinem/rollup-plugin-dts#readme",
+  "main": "dist/rollup-plugin-dts.cjs.js",
+  "module": "dist/rollup-plugin-dts.esm.js",
+  "types": "dist/rollup-plugin-dts.d.ts",
+  "scripts": {
+    "prepublish": "rimraf dist",
+    "build": "rollup -c",
+    "prepublishOnly": "npm run test && npm run build",
+    "test": "jest --runInBand"
+  },
+  "jest": {
+    "preset": "ts-jest/presets/js-with-ts",
+    "collectCoverage": true,
+    "coverageReporters": [
+      "html",
+      "json",
+      "text-summary"
+    ],
+    "coveragePathIgnorePatterns": [
+      "__tests__",
+      "node_modules"
+    ],
+    "testMatch": [
+      "**/?(*.)+(spec|test).(ts|tsx)"
+    ]
+  },
+  "prettier": {
+    "printWidth": 120,
+    "trailingComma": "all"
+  },
+  "devDependencies": {
+    "@types/jest": "^23.3.9",
+    "@types/node": "^10.12.7",
+    "jest": "^23.6.0",
+    "prettier": "^1.15.2",
+    "rollup": "^0.67.1",
+    "rollup-plugin-json": "^3.1.0",
+    "rollup-plugin-node-resolve": "^3.4.0",
+    "rollup-plugin-typescript": "^1.0.0",
+    "ts-jest": "^23.10.4",
+    "tslib": "^1.9.3",
+    "typescript": "3.1.6"
+  },
+  "peerDependencies": {
+    "typescript": ">= 3.1.6"
+  },
+  "dependencies": {
+    "rollup-pluginutils": "^2.3.3"
+  }
+}

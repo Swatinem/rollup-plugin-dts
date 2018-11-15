@@ -1,0 +1,40 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`rollup-plugin-dts works for testcase "export-simple-function" 1`] = `
+"function foo()
+
+export { foo };"
+`;
+
+exports[`rollup-plugin-dts works for testcase "export-simple-interface" 1`] = `
+"interface Foo {}
+
+export { Foo };"
+`;
+
+exports[`rollup-plugin-dts works for testcase "keep-interface-definition" 1`] = `
+"interface Foo {
+  a: string;
+  b: Array<number>;
+}
+
+export { Foo };"
+`;
+
+exports[`rollup-plugin-dts works for testcase "remove-function-body" 1`] = `
+"function foo()
+
+export { foo };"
+`;
+
+exports[`rollup-plugin-dts works for testcase "remove-unexported-function" 1`] = `
+"function foo()
+
+export { foo };"
+`;
+
+exports[`rollup-plugin-dts works for testcase "remove-unexported-interface" 1`] = `
+"interface Foo {}
+
+export { Foo };"
+`;
