@@ -2,10 +2,11 @@ import * as rollup from "rollup";
 import fs from "fs";
 import path from "path";
 import dts from "../";
+import { Meta, defaultMeta } from "./meta";
 
 const TESTCASES = path.join(__dirname, "testcases");
 
-async function assertTestcase(dir: string) {
+async function assertTestcase(dir: string, _meta: Meta) {
   const bundle = await rollup.rollup({
     input: path.join(dir, "index.ts"),
     plugins: [dts()],
@@ -23,16 +24,17 @@ async function assertTestcase(dir: string) {
 
 describe("rollup-plugin-dts", () => {
   const dirs = fs.readdirSync(TESTCASES);
-  for (let name of dirs) {
+  for (const name of dirs) {
     const dir = path.join(TESTCASES, name);
     if (fs.statSync(dir).isDirectory()) {
-      let testfn = it;
-      if (name.startsWith("skip.")) {
-        name = name.substr("skip.".length);
-        testfn = it.skip;
-      }
+      const meta = defaultMeta();
+      try {
+        Object.assign(meta, require(path.join(dir, "meta.ts")).default);
+      } catch {}
+
+      let testfn = meta.skip ? it.skip : it;
       testfn(`works for testcase "${name}"`, () => {
-        return assertTestcase(dir);
+        return assertTestcase(dir, meta);
       });
     }
   }

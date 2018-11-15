@@ -105,38 +105,36 @@ export class ProgramConverter {
     );
   }
 
-  convertInterfaceDeclaration(node: ts.InterfaceDeclaration): ESTree.Statement | ESTree.ExportNamedDeclaration {
-    if (!hasExportModifier(node)) {
-      return markForDelete(node);
+  convertInterfaceDeclaration(node: ts.InterfaceDeclaration) {
+    if (!node.name) {
+      this.markForDelete(node);
+      return;
     }
-    const lastModifier = node.modifiers![node.modifiers!.length - 1];
 
-    const exportDecl = withStartEnd<ESTree.ExportNamedDeclaration>(
-      {
-        type: "ExportNamedDeclaration",
-        specifiers: [],
-        declaration: withStartEnd<ESTree.FunctionDeclaration>(
-          {
-            type: "FunctionDeclaration",
-            id: withStartEnd(
-              {
-                type: "Identifier",
-                name: node.name.text,
-              },
-              node.name,
-            ),
-            params: [],
-            body: emptyBlock(),
-          },
-          {
-            start: lastModifier.end,
-            end: node.end,
-          },
-        ),
-      },
-      node,
+    this.maybeMarkAsExported(node, node.name);
+
+    const start = this.rangeAfterModifiers(node);
+
+    // we convert this to a FunctionDeclaration and mark the body as to delete
+    this.pushStatement(
+      withStartEnd<ESTree.FunctionDeclaration>(
+        {
+          type: "FunctionDeclaration",
+          id: withStartEnd(
+            {
+              type: "Identifier",
+              name: node.name.text,
+            },
+            node.name,
+          ),
+          params: [],
+          body: emptyBlock(),
+        },
+        {
+          start,
+          end: node.end,
+        },
+      ),
     );
-
-    return exportDecl;
   }
 }
