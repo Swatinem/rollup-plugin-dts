@@ -26,8 +26,8 @@
     "dist"
   ],
   "scripts": {
-    "build": "rollup -c",
-    "prepublishOnly": "rimraf dist && npm run test && npm run build",
+    "build": "rimraf dist && rollup -c",
+    "prepublishOnly": "npm run test && npm run build",
     "test": "jest --runInBand"
   },
   "jest": {

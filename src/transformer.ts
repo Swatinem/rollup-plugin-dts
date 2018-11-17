@@ -13,6 +13,8 @@ import {
   matchesModifier,
 } from "./astHelpers";
 
+type ESTreeImports = ESTree.ImportDeclaration["specifiers"];
+
 export class Transformer {
   ast: ESTree.Program;
 
@@ -42,10 +44,10 @@ export class Transformer {
     }
   }
 
-  removeExportModifier(node: ts.Declaration) {
+  removeExportModifier(node: ts.Declaration, removeDefault = false) {
     const ret = [];
     for (const mod of node.modifiers || []) {
-      if (mod.kind === ts.SyntaxKind.ExportKeyword) {
+      if (mod.kind === ts.SyntaxKind.ExportKeyword || (removeDefault && mod.kind === ts.SyntaxKind.DefaultKeyword)) {
         const start = node.getStart();
         const end = mod.end + 1;
         ret.push(removeNested({ start, end }));
@@ -111,7 +113,7 @@ export class Transformer {
     this.maybeMarkAsExported(node, node.name);
 
     const body = this.createDeclaration(node.name, node);
-    body.push(...this.removeExportModifier(node));
+    body.push(...this.removeExportModifier(node, true));
 
     for (const heritage of node.heritageClauses || []) {
       for (const type of heritage.types) {
@@ -168,25 +170,34 @@ export class Transformer {
   }
 
   convertImportDeclaration(node: ts.ImportDeclaration) {
+    const source = this.convertExpression(node.moduleSpecifier) as any;
     // istanbul ignore if
-    if (!node.importClause || !node.importClause.namedBindings) {
+    if (!node.importClause || (!node.importClause.name && !node.importClause.namedBindings)) {
       throw new Error(`ImportDeclaration should have imports`);
     }
+    const specifiers: ESTreeImports = node.importClause.namedBindings
+      ? this.convertNamedImportBindings(node.importClause.namedBindings)
+      : [];
+    if (node.importClause.name) {
+      specifiers.push({
+        type: "ImportDefaultSpecifier",
+        local: createIdentifier(node.importClause.name),
+      });
+    }
+
     this.pushStatement(
       withStartEnd(
         {
           type: "ImportDeclaration",
-          specifiers: this.convertNamedImportBindings(node.importClause.namedBindings),
-          source: this.convertExpression(node.moduleSpecifier) as any,
+          specifiers,
+          source,
         },
         node,
       ),
     );
   }
 
-  convertNamedImportBindings(
-    node: ts.NamedImportBindings,
-  ): Array<ESTree.ImportSpecifier | ESTree.ImportNamespaceSpecifier> {
+  convertNamedImportBindings(node: ts.NamedImportBindings): ESTreeImports {
     if (ts.isNamedImports(node)) {
       return node.elements.map(el => {
         const local = createIdentifier(el.name);
