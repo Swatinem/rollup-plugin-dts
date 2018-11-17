@@ -1,101 +1,121 @@
 import * as ts from "typescript";
 import * as ESTree from "estree";
 
-export interface WithModifiers extends ts.Node {
-  modifiers?: ts.NodeArray<ts.Modifier>;
+const MARKER = "0";
+let IDs = 1;
+
+/**
+ * Create a new `Program` for the given `node`:
+ */
+export function createProgram(node: ts.SourceFile): ESTree.Program {
+  return withStartEnd(
+    {
+      type: "Program",
+      sourceType: "module",
+      body: [],
+    },
+    node,
+  );
 }
 
-export function maybeMarkAsExported(node: WithModifiers, id: ts.Identifier) {
-  if (hasExportModifier(node)) {
-    return createExportedReference(id);
-  }
-  return undefined;
-  // if (!hasExportModifier(node)) {
-  //   return markForDelete(node);
-  // }
-}
-
-export function hasExportModifier(node: WithModifiers) {
-  return node.modifiers && node.modifiers.some(mod => mod.kind === ts.SyntaxKind.ExportKeyword);
-}
-
-export function createExportedReference(node: ts.Identifier) {
-  const id = createIdentifier(node);
-  return withStartEnd<ESTree.ExportNamedDeclaration>({
-    type: "ExportNamedDeclaration",
-    declaration: null,
-    specifiers: [
-      withStartEnd<ESTree.ExportSpecifier>(
+/**
+ * Create an export for `id`:
+ * `export { id }`
+ */
+export function createExport(node: ts.Identifier, range: Ranged) {
+  const id = createIdentifier(node, range);
+  return withStartEnd<ESTree.ExportNamedDeclaration>(
+    {
+      type: "ExportNamedDeclaration",
+      declaration: null,
+      specifiers: [
         {
           type: "ExportSpecifier",
           exported: id,
           local: id,
         },
-        node,
-      ),
-    ],
-  });
+      ],
+    },
+    range,
+  );
 }
 
-function createIdentifier(node: ts.Identifier) {
+/**
+ * Creates a reference to `id`:
+ * `_ = ${id}`
+ */
+export function createReference(id: ESTree.Expression): ESTree.AssignmentPattern {
+  return {
+    type: "AssignmentPattern",
+    left: {
+      type: "Identifier",
+      name: String(IDs++),
+    },
+    right: id,
+  };
+}
+
+export function createIdentifier(node: ts.Identifier, range: Ranged = node) {
   return withStartEnd<ESTree.Identifier>(
     {
       type: "Identifier",
-      name: node.text,
+      name: node.text || String(node.escapedText),
     },
-    // node,
+    range,
   );
 }
 
-// function emptyIdentifier() {
-//   return withStartEnd<ESTree.Identifier>({start: 0, end: 0}, {
-//     type: "Identifier",
-//     name: '',
-//   });
-// }
-
-// function emptyFunction() {
-//   return withStartEnd<ESTree.FunctionDeclaration>(
-//     {start: 0, end: 0},
-//     {
-//       type: "FunctionDeclaration",
-//       id: emptyIdentifier(),
-//       params: [],
-//       body: emptyBlock()
-//     },
-//   );
-// }
-
-export function emptyBlock() {
-  return withStartEnd<ESTree.BlockStatement>({
-    type: "BlockStatement",
-    body: [],
-  });
-}
-
-export function markBlockForDelete(node?: ts.Node) {
-  return withStartEnd<ESTree.BlockStatement>(
+/**
+ * Create a new Declaration and Scope for `id`:
+ * `function ${id}(_ = MARKER) {}`
+ */
+export function createDeclaration(id: ts.Identifier, range: Ranged) {
+  const start = getStart(range);
+  return withStartEnd<ESTree.FunctionDeclaration>(
     {
-      type: "BlockStatement",
-      body: node ? [markForDelete(node)] : [],
+      type: "FunctionDeclaration",
+      id: withStartEnd(
+        {
+          type: "Identifier",
+          name: id.text,
+        },
+        { start, end: start },
+      ),
+      params: [createReference(createIdentifier(id))],
+      body: { type: "BlockStatement", body: [] },
     },
-    node,
+    range,
   );
 }
 
-export function markForDelete(node: Ranged) {
-  return withStartEnd<ESTree.IfStatement>(
-    {
-      type: "IfStatement",
-      test: { type: "Literal", value: false },
-      consequent: {
+/**
+ * Mark the nested `range` to be removed, by creating dead code:
+ * `_ = () => {MARKER}`
+ */
+export function removeNested(range: Ranged) {
+  return createReference({
+    type: "FunctionExpression",
+    id: null,
+    body: withStartEnd(
+      {
         type: "BlockStatement",
-        body: [],
+        body: [
+          withStartEnd(
+            {
+              type: "ExpressionStatement",
+              expression: { type: "Identifier", name: MARKER },
+            },
+            range,
+          ),
+        ],
       },
-      alternate: null,
-    },
-    node,
-  );
+      {
+        start: getStart(range) - 1,
+        end: range.end + 1,
+      },
+    ),
+    params: [],
+  });
 }
 
 export interface Ranged {
@@ -109,17 +129,20 @@ interface WithRange {
   end: number;
 }
 
-// function castRanged<T>(node: T): T & WithRange {
-//   return node as any;
-// }
+function getStart({ start, pos }: Ranged) {
+  return typeof start === "number" ? start : pos || 0;
+}
 
-export function withStartEnd<T extends ESTree.Node>(
-  node: T,
-  { start, pos, end }: Ranged = { start: 0, end: 0 },
-): T & WithRange {
-  Object.assign(node, {
-    start: typeof start === "number" ? start : pos || 0,
-    end,
+export function withStartEnd<T extends ESTree.Node>(node: T, range: Ranged = { start: 0, end: 0 }): T & WithRange {
+  return Object.assign(node, {
+    start: getStart(range),
+    end: range.end,
   });
-  return node as any;
+}
+
+export function isNodeExported(node: ts.Declaration): boolean {
+  return (
+    (ts.getCombinedModifierFlags(node) & ts.ModifierFlags.Export) !== 0 ||
+    (!!node.parent && node.parent.kind === ts.SyntaxKind.SourceFile)
+  );
 }

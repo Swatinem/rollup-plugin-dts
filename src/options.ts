@@ -1,6 +1,6 @@
 // Code is copied from here:
 // https://github.com/rollup/rollup-plugin-typescript/blob/7f553800b90fc9abdcd13636b17b4824459d3960/src/options.js#L16-L52
-import ts from "typescript";
+import * as ts from "typescript";
 import path from "path";
 import { existsSync, readFileSync } from "fs";
 
@@ -28,7 +28,7 @@ function findFile(cwd: string, filename: string) {
   return null;
 }
 
-export function getCompilerOptionsFromTsConfig(typescript: typeof ts, tsconfigPath?: string) {
+export function getCompilerOptionsFromTsConfig(typescript: typeof ts, tsconfigPath?: string): ts.CompilerOptions {
   if (tsconfigPath && !existsSync(tsconfigPath)) {
     throw new Error(`Could not find specified tsconfig.json at ${tsconfigPath}`);
   }

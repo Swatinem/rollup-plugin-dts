@@ -6,18 +6,24 @@ import { Meta, defaultMeta } from "./meta";
 
 const TESTCASES = path.join(__dirname, "testcases");
 
-async function assertTestcase(dir: string, _meta: Meta) {
+async function assertTestcase(dir: string, meta: Meta) {
   const bundle = await rollup.rollup({
     input: path.join(dir, "index.ts"),
-    plugins: [dts()],
+    plugins: [
+      dts({
+        logAst: meta.debug,
+      }),
+    ],
   });
 
   const { code } = await bundle.generate({
     format: "es",
     // TODO: enable source maps at some point…
-    // sourcemap: true,
-    // sourcemapExcludeSources: true,
+    sourcemap: true,
+    sourcemapExcludeSources: true,
   });
+
+  // console.log(code);
 
   expect(code.trim()).toMatchSnapshot();
 }
@@ -29,7 +35,7 @@ describe("rollup-plugin-dts", () => {
     if (fs.statSync(dir).isDirectory()) {
       const meta = defaultMeta();
       try {
-        Object.assign(meta, require(path.join(dir, "meta.ts")).default);
+        Object.assign(meta, require(path.join(dir, "meta.json")));
       } catch {}
 
       let testfn = meta.skip ? it.skip : it;

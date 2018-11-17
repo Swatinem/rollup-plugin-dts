@@ -2,7 +2,7 @@
   "compilerOptions": {
     "noEmitOnError": true,
     "diagnostics": true,
-    "lib": ["dom", "es2018", "esnext"],
+    "lib": ["es2018", "esnext"],
 
     "target": "es2017",
 
@@ -16,7 +16,6 @@
     "allowJs": true,
     "checkJs": true,
     "noEmit": true,
-    "inlineSourceMap": true,
 
     "strict": true,
     "skipLibCheck": true,
@@ -24,5 +23,5 @@
     "noUnusedParameters": true,
     "noImplicitReturns": true
   },
-  "exclude": ["coverage", "dist"]
+  "exclude": ["coverage", "dist", "src/__tests__/testcases"]
 }

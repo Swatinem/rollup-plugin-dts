@@ -4,32 +4,32 @@ import rollup from "rollup";
 import { createFilter } from "rollup-pluginutils";
 import { getCompilerOptionsFromTsConfig } from "./options";
 import resolveHost from "./resolveHost";
-import { ProgramConverter } from "./convert";
+import { Transformer } from "./transformer";
 
 interface Options {
   include?: Array<string>;
   exclude?: Array<string>;
   typescript?: typeof ts;
-  tsconfig?: unknown;
+  tsconfig?: string;
+  logAst?: boolean;
 }
 
 export default function dts(options: Options = {}): rollup.Plugin {
-  const {
-    // Allow users to override the TypeScript version used for transpilation and tslib version used for helpers.
-    typescript = ts,
-  } = options;
-  let { tsconfig } = options;
+  const { typescript = ts } = options;
   const filter = createFilter(options.include || ["*.ts+(|x)", "**/*.ts+(|x)"], options.exclude || []);
 
   // This is mostly copied from:
   // https://github.com/rollup/rollup-plugin-typescript/blob/7f553800b90fc9abdcd13636b17b4824459d3960/src/index.js#L21-L57
 
   // Load options from `tsconfig.json` unless explicitly asked not to.
-  if (typeof tsconfig === "string") {
-    tsconfig = getCompilerOptionsFromTsConfig(typescript, tsconfig);
-  }
+  const tsconfig: ts.CompilerOptions =
+    typeof options.tsconfig === "string" ? getCompilerOptionsFromTsConfig(typescript, options.tsconfig) : {};
+  tsconfig.skipLibCheck = true;
+  tsconfig.declaration = true;
+  // TODO: figure out how to correctly make declaration maps work
+  // tsconfig.declarationMap = true;
 
-  const parsed = typescript.convertCompilerOptionsFromJson(options, process.cwd());
+  const parsed = typescript.convertCompilerOptionsFromJson(tsconfig, process.cwd());
 
   if (parsed.errors.length) {
     parsed.errors.forEach(error => console.error(`rollup-plugin-dts: ${error.messageText}`));
@@ -59,19 +59,42 @@ export default function dts(options: Options = {}): rollup.Plugin {
       return null;
     },
 
-    async transform(code, id) {
+    async transform(_code, id) {
       if (!filter(id)) {
         return;
       }
 
-      const sourceFile = ts.createSourceFile(id, code, ts.ScriptTarget.ESNext, /*setParentNodes */ false);
-      const converter = new ProgramConverter(sourceFile);
-      const emptyMap = { mappings: "" as "" };
+      // TODO: figure out how we can avoid creating a fresh typechecker all the time.
+      const program = typescript.createProgram([id], compilerOptions);
+      const sourceFile = program.getSourceFile(id)!;
+
+      let dtsFilename = "";
+      let code = "";
+      let map = `{"mappings": ""}`;
+      program.emit(sourceFile, (fileName, data) => {
+        if (fileName.endsWith(".d.ts")) {
+          dtsFilename = fileName;
+          code = data;
+        }
+        // if (fileName.endsWith(".d.ts.map")) {
+        //   map = data;
+        // }
+      });
+
+      // console.log({ id, code });
+
+      const dtsSource = typescript.createSourceFile(dtsFilename, code, ts.ScriptTarget.Latest);
+
+      if (options.logAst) {
+        console.log(code);
+      }
+
+      const converter = new Transformer(dtsSource, options);
 
       return {
         code,
         ast: converter.ast,
-        map: emptyMap,
+        map,
       };
     },
   };
