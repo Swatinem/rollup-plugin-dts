@@ -21,10 +21,13 @@
   "main": "dist/rollup-plugin-dts.cjs.js",
   "module": "dist/rollup-plugin-dts.esm.js",
   "types": "dist/rollup-plugin-dts.d.ts",
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
   "scripts": {
-    "prepublish": "rimraf dist",
     "build": "rollup -c",
-    "prepublishOnly": "npm run test && npm run build",
+    "prepublishOnly": "rimraf dist && npm run test && npm run build",
     "test": "jest --runInBand"
   },
   "jest": {
