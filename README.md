@@ -1,5 +1,8 @@
 # rollup-plugin-dts
 
+[![Build Status](https://img.shields.io/travis/Swatinem/rollup-plugin-dts.svg)](https://travis-ci.org/Swatinem/rollup-plugin-dts)
+[![Coverage Status](https://img.shields.io/codecov/c/github/Swatinem/rollup-plugin-dts.svg)](https://codecov.io/gh/Swatinem/rollup-plugin-dts)
+
 This is an **EXPERIMENT** to generate roll-upd `.d.ts` definition files from
 your `.ts` files.
 
