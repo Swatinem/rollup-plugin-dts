@@ -1,38 +1,52 @@
-import * as rollup from "rollup";
-import fs from "fs";
-import path from "path";
+import { rollup } from "rollup";
 import dts from "../";
+import fsExtra from "fs-extra";
+import path from "path";
 import { Meta, defaultMeta } from "./meta";
 
-const TESTCASES = path.join(__dirname, "testcases");
+export const TESTCASES = path.join(__dirname, "testcases");
 
-async function assertTestcase(dir: string, meta: Meta) {
-  const bundle = await rollup.rollup({
-    input: path.join(dir, "index.ts"),
-    plugins: [
-      dts({
-        logAst: meta.debug,
-      }),
-    ],
+async function createBundle(input: string) {
+  const bundle = await rollup({
+    input,
+    plugins: [dts({ tsconfig: TESTCASES })],
   });
-
-  const { code } = await bundle.generate({
+  return bundle.generate({
     format: "es",
-    // TODO: enable source maps at some point…
-    sourcemap: true,
+    // sourcemap: true,
     sourcemapExcludeSources: true,
   });
+}
 
-  // console.log(code);
+async function assertTestcase(dir: string, meta: Meta) {
+  if (meta.debug) {
+    debugger;
+  }
 
-  expect(code.trim()).toMatchSnapshot();
+  const { code } = await createBundle(path.join(dir, "index.ts"));
+
+  const expectedDts = path.join(dir, "expected.ts");
+  // const expectedMap = path.join(dir, "expected.ts.map");
+  if (!(await fsExtra.pathExists(expectedDts))) {
+    await fsExtra.writeFile(expectedDts, code);
+    // await fsExtra.writeFile(expectedMap, map);
+  }
+
+  const expectedCode = await fsExtra.readFile(expectedDts, "utf-8");
+  expect(code).toEqual(expectedCode);
+  // expect(String(map)).toEqual(await fsExtra.readFile(expectedMap, "utf-8"));
+
+  const sanityCheck = await createBundle(expectedDts);
+  // typescript `.d.ts` output compresses whitespace, so make sure we ignore that
+  const skipBlanks = (s: string) => s.replace(/\n+/gm, "\n");
+  expect(skipBlanks(sanityCheck.code)).toEqual(skipBlanks(expectedCode));
 }
 
 describe("rollup-plugin-dts", () => {
-  const dirs = fs.readdirSync(TESTCASES);
+  const dirs = fsExtra.readdirSync(TESTCASES);
   for (const name of dirs) {
     const dir = path.join(TESTCASES, name);
-    if (fs.statSync(dir).isDirectory()) {
+    if (fsExtra.statSync(dir).isDirectory()) {
       const meta = defaultMeta();
       try {
         Object.assign(meta, require(path.join(dir, "meta.json")));

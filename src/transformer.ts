@@ -12,26 +12,19 @@ import {
   withStartEnd,
 } from "./astHelpers";
 
-interface TransformerOptions {
-  logAst?: boolean;
-}
-
 export class Transformer {
   ast: ESTree.Program;
 
-  constructor(sourceFile: ts.SourceFile, options: TransformerOptions) {
+  constructor(sourceFile: ts.SourceFile) {
     this.ast = createProgram(sourceFile);
 
     for (const stmt of sourceFile.statements) {
       this.convertStatement(stmt);
     }
+  }
 
-    if (options.logAst) {
-      console.log({
-        tsAst: sourceFile,
-        ast: this.ast,
-      });
-    }
+  transform() {
+    return this.ast;
   }
 
   pushStatement(node: undefined | ESTree.Statement | ESTree.ModuleDeclaration) {

@@ -6,30 +6,41 @@ import resolve from "rollup-plugin-node-resolve";
 import typescript from "rollup-plugin-typescript";
 import pkg from "./package.json";
 
+require("ts-node").register({ transpileOnly: true });
+const dts = require("./src").default;
+
 /**
- * @type {import("rollup").InputOptions}
+ * @type {Array<import("rollup").RollupWatchOptions>}
  */
-const config = {
-  input: "./src/index.ts",
-  output: [{ file: pkg.main, format: "cjs" }, { file: pkg.module, format: "es" }],
+const config = [
+  {
+    input: "./src/index.ts",
+    output: [{ file: pkg.main, format: "cjs" }, { file: pkg.module, format: "es" }],
 
-  external: ["fs", "path", "typescript", "rollup-pluginutils", "rollup"],
-  // @ts-ignore: this option is not in the @types
-  treeshake: {
-    pureExternalModules: true,
+    external: ["fs", "path", "typescript", "rollup-pluginutils", "rollup"],
+    // @ts-ignore: this option is not in the @types
+    treeshake: {
+      pureExternalModules: true,
+    },
+
+    plugins: [
+      resolve({
+        jsnext: true,
+        extensions: [".ts"],
+      }),
+      json({
+        preferConst: true,
+        indent: "  ",
+      }),
+      typescript(),
+    ],
   },
+  {
+    input: "./src/index.ts",
+    output: [{ file: pkg.types, format: "es" }],
 
-  plugins: [
-    resolve({
-      jsnext: true,
-      extensions: [".ts"],
-    }),
-    json({
-      preferConst: true,
-      indent: "  ",
-    }),
-    typescript(),
-  ],
-};
+    plugins: [dts()],
+  },
+];
 
 export default config;
