@@ -2,7 +2,6 @@ import * as ts from "typescript";
 import * as ESTree from "estree";
 import {
   Ranged,
-  isNodeExported,
   createExport,
   createDeclaration,
   createIdentifier,
@@ -10,6 +9,8 @@ import {
   createProgram,
   removeNested,
   withStartEnd,
+  createDefaultExport,
+  matchesModifier,
 } from "./astHelpers";
 
 export class Transformer {
@@ -34,7 +35,10 @@ export class Transformer {
   }
 
   maybeMarkAsExported(node: ts.Declaration, id: ts.Identifier) {
-    if (isNodeExported(node)) {
+    if (matchesModifier(node, ts.ModifierFlags.ExportDefault)) {
+      const start = node.pos;
+      this.pushStatement(createDefaultExport(id, { start, end: start }));
+    } else if (matchesModifier(node, ts.ModifierFlags.Export)) {
       const start = node.pos;
       this.pushStatement(createExport(id, { start, end: start }));
     }
@@ -43,14 +47,10 @@ export class Transformer {
   removeExportModifier(node: ts.Declaration) {
     const ret = [];
     for (const mod of node.modifiers || []) {
-      const end = mod.end + 1;
       if (mod.kind === ts.SyntaxKind.ExportKeyword) {
-        ret.push(
-          removeNested({
-            start: end - "export ".length,
-            end,
-          }),
-        );
+        const start = node.getStart();
+        const end = mod.end + 1;
+        ret.push(removeNested({ start, end }));
       }
     }
     return ret;
@@ -63,13 +63,13 @@ export class Transformer {
     if (ts.isInterfaceDeclaration(node)) {
       return this.convertInterfaceDeclaration(node);
     }
-    if (ts.isExportDeclaration(node)) {
+    if (ts.isExportDeclaration(node) || ts.isExportAssignment(node)) {
       return this.convertExportDeclaration(node);
     }
     if (ts.isImportDeclaration(node)) {
       return this.convertImportDeclaration(node);
     }
-    console.log(node);
+    console.log({ code: node.getFullText() });
     throw new Error(`unsupported node type`);
   }
 
@@ -89,6 +89,15 @@ export class Transformer {
 
     const body = this.createDeclaration(node.name, node);
     body.push(...this.removeExportModifier(node));
+
+    for (const param of node.parameters) {
+      if (param.type) {
+        this.convertTypeNode(param.type, body);
+      }
+    }
+    if (node.type) {
+      this.convertTypeNode(node.type, body);
+    }
   }
 
   convertInterfaceDeclaration(node: ts.InterfaceDeclaration) {
@@ -115,12 +124,45 @@ export class Transformer {
     }
   }
 
-  convertExportDeclaration(node: ts.ExportDeclaration) {
-    this.pushStatement({
-      type: "ExportNamedDeclaration",
-      declaration: null,
-      specifiers: node.exportClause ? node.exportClause.elements.map(e => this.convertExportSpecifier(e)) : [],
-    });
+  convertExportDeclaration(node: ts.ExportDeclaration | ts.ExportAssignment) {
+    if (ts.isExportAssignment(node)) {
+      this.pushStatement(
+        withStartEnd(
+          {
+            type: "ExportDefaultDeclaration",
+            declaration: this.convertExpression(node.expression),
+          },
+          node,
+        ),
+      );
+      return;
+    }
+
+    const source = node.moduleSpecifier ? (this.convertExpression(node.moduleSpecifier) as any) : undefined;
+
+    if (!node.exportClause) {
+      this.pushStatement(
+        withStartEnd(
+          {
+            type: "ExportAllDeclaration",
+            source,
+          },
+          node,
+        ),
+      );
+    } else {
+      this.pushStatement(
+        withStartEnd(
+          {
+            type: "ExportNamedDeclaration",
+            declaration: null,
+            specifiers: node.exportClause ? node.exportClause.elements.map(e => this.convertExportSpecifier(e)) : [],
+            source,
+          },
+          node,
+        ),
+      );
+    }
   }
 
   convertImportDeclaration(node: ts.ImportDeclaration) {
@@ -180,12 +222,16 @@ export class Transformer {
     if (ts.isIdentifier(node)) {
       return createIdentifier(node);
     }
-    return {
-      type: "MemberExpression",
-      computed: false,
-      object: this.convertEntityName(node.left),
-      property: createIdentifier(node.right),
-    };
+    return withStartEnd(
+      {
+        type: "MemberExpression",
+        computed: false,
+        object: this.convertEntityName(node.left),
+        property: createIdentifier(node.right),
+      },
+      // TODO: clean up all the `start` handling!
+      { start: node.getStart(), end: node.end },
+    );
   }
 
   convertExpression(node: ts.Expression): ESTree.Expression {
@@ -195,7 +241,7 @@ export class Transformer {
     if (ts.isIdentifier(node)) {
       return createIdentifier(node);
     }
-    console.log(node);
+    console.log({ code: node.getFullText() });
     throw new Error(`Unknown Expression`);
   }
 }

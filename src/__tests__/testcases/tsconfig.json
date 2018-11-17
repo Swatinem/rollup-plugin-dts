@@ -1,6 +1,0 @@
-{
-  "compilerOptions": {
-    "lib": ["es2018", "esnext"],
-    "target": "es2017"
-  }
-}

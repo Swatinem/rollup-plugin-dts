@@ -20,6 +20,21 @@ export function createProgram(node: ts.SourceFile): ESTree.Program {
 
 /**
  * Create an export for `id`:
+ * `export default id`
+ */
+export function createDefaultExport(node: ts.Identifier, range: Ranged) {
+  const id = createIdentifier(node, range);
+  return withStartEnd<ESTree.ExportDefaultDeclaration>(
+    {
+      type: "ExportDefaultDeclaration",
+      declaration: id,
+    },
+    range,
+  );
+}
+
+/**
+ * Create an export for `id`:
  * `export { id }`
  */
 export function createExport(node: ts.Identifier, range: Ranged) {
@@ -140,9 +155,7 @@ export function withStartEnd<T extends ESTree.Node>(node: T, range: Ranged = { s
   });
 }
 
-export function isNodeExported(node: ts.Declaration): boolean {
-  return (
-    (ts.getCombinedModifierFlags(node) & ts.ModifierFlags.Export) !== 0 ||
-    (!!node.parent && node.parent.kind === ts.SyntaxKind.SourceFile)
-  );
+export function matchesModifier(node: ts.Declaration, flags: ts.ModifierFlags) {
+  const nodeFlags = ts.getCombinedModifierFlags(node);
+  return (nodeFlags & flags) === flags;
 }

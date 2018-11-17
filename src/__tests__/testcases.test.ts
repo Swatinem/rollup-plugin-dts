@@ -1,15 +1,25 @@
-import { rollup } from "rollup";
+import { rollup, RollupFileOptions } from "rollup";
 import dts from "../";
 import fsExtra from "fs-extra";
 import path from "path";
-import { Meta, defaultMeta } from "./meta";
 
-export const TESTCASES = path.join(__dirname, "testcases");
+const ROOT = path.join(__dirname, "..", "..");
+const TESTCASES = path.join(__dirname, "testcases");
 
-async function createBundle(input: string) {
+interface BundleOptions extends Partial<RollupFileOptions> {
+  tsconfig?: string;
+}
+interface Meta extends BundleOptions {
+  rootFile: string;
+  skip: boolean;
+}
+
+async function createBundle(input: string, options: BundleOptions) {
+  const { tsconfig, ...rest } = options;
   const bundle = await rollup({
+    ...rest,
     input,
-    plugins: [dts({ tsconfig: TESTCASES })],
+    plugins: [dts({ tsconfig })],
   });
   return bundle.generate({
     format: "es",
@@ -19,11 +29,8 @@ async function createBundle(input: string) {
 }
 
 async function assertTestcase(dir: string, meta: Meta) {
-  if (meta.debug) {
-    debugger;
-  }
-
-  const { code } = await createBundle(path.join(dir, "index.ts"));
+  const { skip, rootFile, ...bundleOptions } = meta;
+  const { code } = await createBundle(path.join(dir, rootFile), bundleOptions);
 
   const expectedDts = path.join(dir, "expected.ts");
   // const expectedMap = path.join(dir, "expected.ts.map");
@@ -36,7 +43,7 @@ async function assertTestcase(dir: string, meta: Meta) {
   expect(code).toEqual(expectedCode);
   // expect(String(map)).toEqual(await fsExtra.readFile(expectedMap, "utf-8"));
 
-  const sanityCheck = await createBundle(expectedDts);
+  const sanityCheck = await createBundle(expectedDts, bundleOptions);
   // typescript `.d.ts` output compresses whitespace, so make sure we ignore that
   const skipBlanks = (s: string) => s.replace(/\n+/gm, "\n");
   expect(skipBlanks(sanityCheck.code)).toEqual(skipBlanks(expectedCode));
@@ -47,7 +54,11 @@ describe("rollup-plugin-dts", () => {
   for (const name of dirs) {
     const dir = path.join(TESTCASES, name);
     if (fsExtra.statSync(dir).isDirectory()) {
-      const meta = defaultMeta();
+      const meta: Meta = {
+        rootFile: "index.ts",
+        skip: false,
+        tsconfig: path.join(ROOT, "tsconfig.tests.json"),
+      };
       try {
         Object.assign(meta, require(path.join(dir, "meta.json")));
       } catch {}

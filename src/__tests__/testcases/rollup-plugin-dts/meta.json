@@ -1,0 +1,3 @@
+{
+  "external": ["typescript", "rollup"]
+}

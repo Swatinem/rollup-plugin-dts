@@ -39,6 +39,8 @@ const config = [
     input: "./src/index.ts",
     output: [{ file: pkg.types, format: "es" }],
 
+    external: ["typescript", "rollup"],
+
     plugins: [dts()],
   },
 ];

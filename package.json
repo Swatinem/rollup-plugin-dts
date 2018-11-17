@@ -3,7 +3,10 @@
   "version": "0.0.0",
   "description": "An experiment to generate .d.ts rollup files",
   "keywords": [
-    "rollup-plugin"
+    "rollup-plugin",
+    "typescript",
+    "dts",
+    "@types"
   ],
   "author": "Arpad Borsos <arpad.borsos@googlemail.com>",
   "license": "LGPL-3.0",

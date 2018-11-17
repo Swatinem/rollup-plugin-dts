@@ -15,10 +15,17 @@ There are also some solutions for this already:
   an official Microsoft project, which however is super complicated and I was not
   able to get it to work.
 - [dts-bundle-generator](https://github.com/timocov/dts-bundle-generator) which
-  also has this goal, but it is also very immature so far.
+  was a good inspiration for this project but in the end didn’t really work as
+  well for my use-cases.
 
 Some projects, like [rollup itself](https://github.com/rollup/rollup/blob/24fe07f39da8e4225f4bc4f797331930d8405ec2/src/rollup/types.d.ts)
 go the route of completely separating their public interfaces in a separate file.
+
+## Does it even work?
+
+Well yes it does, even though I am sure there are _a lot_ of things I haven’t
+covered yet. However, so far it is complete enough to even generate
+[its own definition file](./src/__tests__/testcases/rollup-plugin-dts/expected.ts)
 
 ## How does it work?
 
@@ -31,3 +38,20 @@ figuring out which parts it can safely remove from the output bundle.
 
 We can use this knowledge to specifically direct rollup to _keep_, _change_ and
 _remove_ parts of our input file.
+
+# TODO
+
+- explain how I abuse rollup to do what I want :-D
+
+## Things to test:
+
+- `export default`
+- function arguments
+- function return values
+- make sure overrides work correctly
+- make sure tsdoc and other type of comments work correctly
+
+## Things to implement:
+
+- classes
+- maybe removing things from the bundle marked with `@internal` or `@hidden`

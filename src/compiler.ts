@@ -1,5 +1,6 @@
 import * as ts from "typescript";
 import { Transformer } from "./transformer";
+import path from "path";
 
 let SOURCEMAPPING_URL = "sourceMa";
 SOURCEMAPPING_URL += "ppingURL";
@@ -19,7 +20,12 @@ interface CacheEntry {
 const COMPILERCACHE = new Map<string, CacheEntry>();
 
 function createCompiler(options: CacheOptions) {
-  const configFileName = ts.findConfigFile(options.tsconfig, ts.sys.fileExists);
+  const file = path.basename(options.tsconfig);
+  const configFileName = ts.findConfigFile(
+    options.tsconfig,
+    ts.sys.fileExists,
+    path.extname(options.tsconfig) ? file : undefined,
+  );
 
   if (!configFileName) {
     throw new Error(`rollup-plugin-dts: Couldn't find tsconfig file`);
@@ -88,24 +94,30 @@ export function getCachedCompiler(options: CacheOptions) {
       let dtsFilename = "";
       let code = "";
       let map = `{"mappings": ""}`;
+      const baseFileName = fileName.slice(0, -path.extname(fileName).length);
       compiler.emit(sourceFile, (fileName, data) => {
-        if (fileName.endsWith(".d.ts")) {
+        if (fileName === `${baseFileName}.d.ts`) {
           dtsFilename = fileName;
           code = data.replace(SOURCEMAPPING_URL_RE, "").trim();
         }
-        if (fileName.endsWith(".d.ts.map")) {
+        if (fileName === `${baseFileName}.d.ts.map`) {
           map = data;
         }
       });
 
-      const dtsSource = ts.createSourceFile(dtsFilename, code, ts.ScriptTarget.Latest);
+      const dtsSource = ts.createSourceFile(dtsFilename, code, ts.ScriptTarget.Latest, true);
 
       const converter = new Transformer(dtsSource);
-      return {
-        code,
-        ast: converter.transform(),
-        map,
-      };
+      const ast = converter.transform();
+
+      // NOTE(swatinem):
+      // hm, typescript generates `export default` without a declare,
+      // but rollup moves the `export default` to a different place, which leaves
+      // the function declaration without a `declare`.
+      // Well luckily both words have the same length, haha :-D
+      code = code.replace(/(export\s+)default(\s+function)/m, "$1declare$2");
+
+      return { code, ast, map };
     },
     // invalidate() {
     //   COMPILERCACHE.delete(cacheKey);
