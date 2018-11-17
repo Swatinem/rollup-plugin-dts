@@ -31,6 +31,7 @@ export default function dts(options: Options = {}): Plugin {
     },
 
     async transform(_code, id) {
+      // istanbul ignore if
       if (!filter(id)) {
         return;
       }

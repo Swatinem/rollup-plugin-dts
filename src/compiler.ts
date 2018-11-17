@@ -27,6 +27,7 @@ function createCompiler(options: CacheOptions) {
     path.extname(options.tsconfig) ? file : undefined,
   );
 
+  // istanbul ignore if
   if (!configFileName) {
     throw new Error(`rollup-plugin-dts: Couldn't find tsconfig file`);
   }
@@ -46,9 +47,11 @@ function createCompiler(options: CacheOptions) {
   const configParseResult = ts.getParsedCommandLineOfConfigFile(configFileName, compilerOptions, {
     ...ts.sys,
     onUnRecoverableConfigFileDiagnostic(d) {
+      // istanbul ignore next
       diagnostic = d;
     },
   });
+  // istanbul ignore if
   if (!configParseResult) {
     console.log(diagnostic);
     throw new Error(`rollup-plugin-dts: Couldn't process compiler options`);
@@ -74,17 +77,16 @@ export function getCachedCompiler(options: CacheOptions) {
   }
 
   return {
-    get compiler(): ts.Program {
-      return lazyCreate().compiler;
-    },
     resolve(importee: string, importer: string): string | null {
       const { parsedCompilerOptions } = lazyCreate();
 
       const result = ts.nodeModuleNameResolver(importee, importer, parsedCompilerOptions, ts.sys);
+      // istanbul ignore else
       if (result.resolvedModule && result.resolvedModule.resolvedFileName) {
         return result.resolvedModule.resolvedFileName;
+      } else {
+        return null;
       }
-      return null;
     },
     transform(fileName: string) {
       const { compiler } = lazyCreate();
@@ -100,9 +102,9 @@ export function getCachedCompiler(options: CacheOptions) {
           dtsFilename = fileName;
           code = data.replace(SOURCEMAPPING_URL_RE, "").trim();
         }
-        if (fileName === `${baseFileName}.d.ts.map`) {
-          map = data;
-        }
+        // if (fileName === `${baseFileName}.d.ts.map`) {
+        //   map = data;
+        // }
       });
 
       const dtsSource = ts.createSourceFile(dtsFilename, code, ts.ScriptTarget.Latest, true);

@@ -28,10 +28,8 @@ export class Transformer {
     return this.ast;
   }
 
-  pushStatement(node: undefined | ESTree.Statement | ESTree.ModuleDeclaration) {
-    if (node) {
-      this.ast.body.push(node);
-    }
+  pushStatement(node: ESTree.Statement | ESTree.ModuleDeclaration) {
+    this.ast.body.push(node);
   }
 
   maybeMarkAsExported(node: ts.Declaration, id: ts.Identifier) {
@@ -66,11 +64,13 @@ export class Transformer {
     if (ts.isExportDeclaration(node) || ts.isExportAssignment(node)) {
       return this.convertExportDeclaration(node);
     }
+    // istanbul ignore else
     if (ts.isImportDeclaration(node)) {
       return this.convertImportDeclaration(node);
+    } else {
+      console.log({ code: node.getFullText() });
+      throw new Error(`unsupported node type`);
     }
-    console.log({ code: node.getFullText() });
-    throw new Error(`unsupported node type`);
   }
 
   createDeclaration(id: ts.Identifier, range: Ranged) {
@@ -80,6 +80,7 @@ export class Transformer {
   }
 
   convertFunctionDeclaration(node: ts.FunctionDeclaration) {
+    // istanbul ignore if
     if (!node.name) {
       console.log(node);
       throw new Error(`FunctionDeclaration should have a name`);
@@ -101,6 +102,7 @@ export class Transformer {
   }
 
   convertInterfaceDeclaration(node: ts.InterfaceDeclaration) {
+    // istanbul ignore if
     if (!node.name) {
       console.log(node);
       throw new Error(`InterfaceDeclaration should have a name`);
@@ -166,6 +168,7 @@ export class Transformer {
   }
 
   convertImportDeclaration(node: ts.ImportDeclaration) {
+    // istanbul ignore if
     if (!node.importClause || !node.importClause.namedBindings) {
       throw new Error(`ImportDeclaration should have imports`);
     }
@@ -238,10 +241,12 @@ export class Transformer {
     if (ts.isLiteralExpression(node)) {
       return { type: "Literal", value: node.text };
     }
+    // istanbul ignore else
     if (ts.isIdentifier(node)) {
       return createIdentifier(node);
+    } else {
+      console.log({ code: node.getFullText() });
+      throw new Error(`Unknown Expression`);
     }
-    console.log({ code: node.getFullText() });
-    throw new Error(`Unknown Expression`);
   }
 }
