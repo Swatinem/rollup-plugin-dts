@@ -60,8 +60,8 @@ export class Transformer {
     if (ts.isFunctionDeclaration(node)) {
       return this.convertFunctionDeclaration(node);
     }
-    if (ts.isInterfaceDeclaration(node)) {
-      return this.convertInterfaceDeclaration(node);
+    if (ts.isInterfaceDeclaration(node) || ts.isClassDeclaration(node)) {
+      return this.convertClassOrInterfaceDeclaration(node);
     }
     if (ts.isExportDeclaration(node) || ts.isExportAssignment(node)) {
       return this.convertExportDeclaration(node);
@@ -84,7 +84,7 @@ export class Transformer {
   convertFunctionDeclaration(node: ts.FunctionDeclaration) {
     // istanbul ignore if
     if (!node.name) {
-      console.log(node);
+      console.log({ code: node.getFullText() });
       throw new Error(`FunctionDeclaration should have a name`);
     }
 
@@ -93,6 +93,10 @@ export class Transformer {
     const body = this.createDeclaration(node.name, node);
     body.push(...this.removeExportModifier(node));
 
+    this.convertParametersAndType(node, body);
+  }
+
+  convertParametersAndType(node: ts.SignatureDeclarationBase, body: Array<ESTree.Pattern>) {
     for (const param of node.parameters) {
       if (param.type) {
         this.convertTypeNode(param.type, body);
@@ -103,29 +107,44 @@ export class Transformer {
     }
   }
 
-  convertInterfaceDeclaration(node: ts.InterfaceDeclaration) {
-    // istanbul ignore if
-    if (!node.name) {
-      console.log(node);
-      throw new Error(`InterfaceDeclaration should have a name`);
-    }
-
-    this.maybeMarkAsExported(node, node.name);
-
-    const body = this.createDeclaration(node.name, node);
-    body.push(...this.removeExportModifier(node, true));
-
+  convertHeritageClauses(node: ts.InterfaceDeclaration | ts.ClassDeclaration, body: Array<ESTree.Pattern>) {
     for (const heritage of node.heritageClauses || []) {
       for (const type of heritage.types) {
         body.push(createReference(this.convertExpression(type.expression)));
       }
     }
+  }
 
+  convertMembers(node: ts.InterfaceDeclaration | ts.ClassDeclaration, body: Array<ESTree.Pattern>) {
     for (const member of node.members) {
-      if (ts.isPropertySignature(member) && member.type) {
+      if ((ts.isPropertyDeclaration(member) || ts.isPropertySignature(member)) && member.type) {
         this.convertTypeNode(member.type, body);
+      } else if (
+        ts.isMethodDeclaration(member) ||
+        ts.isMethodSignature(member) ||
+        ts.isConstructorDeclaration(member) ||
+        ts.isConstructSignatureDeclaration(member)
+      ) {
+        this.convertParametersAndType(member, body);
       }
     }
+  }
+
+  convertClassOrInterfaceDeclaration(node: ts.ClassDeclaration | ts.InterfaceDeclaration) {
+    // istanbul ignore if
+    if (!node.name) {
+      console.log({ code: node.getFullText() });
+      throw new Error(`ClassDeclaration / InterfaceDeclaration should have a name`);
+    }
+
+    this.maybeMarkAsExported(node, node.name);
+
+    const body = this.createDeclaration(node.name, node);
+    body.push(...this.removeExportModifier(node, ts.isInterfaceDeclaration(node)));
+
+    this.convertHeritageClauses(node, body);
+
+    this.convertMembers(node, body);
   }
 
   convertExportDeclaration(node: ts.ExportDeclaration | ts.ExportAssignment) {
@@ -173,6 +192,7 @@ export class Transformer {
     const source = this.convertExpression(node.moduleSpecifier) as any;
     // istanbul ignore if
     if (!node.importClause || (!node.importClause.name && !node.importClause.namedBindings)) {
+      console.log({ code: node.getFullText() });
       throw new Error(`ImportDeclaration should have imports`);
     }
     const specifiers: ESTreeImports = node.importClause.namedBindings

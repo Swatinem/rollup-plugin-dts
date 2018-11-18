@@ -1,6 +1,6 @@
-export class A {}
+export abstract class A {}
 
-export function B() {}
+export interface B {}
 
 export interface C {}
 

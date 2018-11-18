@@ -117,7 +117,7 @@ export function getCachedCompiler(options: CacheOptions) {
       // but rollup moves the `export default` to a different place, which leaves
       // the function declaration without a `declare`.
       // Well luckily both words have the same length, haha :-D
-      code = code.replace(/(export\s+)default(\s+function)/m, "$1declare$2");
+      code = code.replace(/(export\s+)default(\s+(function|class))/m, "$1declare$2");
 
       return { code, ast, map };
     },
