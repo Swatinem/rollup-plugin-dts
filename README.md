@@ -146,7 +146,6 @@ With that, we have all the tools to create roll-upd `.d.ts` files.
 
 ## Things to test:
 
-- [ ] make sure overrides work correctly
 - [ ] make sure tsdoc and other type of comments work correctly
 
 ## Things to implement:
