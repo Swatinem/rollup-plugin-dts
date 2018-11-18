@@ -1,5 +1,5 @@
 import * as ts from "typescript";
-import { Transformer } from "./transformer";
+import { Transformer } from "./Transformer";
 import path from "path";
 
 let SOURCEMAPPING_URL = "sourceMa";

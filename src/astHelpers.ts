@@ -103,6 +103,19 @@ export function createDeclaration(id: ts.Identifier, range: Ranged) {
   );
 }
 
+export function convertExpression(node: ts.Expression): ESTree.Expression {
+  if (ts.isLiteralExpression(node)) {
+    return { type: "Literal", value: node.text };
+  }
+  // istanbul ignore else
+  if (ts.isIdentifier(node)) {
+    return createIdentifier(node);
+  } else {
+    console.log({ kind: node.kind, code: node.getFullText() });
+    throw new Error(`Unknown Expression`);
+  }
+}
+
 /**
  * Mark the nested `range` to be removed, by creating dead code:
  * `_ = () => {MARKER}`
