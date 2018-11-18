@@ -30,6 +30,9 @@ async function createBundle(input: string, options: BundleOptions) {
 
 async function assertTestcase(dir: string, meta: Meta) {
   const { skip, rootFile, ...bundleOptions } = meta;
+  if (bundleOptions.tsconfig && !path.isAbsolute(bundleOptions.tsconfig)) {
+    bundleOptions.tsconfig = path.join(dir, bundleOptions.tsconfig);
+  }
   const { code } = await createBundle(path.join(dir, rootFile), bundleOptions);
 
   const expectedDts = path.join(dir, "expected.ts");

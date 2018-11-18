@@ -38,6 +38,9 @@ function createCompiler(options: CacheOptions) {
     noEmit: false,
     skipLibCheck: true,
     declaration: true,
+    allowJs: true,
+    checkJs: true,
+    resolveJsonModule: true,
     // hm, there are still issues with this, I couldn’t get it to work locally
     // See https://github.com/Microsoft/TypeScript/issues/25662
     declarationMap: false,
@@ -88,26 +91,33 @@ export function getCachedCompiler(options: CacheOptions) {
         return null;
       }
     },
-    transform(fileName: string) {
+    transform(code: string, fileName: string) {
       const { compiler } = lazyCreate();
 
       const sourceFile = compiler.getSourceFile(fileName)!;
 
-      let dtsFilename = "";
-      let code = "";
+      let dtsSource = sourceFile;
+      let dtsFilename = fileName;
       let map = `{"mappings": ""}`;
-      const baseFileName = fileName.slice(0, -path.extname(fileName).length);
-      compiler.emit(sourceFile, (fileName, data) => {
-        if (fileName === `${baseFileName}.d.ts`) {
-          dtsFilename = fileName;
-          code = data.replace(SOURCEMAPPING_URL_RE, "").trim();
-        }
-        // if (fileName === `${baseFileName}.d.ts.map`) {
-        //   map = data;
-        // }
-      });
 
-      const dtsSource = ts.createSourceFile(dtsFilename, code, ts.ScriptTarget.Latest, true);
+      if (!fileName.endsWith(".d.ts")) {
+        code = "";
+        const baseFileName = fileName.slice(0, -path.extname(fileName).length);
+        compiler.emit(sourceFile, (fileName, data) => {
+          if (fileName === `${baseFileName}.d.ts`) {
+            dtsFilename = fileName;
+            code = data.replace(SOURCEMAPPING_URL_RE, "").trim();
+          }
+          // if (fileName === `${baseFileName}.d.ts.map`) {
+          //   map = data;
+          // }
+        });
+
+        dtsSource = ts.createSourceFile(dtsFilename, code, ts.ScriptTarget.Latest, true);
+      } else {
+        // TODO(swatinem):
+        // maybe load the `map` from a pre-existing map file?
+      }
 
       const converter = new Transformer(dtsSource);
       const ast = converter.transform();

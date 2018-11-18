@@ -12,7 +12,10 @@ interface Options {
 }
 
 export default function dts(options: Options = {}): Plugin {
-  const filter = createFilter(options.include || ["*.ts+(|x)", "**/*.ts+(|x)"], options.exclude || []);
+  const filter = createFilter(
+    options.include || ["*.ts+(|x)", "**/*.ts+(|x)", "*.json", "**/*.json"],
+    options.exclude || [],
+  );
 
   const compiler = getCachedCompiler({
     tsconfig: options.tsconfig || process.cwd(),
@@ -30,12 +33,12 @@ export default function dts(options: Options = {}): Plugin {
       return compiler.resolve(importee, importer);
     },
 
-    async transform(_code, id) {
+    async transform(code, id) {
       // istanbul ignore if
       if (!filter(id)) {
         return;
       }
-      return compiler.transform(id);
+      return compiler.transform(code, id);
     },
   };
 }

@@ -23,11 +23,10 @@ export function createProgram(node: ts.SourceFile): ESTree.Program {
  * `export default id`
  */
 export function createDefaultExport(node: ts.Identifier, range: Ranged) {
-  const id = createIdentifier(node, range);
   return withStartEnd<ESTree.ExportDefaultDeclaration>(
     {
       type: "ExportDefaultDeclaration",
-      declaration: id,
+      declaration: createIdentifier(node),
     },
     range,
   );
@@ -38,7 +37,7 @@ export function createDefaultExport(node: ts.Identifier, range: Ranged) {
  * `export { id }`
  */
 export function createExport(node: ts.Identifier, range: Ranged) {
-  const id = createIdentifier(node, range);
+  const id = createIdentifier(node);
   return withStartEnd<ESTree.ExportNamedDeclaration>(
     {
       type: "ExportNamedDeclaration",
@@ -70,13 +69,16 @@ export function createReference(id: ESTree.Expression): ESTree.AssignmentPattern
   };
 }
 
-export function createIdentifier(node: ts.Identifier, range: Ranged = node) {
+export function createIdentifier(node: ts.Identifier) {
   return withStartEnd<ESTree.Identifier>(
     {
       type: "Identifier",
       name: node.text || String(node.escapedText),
     },
-    range,
+    {
+      start: node.getStart(),
+      end: node.getEnd(),
+    },
   );
 }
 
@@ -85,7 +87,6 @@ export function createIdentifier(node: ts.Identifier, range: Ranged = node) {
  * `function ${id}(_ = MARKER) {}`
  */
 export function createDeclaration(id: ts.Identifier, range: Ranged) {
-  const start = getStart(range);
   return withStartEnd<ESTree.FunctionDeclaration>(
     {
       type: "FunctionDeclaration",
@@ -94,9 +95,9 @@ export function createDeclaration(id: ts.Identifier, range: Ranged) {
           type: "Identifier",
           name: id.text,
         },
-        { start, end: start },
+        { start: id.getStart(), end: id.getEnd() },
       ),
-      params: [createReference(createIdentifier(id))],
+      params: [],
       body: { type: "BlockStatement", body: [] },
     },
     range,

@@ -108,9 +108,6 @@ export class Transformer {
 
     scope.convertHeritageClauses(node);
 
-    // NOTE(swatinem): typescript loses the non-null assertion for `node.name`
-    scope.pushIdentifierReference(node.name!);
-
     scope.convertMembers(node.members);
   }
 
@@ -119,8 +116,6 @@ export class Transformer {
 
     const scope = this.createDeclaration(node.name, node);
     scope.removeModifier(node);
-
-    scope.pushIdentifierReference(node.name);
 
     scope.convertTypeNode(node.type);
   }
@@ -143,8 +138,6 @@ export class Transformer {
 
       const scope = this.createDeclaration(decl.name, node);
       scope.removeModifier(node);
-
-      scope.pushIdentifierReference(decl.name);
 
       if (decl.type) {
         scope.convertTypeNode(decl.type);

@@ -1,0 +1,5 @@
+{
+  "skip": true,
+  "tsconfig": "./",
+  "external": ["fs-extra", "path", "@babel/code-frame"]
+}

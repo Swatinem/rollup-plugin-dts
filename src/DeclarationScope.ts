@@ -79,6 +79,10 @@ export class DeclarationScope {
         node.type
       ) {
         this.convertTypeNode(node.type);
+      } else if (ts.isPropertyDeclaration(node) || ts.isPropertySignature(node)) {
+        if (node.type) {
+          this.convertTypeNode(node.type);
+        }
       }
       // istanbul ignore else
       else if (
