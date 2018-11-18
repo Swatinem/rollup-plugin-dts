@@ -13,6 +13,7 @@ import {
 const IGNORE_TYPENODES = new Set([
   ts.SyntaxKind.LiteralType,
   ts.SyntaxKind.VoidKeyword,
+  ts.SyntaxKind.UnknownKeyword,
   ts.SyntaxKind.AnyKeyword,
   ts.SyntaxKind.BooleanKeyword,
   ts.SyntaxKind.NumberKeyword,
@@ -22,6 +23,7 @@ const IGNORE_TYPENODES = new Set([
   ts.SyntaxKind.UndefinedKeyword,
   ts.SyntaxKind.SymbolKeyword,
   ts.SyntaxKind.NeverKeyword,
+  ts.SyntaxKind.ThisKeyword,
 ]);
 
 export class DeclarationScope {
@@ -70,17 +72,25 @@ export class DeclarationScope {
     }
   }
 
-  convertMembers(node: ts.InterfaceDeclaration | ts.ClassDeclaration) {
-    for (const member of node.members) {
-      if ((ts.isPropertyDeclaration(member) || ts.isPropertySignature(member)) && member.type) {
-        this.convertTypeNode(member.type);
-      } else if (
-        ts.isMethodDeclaration(member) ||
-        ts.isMethodSignature(member) ||
-        ts.isConstructorDeclaration(member) ||
-        ts.isConstructSignatureDeclaration(member)
+  convertMembers(members: ts.NodeArray<ts.TypeElement | ts.ClassElement>) {
+    for (const node of members) {
+      if (
+        (ts.isPropertyDeclaration(node) || ts.isPropertySignature(node) || ts.isIndexSignatureDeclaration(node)) &&
+        node.type
       ) {
-        this.convertParametersAndType(member);
+        this.convertTypeNode(node.type);
+      }
+      // istanbul ignore else
+      else if (
+        ts.isMethodDeclaration(node) ||
+        ts.isMethodSignature(node) ||
+        ts.isConstructorDeclaration(node) ||
+        ts.isConstructSignatureDeclaration(node)
+      ) {
+        this.convertParametersAndType(node);
+      } else {
+        console.log({ kind: node.kind, code: node.getFullText() });
+        throw new Error(`Unknown TypeElement`);
       }
     }
   }
@@ -106,6 +116,9 @@ export class DeclarationScope {
         this.convertTypeNode(type);
       }
       return;
+    }
+    if (ts.isTypeLiteralNode(node)) {
+      return this.convertMembers(node.members);
     }
     // istanbul ignore else
     if (ts.isTypeReferenceNode(node)) {

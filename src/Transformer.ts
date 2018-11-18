@@ -111,7 +111,7 @@ export class Transformer {
     // NOTE(swatinem): typescript loses the non-null assertion for `node.name`
     scope.pushIdentifierReference(node.name!);
 
-    scope.convertMembers(node);
+    scope.convertMembers(node.members);
   }
 
   convertTypeAliasDeclaration(node: ts.TypeAliasDeclaration) {
