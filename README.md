@@ -151,6 +151,5 @@ With that, we have all the tools to create roll-upd `.d.ts` files.
 
 ## Things to implement:
 
-- [ ] support things like mapped types and conditional types
 - [ ] type parameters with correct shadowing
 - [ ] maybe removing things from the bundle marked with `@internal` or `@hidden`

@@ -120,6 +120,31 @@ export class DeclarationScope {
     if (ts.isTypeLiteralNode(node)) {
       return this.convertMembers(node.members);
     }
+    if (ts.isMappedTypeNode(node)) {
+      const { typeParameter, type } = node;
+      if (typeParameter.constraint) {
+        this.convertTypeNode(typeParameter.constraint);
+      }
+      // TODO: create scopes for the name
+      // node.typeParameter.name
+      if (type) {
+        this.convertTypeNode(type);
+      }
+      return;
+    }
+    if (ts.isConditionalTypeNode(node)) {
+      this.convertTypeNode(node.checkType);
+      // TODO: create scopes for `infer`
+      this.convertTypeNode(node.extendsType);
+      this.convertTypeNode(node.trueType);
+      this.convertTypeNode(node.falseType);
+      return;
+    }
+    if (ts.isIndexedAccessTypeNode(node)) {
+      this.convertTypeNode(node.objectType);
+      this.convertTypeNode(node.indexType);
+      return;
+    }
     // istanbul ignore else
     if (ts.isTypeReferenceNode(node)) {
       return this.pushReference(this.convertEntityName(node.typeName));
