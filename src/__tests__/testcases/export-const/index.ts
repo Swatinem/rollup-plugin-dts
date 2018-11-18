@@ -1,0 +1,10 @@
+export const sLit = "";
+export const nLit = 0;
+export const aLit = [];
+export const sLitDef: "" = "";
+export const nLitDef: 0 = 0;
+export const sDef: string = "";
+export const nDef: number = 0;
+export const aDef: Array<number> = [0];
+export declare const tuple: [number, string];
+export declare const unique: unique symbol;

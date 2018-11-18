@@ -33,8 +33,9 @@ async function assertTestcase(dir: string, meta: Meta) {
   const { code } = await createBundle(path.join(dir, rootFile), bundleOptions);
 
   const expectedDts = path.join(dir, "expected.ts");
+  const hasExpected = await fsExtra.pathExists(expectedDts);
   // const expectedMap = path.join(dir, "expected.ts.map");
-  if (!(await fsExtra.pathExists(expectedDts))) {
+  if (!hasExpected) {
     await fsExtra.writeFile(expectedDts, code);
     // await fsExtra.writeFile(expectedMap, map);
   }
@@ -43,10 +44,12 @@ async function assertTestcase(dir: string, meta: Meta) {
   expect(code).toEqual(expectedCode);
   // expect(String(map)).toEqual(await fsExtra.readFile(expectedMap, "utf-8"));
 
-  const sanityCheck = await createBundle(expectedDts, bundleOptions);
-  // typescript `.d.ts` output compresses whitespace, so make sure we ignore that
-  const skipBlanks = (s: string) => s.replace(/\n+/gm, "\n");
-  expect(skipBlanks(sanityCheck.code)).toEqual(skipBlanks(expectedCode));
+  if (hasExpected) {
+    const sanityCheck = await createBundle(expectedDts, bundleOptions);
+    // typescript `.d.ts` output compresses whitespace, so make sure we ignore that
+    const skipBlanks = (s: string) => s.replace(/\n+/gm, "\n");
+    expect(skipBlanks(sanityCheck.code)).toEqual(skipBlanks(expectedCode));
+  }
 }
 
 describe("rollup-plugin-dts", () => {

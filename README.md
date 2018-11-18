@@ -146,13 +146,11 @@ With that, we have all the tools to create roll-upd `.d.ts` files.
 
 ## Things to test:
 
-- [ ] function arguments
-- [ ] function return values
 - [ ] make sure overrides work correctly
 - [ ] make sure tsdoc and other type of comments work correctly
 
 ## Things to implement:
 
-- [ ] export type aliases and things like mapped types and conditional types
+- [ ] support things like mapped types and conditional types
 - [ ] type parameters with correct shadowing
 - [ ] maybe removing things from the bundle marked with `@internal` or `@hidden`

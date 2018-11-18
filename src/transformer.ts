@@ -15,6 +15,20 @@ import {
 
 type ESTreeImports = ESTree.ImportDeclaration["specifiers"];
 
+const IGNORE_TYPENODES = new Set([
+  ts.SyntaxKind.LiteralType,
+  ts.SyntaxKind.VoidKeyword,
+  ts.SyntaxKind.AnyKeyword,
+  ts.SyntaxKind.BooleanKeyword,
+  ts.SyntaxKind.NumberKeyword,
+  ts.SyntaxKind.StringKeyword,
+  ts.SyntaxKind.ObjectKeyword,
+  ts.SyntaxKind.NullKeyword,
+  ts.SyntaxKind.UndefinedKeyword,
+  ts.SyntaxKind.SymbolKeyword,
+  ts.SyntaxKind.NeverKeyword,
+]);
+
 export class Transformer {
   ast: ESTree.Program;
 
@@ -34,17 +48,17 @@ export class Transformer {
     this.ast.body.push(node);
   }
 
-  maybeMarkAsExported(node: ts.Declaration, id: ts.Identifier) {
-    if (matchesModifier(node, ts.ModifierFlags.ExportDefault)) {
+  maybeMarkAsExported(node: ts.Node, id: ts.Identifier) {
+    if (matchesModifier(node as any, ts.ModifierFlags.ExportDefault)) {
       const start = node.pos;
       this.pushStatement(createDefaultExport(id, { start, end: start }));
-    } else if (matchesModifier(node, ts.ModifierFlags.Export)) {
+    } else if (matchesModifier(node as any, ts.ModifierFlags.Export)) {
       const start = node.pos;
       this.pushStatement(createExport(id, { start, end: start }));
     }
   }
 
-  removeExportModifier(node: ts.Declaration, removeDefault = false) {
+  removeExportModifier(node: ts.Node, removeDefault = false) {
     const ret = [];
     for (const mod of node.modifiers || []) {
       if (mod.kind === ts.SyntaxKind.ExportKeyword || (removeDefault && mod.kind === ts.SyntaxKind.DefaultKeyword)) {
@@ -66,11 +80,17 @@ export class Transformer {
     if (ts.isExportDeclaration(node) || ts.isExportAssignment(node)) {
       return this.convertExportDeclaration(node);
     }
+    if (ts.isTypeAliasDeclaration(node)) {
+      return this.convertTypeAliasDeclaration(node);
+    }
+    if (ts.isVariableStatement(node)) {
+      return this.convertVariableStatement(node);
+    }
     // istanbul ignore else
     if (ts.isImportDeclaration(node)) {
       return this.convertImportDeclaration(node);
     } else {
-      console.log({ code: node.getFullText() });
+      console.log({ kind: node.kind, code: node.getFullText() });
       throw new Error(`unsupported node type`);
     }
   }
@@ -79,6 +99,41 @@ export class Transformer {
     const decl = createDeclaration(id, range);
     this.pushStatement(decl);
     return decl.params;
+  }
+
+  convertVariableStatement(node: ts.VariableStatement) {
+    const { declarations } = node.declarationList;
+    // istanbul ignore if
+    if (declarations.length !== 1) {
+      console.log({ code: node.getFullText() });
+      throw new Error(`VariableStatement with more than one declaration not yet supported`);
+    }
+    for (const decl of declarations) {
+      // istanbul ignore if
+      if (!ts.isIdentifier(decl.name)) {
+        console.log({ code: node.getFullText() });
+        throw new Error(`VariableDeclaration must have a name`);
+      }
+
+      this.maybeMarkAsExported(node, decl.name);
+
+      const body = this.createDeclaration(decl.name, node);
+
+      body.push(...this.removeExportModifier(node));
+
+      if (decl.type) {
+        this.convertTypeNode(decl.type, body);
+      }
+    }
+  }
+
+  convertTypeAliasDeclaration(node: ts.TypeAliasDeclaration) {
+    this.maybeMarkAsExported(node, node.name);
+
+    const body = this.createDeclaration(node.name, node);
+    body.push(...this.removeExportModifier(node));
+
+    this.convertTypeNode(node.type, body);
   }
 
   convertFunctionDeclaration(node: ts.FunctionDeclaration) {
@@ -246,9 +301,34 @@ export class Transformer {
     };
   }
 
-  convertTypeNode(node: ts.TypeNode, body: Array<ESTree.Pattern>) {
+  convertTypeNode(node: ts.TypeNode, body: Array<ESTree.Pattern>): any {
+    if (IGNORE_TYPENODES.has(node.kind)) {
+      return;
+    }
+    if (ts.isParenthesizedTypeNode(node) || ts.isTypeOperatorNode(node)) {
+      return this.convertTypeNode(node.type, body);
+    }
+    if (ts.isArrayTypeNode(node)) {
+      return this.convertTypeNode(node.elementType, body);
+    }
+    if (ts.isTupleTypeNode(node)) {
+      for (const type of node.elementTypes) {
+        this.convertTypeNode(type, body);
+      }
+      return;
+    }
+    if (ts.isUnionTypeNode(node) || ts.isIntersectionTypeNode(node)) {
+      for (const type of node.types) {
+        this.convertTypeNode(type, body);
+      }
+      return;
+    }
+    // istanbul ignore else
     if (ts.isTypeReferenceNode(node)) {
-      body.push(createReference(this.convertEntityName(node.typeName)));
+      return body.push(createReference(this.convertEntityName(node.typeName)));
+    } else {
+      console.log({ kind: node.kind, code: node.getFullText() });
+      throw new Error(`Unknown TypeNode`);
     }
   }
 
@@ -276,7 +356,7 @@ export class Transformer {
     if (ts.isIdentifier(node)) {
       return createIdentifier(node);
     } else {
-      console.log({ code: node.getFullText() });
+      console.log({ kind: node.kind, code: node.getFullText() });
       throw new Error(`Unknown Expression`);
     }
   }
