@@ -9,6 +9,7 @@ import {
   createDefaultExport,
   matchesModifier,
   convertExpression,
+  isInternal,
 } from "./astHelpers";
 import { DeclarationScope } from "./DeclarationScope";
 
@@ -34,13 +35,19 @@ export class Transformer {
   }
 
   maybeMarkAsExported(node: ts.Node, id: ts.Identifier) {
+    if (isInternal(node)) {
+      return false;
+    }
     if (matchesModifier(node as any, ts.ModifierFlags.ExportDefault)) {
       const start = node.pos;
       this.pushStatement(createDefaultExport(id, { start, end: start }));
+      return true;
     } else if (matchesModifier(node as any, ts.ModifierFlags.Export)) {
       const start = node.pos;
       this.pushStatement(createExport(id, { start, end: start }));
+      return true;
     }
+    return false;
   }
 
   createDeclaration(id: ts.Identifier, range: Ranged) {

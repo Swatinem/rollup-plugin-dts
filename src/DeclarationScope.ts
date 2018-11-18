@@ -8,6 +8,7 @@ import {
   removeNested,
   withStartEnd,
   convertExpression,
+  isInternal,
 } from "./astHelpers";
 
 const IGNORE_TYPENODES = new Set([
@@ -74,12 +75,16 @@ export class DeclarationScope {
 
   convertMembers(members: ts.NodeArray<ts.TypeElement | ts.ClassElement>) {
     for (const node of members) {
-      if (
-        (ts.isPropertyDeclaration(node) || ts.isPropertySignature(node) || ts.isIndexSignatureDeclaration(node)) &&
-        node.type
-      ) {
-        this.convertTypeNode(node.type);
-      } else if (ts.isPropertyDeclaration(node) || ts.isPropertySignature(node)) {
+      // NOTE(swatinem):
+      // Well, actually having `private`/`protected` members in the exported
+      // definitions is quite nice, so let’s keep them. Instead we look for an
+      // `@internal` tag
+      // if (matchesModifier(node, ts.ModifierFlags.Private) || matchesModifier(node, ts.ModifierFlags.Protected)) {
+      if (isInternal(node)) {
+        this.pushRaw(removeNested({ start: node.getFullStart(), end: node.getEnd() }));
+        continue;
+      }
+      if (ts.isPropertyDeclaration(node) || ts.isPropertySignature(node) || ts.isIndexSignatureDeclaration(node)) {
         if (node.type) {
           this.convertTypeNode(node.type);
         }

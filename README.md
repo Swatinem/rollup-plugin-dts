@@ -46,32 +46,15 @@ What we do, is to transform the Typescript code into a _virtual AST_, that is in
 itself just really strange code, but it makes rollup do what we would like it
 to do.
 
-### Marking code for removal
-
-For things on the top-level that we want removed from our source, we generate
-an `IfStatement` that is always false. Rollup will figure this out and just
-remove that statement altogether.
-
-```
-if (false) {}
-```
-
-[See it live](https://rollupjs.org/repl?version=0.67.1&shareable=JTdCJTIybW9kdWxlcyUyMiUzQSU1QiU3QiUyMm5hbWUlMjIlM0ElMjJtYWluLmpzJTIyJTJDJTIyY29kZSUyMiUzQSUyMmlmJTIwKGZhbHNlKSUyMCU3QiU3RCUyMiU3RCU1RCUyQyUyMm9wdGlvbnMlMjIlM0ElN0IlMjJmb3JtYXQlMjIlM0ElMjJlc20lMjIlMkMlMjJuYW1lJTIyJTNBJTIybXlCdW5kbGUlMjIlMkMlMjJhbWQlMjIlM0ElN0IlMjJpZCUyMiUzQSUyMiUyMiU3RCU3RCUyQyUyMmV4YW1wbGUlMjIlM0FudWxsJTdE)
-
-The trick here is to annotate this `IfStatement` with a certain `start` and `end`.
-Rollup will then just remove all the bytes between `start` and `end`, without
-even looking into what those bytes actually are.
-
-**TODO**: actually, it should be easier to just generate any identifier without
-a side-effect, like I do for nested code.
-
 ### Creating declarations
 
 For each export (`class`, `function`, `interface` or `type`), we will create
-a bogus `FunctionDeclaration` for rollup. Again, we annotate the
-`FunctionDeclaration` with a set of `start` and `end` markers, so that rollup
-will remove the correct parts of our code if it figures out the declaration is
-not referenced.
+a bogus `FunctionDeclaration` for rollup.
+The trick here is to annotate this `FunctionDeclaration` with a certain
+`start` and `end`.
+Rollup will then just remove all the bytes between `start` and `end`, without
+even looking into what those bytes actually are, if it figures out that the
+declaration is not referenced.
 
 ```
 function foo() {}
@@ -151,4 +134,3 @@ With that, we have all the tools to create roll-upd `.d.ts` files.
 ## Things to implement:
 
 - [ ] type parameters with correct shadowing
-- [ ] maybe removing things from the bundle marked with `@internal` or `@hidden`

@@ -19,7 +19,7 @@ export function createProgram(node: ts.SourceFile): ESTree.Program {
 }
 
 /**
- * Create an export for `id`:
+ * Create a default export for `id`:
  * `export default id`
  */
 export function createDefaultExport(node: ts.Identifier, range: Ranged) {
@@ -93,7 +93,7 @@ export function createDeclaration(id: ts.Identifier, range: Ranged) {
       id: withStartEnd(
         {
           type: "Identifier",
-          name: id.text,
+          name: ts.idText(id),
         },
         { start: id.getStart(), end: id.getEnd() },
       ),
@@ -169,7 +169,12 @@ export function withStartEnd<T extends ESTree.Node>(node: T, range: Ranged = { s
   });
 }
 
-export function matchesModifier(node: ts.Declaration, flags: ts.ModifierFlags) {
-  const nodeFlags = ts.getCombinedModifierFlags(node);
+export function matchesModifier(node: ts.Node, flags: ts.ModifierFlags) {
+  const nodeFlags = ts.getCombinedModifierFlags(node as any);
   return (nodeFlags & flags) === flags;
+}
+
+export function isInternal(node: ts.Node) {
+  const tags = ts.getJSDocTags(node);
+  return tags.some(t => ts.idText(t.tagName) === "internal");
 }
