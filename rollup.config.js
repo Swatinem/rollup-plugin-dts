@@ -17,7 +17,14 @@ const external = ["fs", "path", "typescript", "rollup-pluginutils", "rollup"];
 const config = [
   {
     input: "./src/index.ts",
-    output: [{ file: pkg.main, format: "cjs" }, { file: pkg.module, format: "es" }],
+    output: [
+      {
+        exports: "named",
+        file: pkg.main,
+        format: "cjs",
+      },
+      { file: pkg.module, format: "es" },
+    ],
 
     external,
     // @ts-ignore: this option is not in the @types
