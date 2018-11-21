@@ -71,6 +71,7 @@
     "typescript": "3.1.6"
   },
   "peerDependencies": {
+    "tslib": "*",
     "typescript": ">= 3.1.6"
   },
   "dependencies": {

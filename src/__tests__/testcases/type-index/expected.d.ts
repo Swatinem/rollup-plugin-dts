@@ -1,9 +1,6 @@
 interface A {
 }
-interface B {
-}
 declare type Foo = {
-    [P in keyof A]: B[P];
+    [k: string]: A;
 };
-
 export { Foo };

@@ -1,10 +1,10 @@
+interface A {
+}
 declare class B {
 }
 declare class Foo {
     private a;
     protected b: B;
-    private ma;
-    protected mb(): void;
+    constructor(a: A, b: B);
 }
-
 export { Foo };

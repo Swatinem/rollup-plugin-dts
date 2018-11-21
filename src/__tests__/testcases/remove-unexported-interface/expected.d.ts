@@ -1,4 +1,3 @@
 interface Foo {
 }
-
 export { Foo };

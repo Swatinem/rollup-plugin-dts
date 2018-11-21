@@ -1,4 +1,3 @@
-interface Foo {
+declare class Foo {
 }
-
 export default Foo;

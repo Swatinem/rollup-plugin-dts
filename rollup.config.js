@@ -3,13 +3,13 @@ import json from "rollup-plugin-json";
 // @ts-ignore
 import resolve from "rollup-plugin-node-resolve";
 // @ts-ignore
-import typescript from "rollup-plugin-typescript";
+// import typescript from "rollup-plugin-typescript";
 import pkg from "./package.json";
 
 require("ts-node").register({ transpileOnly: true });
-const dts = require("./src").default;
+const { ts, dts } = require("./src");
 
-const external = ["fs", "path", "typescript", "rollup-pluginutils", "rollup"]
+const external = ["fs", "path", "typescript", "rollup-pluginutils", "rollup"];
 
 /**
  * @type {Array<import("rollup").RollupWatchOptions>}
@@ -34,7 +34,7 @@ const config = [
         preferConst: true,
         indent: "  ",
       }),
-      typescript(),
+      ts(),
     ],
   },
   {

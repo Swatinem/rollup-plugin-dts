@@ -57,6 +57,9 @@ export class Transformer {
   }
 
   convertStatement(node: ts.Node) {
+    if (ts.isEnumDeclaration(node)) {
+      return this.convertEnumDeclaration(node);
+    }
     if (ts.isFunctionDeclaration(node)) {
       return this.convertFunctionDeclaration(node);
     }
@@ -79,6 +82,15 @@ export class Transformer {
       console.log({ kind: node.kind, code: node.getFullText() });
       throw new Error(`unsupported node type`);
     }
+  }
+
+  convertEnumDeclaration(node: ts.EnumDeclaration) {
+    this.maybeMarkAsExported(node, node.name);
+
+    const scope = this.createDeclaration(node.name, node);
+    scope.removeModifier(node);
+
+    scope.pushIdentifierReference(node.name);
   }
 
   convertFunctionDeclaration(node: ts.FunctionDeclaration) {

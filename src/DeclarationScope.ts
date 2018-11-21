@@ -56,6 +56,7 @@ export class DeclarationScope {
 
   convertParametersAndType(node: ts.SignatureDeclarationBase) {
     for (const param of node.parameters) {
+      // istanbul ignore else
       if (param.type) {
         this.convertTypeNode(param.type);
       }
@@ -88,9 +89,10 @@ export class DeclarationScope {
         if (node.type) {
           this.convertTypeNode(node.type);
         }
+        continue;
       }
       // istanbul ignore else
-      else if (
+      if (
         ts.isMethodDeclaration(node) ||
         ts.isMethodSignature(node) ||
         ts.isConstructorDeclaration(node) ||
@@ -131,11 +133,13 @@ export class DeclarationScope {
     }
     if (ts.isMappedTypeNode(node)) {
       const { typeParameter, type } = node;
+      // istanbul ignore else
       if (typeParameter.constraint) {
         this.convertTypeNode(typeParameter.constraint);
       }
       // TODO: create scopes for the name
       // node.typeParameter.name
+      // istanbul ignore else
       if (type) {
         this.convertTypeNode(type);
       }
@@ -158,6 +162,7 @@ export class DeclarationScope {
     if (ts.isTypeReferenceNode(node)) {
       return this.pushReference(this.convertEntityName(node.typeName));
     } else {
+      console.log(node.getSourceFile().getFullText());
       console.log({ kind: node.kind, code: node.getFullText() });
       throw new Error(`Unknown TypeNode`);
     }

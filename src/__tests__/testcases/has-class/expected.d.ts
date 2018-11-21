@@ -8,11 +8,9 @@ interface D {
 }
 interface E {
 }
-
 declare class Foo extends A {
     b: B;
     constructor(c: C);
     method(d: D): E;
 }
-
 export default Foo;

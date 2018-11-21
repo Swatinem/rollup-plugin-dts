@@ -1,5 +1,5 @@
 import { rollup, RollupFileOptions } from "rollup";
-import dts from "../";
+import { dts } from "../";
 import fsExtra from "fs-extra";
 import path from "path";
 
@@ -28,16 +28,30 @@ async function createBundle(input: string, options: BundleOptions) {
   });
 }
 
+function clean(code: string) {
+  return (
+    code
+      .trim()
+      // skip blank lines
+      .replace(/\n+/gm, "\n")
+      // ignore the banner
+      .replace(/^\/\/ FILE GENERATED.+\n\/\/.+\n/m, "") + "\n"
+  );
+}
+
 async function assertTestcase(dir: string, meta: Meta) {
   const { skip, rootFile, ...bundleOptions } = meta;
   if (bundleOptions.tsconfig && !path.isAbsolute(bundleOptions.tsconfig)) {
     bundleOptions.tsconfig = path.join(dir, bundleOptions.tsconfig);
   }
-  const { code } = await createBundle(path.join(dir, rootFile), bundleOptions);
+  // TODO(swatinem): also test the js bundling code :-)
+  let { code } = await createBundle(path.join(dir, rootFile), bundleOptions);
 
-  const expectedDts = path.join(dir, "expected.ts");
+  code = clean(code);
+
+  const expectedDts = path.join(dir, "expected.d.ts");
   const hasExpected = await fsExtra.pathExists(expectedDts);
-  // const expectedMap = path.join(dir, "expected.ts.map");
+  // const expectedMap = path.join(dir, "expected.d.ts.map");
   if (!hasExpected) {
     await fsExtra.writeFile(expectedDts, code);
     // await fsExtra.writeFile(expectedMap, map);
@@ -50,8 +64,7 @@ async function assertTestcase(dir: string, meta: Meta) {
   if (hasExpected) {
     const sanityCheck = await createBundle(expectedDts, bundleOptions);
     // typescript `.d.ts` output compresses whitespace, so make sure we ignore that
-    const skipBlanks = (s: string) => s.replace(/\n+/gm, "\n");
-    expect(skipBlanks(sanityCheck.code)).toEqual(skipBlanks(expectedCode));
+    expect(clean(sanityCheck.code)).toEqual(expectedCode);
   }
 }
 
