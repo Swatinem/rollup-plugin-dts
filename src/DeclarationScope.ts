@@ -56,14 +56,10 @@ export class DeclarationScope {
 
   convertParametersAndType(node: ts.SignatureDeclarationBase) {
     for (const param of node.parameters) {
-      // istanbul ignore else
-      if (param.type) {
-        this.convertTypeNode(param.type);
-      }
+      this.convertTypeNode(param.type);
     }
-    if (node.type) {
-      this.convertTypeNode(node.type);
-    }
+    this.convertTypeParameters(node.typeParameters);
+    this.convertTypeNode(node.type);
   }
 
   convertHeritageClauses(node: ts.InterfaceDeclaration | ts.ClassDeclaration) {
@@ -86,9 +82,7 @@ export class DeclarationScope {
         continue;
       }
       if (ts.isPropertyDeclaration(node) || ts.isPropertySignature(node) || ts.isIndexSignatureDeclaration(node)) {
-        if (node.type) {
-          this.convertTypeNode(node.type);
-        }
+        this.convertTypeNode(node.type);
         continue;
       }
       // istanbul ignore else
@@ -106,7 +100,19 @@ export class DeclarationScope {
     }
   }
 
-  convertTypeNode(node: ts.TypeNode): any {
+  convertTypeParameters(params?: ts.NodeArray<ts.TypeParameterDeclaration>) {
+    if (!params) {
+      return;
+    }
+    for (const node of params) {
+      this.convertTypeNode(node.default);
+    }
+  }
+
+  convertTypeNode(node?: ts.TypeNode): any {
+    if (!node) {
+      return;
+    }
     if (IGNORE_TYPENODES.has(node.kind)) {
       return;
     }
@@ -133,16 +139,10 @@ export class DeclarationScope {
     }
     if (ts.isMappedTypeNode(node)) {
       const { typeParameter, type } = node;
-      // istanbul ignore else
-      if (typeParameter.constraint) {
-        this.convertTypeNode(typeParameter.constraint);
-      }
+      this.convertTypeNode(typeParameter.constraint);
       // TODO: create scopes for the name
       // node.typeParameter.name
-      // istanbul ignore else
-      if (type) {
-        this.convertTypeNode(type);
-      }
+      this.convertTypeNode(type);
       return;
     }
     if (ts.isConditionalTypeNode(node)) {
@@ -160,7 +160,11 @@ export class DeclarationScope {
     }
     // istanbul ignore else
     if (ts.isTypeReferenceNode(node)) {
-      return this.pushReference(this.convertEntityName(node.typeName));
+      this.pushReference(this.convertEntityName(node.typeName));
+      for (const arg of node.typeArguments || []) {
+        this.convertTypeNode(arg);
+      }
+      return;
     } else {
       console.log(node.getSourceFile().getFullText());
       console.log({ kind: node.kind, code: node.getFullText() });

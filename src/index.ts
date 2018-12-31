@@ -1,5 +1,5 @@
 import * as ts from "typescript";
-import { Plugin } from "rollup";
+import { PluginImpl } from "rollup";
 // @ts-ignore
 import { createFilter } from "rollup-pluginutils";
 import { getCachedCompiler, CompileMode } from "./compiler";
@@ -21,11 +21,11 @@ const BANNER =
 // https://github.com/Swatinem/rollup-plugin-dts
 `.trim() + "\n";
 
-function plugin(options: Options = {}): Plugin {
+const plugin: PluginImpl<Options> = (options = {}) => {
   const filter = createFilter(options.include || ["*.ts+(|x)", "**/*.ts+(|x)"], options.exclude || []);
 
   const tslibFileName = require.resolve("tslib").replace("tslib.js", "tslib.es6.js");
-  const tslib = ts.sys.readFile(tslibFileName, "utf-8");
+  const tslib = ts.sys.readFile(tslibFileName, "utf-8") || null;
 
   const mode = options.compileMode || CompileMode.Types;
   const compiler = getCachedCompiler({
@@ -53,7 +53,7 @@ function plugin(options: Options = {}): Plugin {
 
     load(id) {
       // istanbul ignore next
-      return id === TSLIB_ID ? tslib : undefined;
+      return id === TSLIB_ID ? tslib : null;
     },
 
     async transform(code, id) {
@@ -64,17 +64,17 @@ function plugin(options: Options = {}): Plugin {
       return compiler.transform(code, id);
     },
   };
-}
+};
 
-function dts(options: Options = {}) {
+const dts: PluginImpl<Options> = (options = {}) => {
   options.compileMode = options.compileMode || CompileMode.Types;
   return plugin(options);
-}
+};
 
-function js(options: Options = {}) {
+const js: PluginImpl<Options> = (options = {}) => {
   options.compileMode = options.compileMode || CompileMode.Js;
   return plugin(options);
-}
+};
 
 export { CompileMode, plugin, dts, js, js as ts };
 

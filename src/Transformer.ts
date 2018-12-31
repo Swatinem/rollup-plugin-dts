@@ -125,8 +125,8 @@ export class Transformer {
       scope.removeModifier(node, ts.SyntaxKind.DefaultKeyword);
     }
 
+    scope.convertTypeParameters(node.typeParameters);
     scope.convertHeritageClauses(node);
-
     scope.convertMembers(node.members);
   }
 
@@ -136,6 +136,7 @@ export class Transformer {
     const scope = this.createDeclaration(node.name, node);
     scope.removeModifier(node);
 
+    scope.convertTypeParameters(node.typeParameters);
     scope.convertTypeNode(node.type);
   }
 
@@ -158,9 +159,7 @@ export class Transformer {
       const scope = this.createDeclaration(decl.name, node);
       scope.removeModifier(node);
 
-      if (decl.type) {
-        scope.convertTypeNode(decl.type);
-      }
+      scope.convertTypeNode(decl.type);
     }
   }
 
@@ -196,7 +195,9 @@ export class Transformer {
           {
             type: "ExportNamedDeclaration",
             declaration: null,
-            specifiers: node.exportClause ? node.exportClause.elements.map(e => this.convertExportSpecifier(e)) : [],
+            specifiers: node.exportClause
+              ? node.exportClause.elements.map(e => this.convertExportSpecifier(e))
+              : /* istanbul ignore next */ [],
             source,
           },
           node,

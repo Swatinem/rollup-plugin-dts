@@ -73,7 +73,7 @@ export function createIdentifier(node: ts.Identifier) {
   return withStartEnd<ESTree.Identifier>(
     {
       type: "Identifier",
-      name: node.text || String(node.escapedText),
+      name: node.getText(),
     },
     {
       start: node.getStart(),
@@ -162,7 +162,7 @@ function getStart({ start, pos }: Ranged) {
   return typeof start === "number" ? start : pos || 0;
 }
 
-export function withStartEnd<T extends ESTree.Node>(node: T, range: Ranged = { start: 0, end: 0 }): T & WithRange {
+export function withStartEnd<T extends ESTree.Node>(node: T, range: Ranged): T & WithRange {
   return Object.assign(node, {
     start: getStart(range),
     end: range.end,

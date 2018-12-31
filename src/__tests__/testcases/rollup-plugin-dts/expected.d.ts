@@ -1,5 +1,5 @@
-import { Plugin } from 'rollup';
 import { CompilerOptions } from 'typescript';
+import { PluginImpl } from 'rollup';
 declare enum CompileMode {
     Types = "dts",
     Js = "js"
@@ -11,8 +11,8 @@ interface Options {
     compilerOptions?: CompilerOptions;
     compileMode?: CompileMode;
 }
-declare function plugin(options?: Options): Plugin;
-declare function dts(options?: Options): Plugin;
-declare function js(options?: Options): Plugin;
+declare const plugin: PluginImpl<Options>;
+declare const dts: PluginImpl<Options>;
+declare const js: PluginImpl<Options>;
 export default plugin;
 export { CompileMode, plugin, dts, js, js as ts };

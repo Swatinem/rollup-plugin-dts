@@ -1,4 +1,4 @@
-import { rollup, RollupFileOptions } from "rollup";
+import { rollup, RollupOptions } from "rollup";
 import { dts } from "../";
 import fsExtra from "fs-extra";
 import path from "path";
@@ -6,7 +6,7 @@ import path from "path";
 const ROOT = path.join(__dirname, "..", "..");
 const TESTCASES = path.join(__dirname, "testcases");
 
-interface BundleOptions extends Partial<RollupFileOptions> {
+interface BundleOptions extends Partial<RollupOptions> {
   tsconfig?: string;
 }
 interface Meta extends BundleOptions {
@@ -28,7 +28,7 @@ async function createBundle(input: string, options: BundleOptions) {
   });
 }
 
-function clean(code: string) {
+function clean(code: string = "") {
   return (
     code
       .trim()
@@ -45,7 +45,9 @@ async function assertTestcase(dir: string, meta: Meta) {
     bundleOptions.tsconfig = path.join(dir, bundleOptions.tsconfig);
   }
   // TODO(swatinem): also test the js bundling code :-)
-  let { code } = await createBundle(path.join(dir, rootFile), bundleOptions);
+  let {
+    output: [{ code }],
+  } = await createBundle(path.join(dir, rootFile), bundleOptions);
 
   code = clean(code);
 
@@ -62,7 +64,9 @@ async function assertTestcase(dir: string, meta: Meta) {
   // expect(String(map)).toEqual(await fsExtra.readFile(expectedMap, "utf-8"));
 
   if (hasExpected) {
-    const sanityCheck = await createBundle(expectedDts, bundleOptions);
+    const {
+      output: [sanityCheck],
+    } = await createBundle(expectedDts, bundleOptions);
     // typescript `.d.ts` output compresses whitespace, so make sure we ignore that
     expect(clean(sanityCheck.code)).toEqual(expectedCode);
   }
