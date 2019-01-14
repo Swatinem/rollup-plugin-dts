@@ -116,7 +116,7 @@ export class DeclarationScope {
     if (IGNORE_TYPENODES.has(node.kind)) {
       return;
     }
-    if (ts.isParenthesizedTypeNode(node) || ts.isTypeOperatorNode(node)) {
+    if (ts.isParenthesizedTypeNode(node) || ts.isTypeOperatorNode(node) || ts.isTypePredicateNode(node)) {
       return this.convertTypeNode(node.type);
     }
     if (ts.isArrayTypeNode(node)) {

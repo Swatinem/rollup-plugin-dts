@@ -12,6 +12,7 @@ interface K {}
 interface L {}
 interface M {}
 interface N {}
+interface O {}
 
 // prettier-ignore
 export function parenthesized(a: (A)): (B) {
@@ -28,4 +29,7 @@ export function operator(a: keyof K) {
 }
 export function arrayAndTuple(a: [L, M]): N[] {
   return a;
+}
+export function predicate(a: any): a is O {
+  throw a;
 }
