@@ -6,6 +6,12 @@ interface E {}
 interface F {}
 interface G {}
 interface H {}
+interface J {}
+interface K {}
+interface L {}
+interface M {}
+interface N {}
+interface O {}
 
 type Gen<T> = T;
 
@@ -22,3 +28,5 @@ export class Cl<T = E> {
   f: Gen<F>;
 }
 export function fn<T = G>(g: T, h: Gen<H>) {}
+export type TyFn = <T = J>(j: T, k: Gen<K>) => L;
+export type TyCtor = new <T = M>(m: T, n: Gen<N>) => O;
