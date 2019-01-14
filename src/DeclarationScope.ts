@@ -158,6 +158,10 @@ export class DeclarationScope {
       this.convertTypeNode(node.indexType);
       return;
     }
+    if (ts.isFunctionOrConstructorTypeNode(node)) {
+      this.convertParametersAndType(node);
+      return;
+    }
     // istanbul ignore else
     if (ts.isTypeReferenceNode(node)) {
       this.pushReference(this.convertEntityName(node.typeName));
