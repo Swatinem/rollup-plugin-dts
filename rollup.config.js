@@ -2,8 +2,6 @@
 import json from "rollup-plugin-json";
 // @ts-ignore
 import resolve from "rollup-plugin-node-resolve";
-// @ts-ignore
-// import typescript from "rollup-plugin-typescript";
 import pkg from "./package.json";
 
 require("ts-node").register({ transpileOnly: true });

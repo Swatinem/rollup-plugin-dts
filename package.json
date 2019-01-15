@@ -18,8 +18,8 @@
     "url": "https://github.com/Swatinem/rollup-plugin-dts/issues"
   },
   "homepage": "https://github.com/Swatinem/rollup-plugin-dts#readme",
-  "main": "dist/rollup-plugin-dts.cjs.js",
-  "module": "dist/rollup-plugin-dts.esm.js",
+  "main": "dist/rollup-plugin-dts.js",
+  "module": "dist/rollup-plugin-dts.mjs",
   "types": "dist/rollup-plugin-dts.d.ts",
   "sideEffects": false,
   "files": [
