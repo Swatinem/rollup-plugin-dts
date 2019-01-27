@@ -80,7 +80,3 @@ Some projects, like [rollup itself](https://github.com/rollup/rollup/blob/24fe07
 go the route of completely separating their public interfaces in a separate file.
 
 ## [How does it work](./docs/how-it-works.md)
-
-# TODO
-
-- [ ] Make shadowing with type parameters work correctly
