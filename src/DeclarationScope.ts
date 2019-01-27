@@ -34,10 +34,48 @@ export class DeclarationScope {
     this.declaration = createDeclaration(id, range);
   }
 
+  /**
+   * As we walk the AST, we need to keep track of type variable bindings that
+   * shadow the outer identifiers. To achieve this, we keep a stack of scopes,
+   * represented as Sets of variable names.
+   */
+  scopes: Array<Set<string>> = [];
+  pushScope() {
+    this.scopes.push(new Set());
+  }
+  popScope(n = 1) {
+    for (let i = 0; i < n; i++) {
+      this.scopes.pop();
+    }
+  }
+  pushTypeVariable(id: ts.Identifier) {
+    const name = id.getText();
+    this.scopes[this.scopes.length - 1].add(name);
+  }
+
   pushRaw(expr: ESTree.AssignmentPattern) {
     this.declaration.params.push(expr);
   }
   pushReference(id: ESTree.Expression) {
+    let name: string | undefined;
+    // We convert references from TS AST to ESTree
+    // to hand them off to rollup.
+    // This means we have to check the left-most identifier inside our scope
+    // tree and avoid to create the reference in that case
+    if (id.type === "Identifier") {
+      name = id.name;
+    } else if (id.type === "MemberExpression") {
+      if (id.object.type === "Identifier") {
+        name = id.object.name;
+      }
+    }
+    if (name) {
+      for (const scope of this.scopes) {
+        if (scope.has(name)) {
+          return;
+        }
+      }
+    }
     this.pushRaw(createReference(id));
   }
   pushIdentifierReference(id: ts.Identifier) {
@@ -55,11 +93,12 @@ export class DeclarationScope {
   }
 
   convertParametersAndType(node: ts.SignatureDeclarationBase) {
+    const typeVariables = this.convertTypeParameters(node.typeParameters);
     for (const param of node.parameters) {
       this.convertTypeNode(param.type);
     }
-    this.convertTypeParameters(node.typeParameters);
     this.convertTypeNode(node.type);
+    this.popScope(typeVariables);
   }
 
   convertHeritageClauses(node: ts.InterfaceDeclaration | ts.ClassDeclaration) {
@@ -102,11 +141,14 @@ export class DeclarationScope {
 
   convertTypeParameters(params?: ts.NodeArray<ts.TypeParameterDeclaration>) {
     if (!params) {
-      return;
+      return 0;
     }
     for (const node of params) {
+      this.pushScope();
+      this.pushTypeVariable(node.name);
       this.convertTypeNode(node.default);
     }
+    return params.length;
   }
 
   convertTypeNode(node?: ts.TypeNode): any {
@@ -116,9 +158,17 @@ export class DeclarationScope {
     if (IGNORE_TYPENODES.has(node.kind)) {
       return;
     }
-    if (ts.isParenthesizedTypeNode(node) || ts.isTypeOperatorNode(node) || ts.isTypePredicateNode(node)) {
-      return this.convertTypeNode(node.type);
+    if (ts.isTypeReferenceNode(node)) {
+      this.pushReference(this.convertEntityName(node.typeName));
+      for (const arg of node.typeArguments || []) {
+        this.convertTypeNode(arg);
+      }
+      return;
     }
+    if (ts.isTypeLiteralNode(node)) {
+      return this.convertMembers(node.members);
+    }
+
     if (ts.isArrayTypeNode(node)) {
       return this.convertTypeNode(node.elementType);
     }
@@ -128,29 +178,31 @@ export class DeclarationScope {
       }
       return;
     }
+    if (ts.isParenthesizedTypeNode(node) || ts.isTypeOperatorNode(node) || ts.isTypePredicateNode(node)) {
+      return this.convertTypeNode(node.type);
+    }
     if (ts.isUnionTypeNode(node) || ts.isIntersectionTypeNode(node)) {
       for (const type of node.types) {
         this.convertTypeNode(type);
       }
       return;
     }
-    if (ts.isTypeLiteralNode(node)) {
-      return this.convertMembers(node.members);
-    }
     if (ts.isMappedTypeNode(node)) {
       const { typeParameter, type } = node;
       this.convertTypeNode(typeParameter.constraint);
-      // TODO: create scopes for the name
-      // node.typeParameter.name
+      this.pushScope();
+      this.pushTypeVariable(node.typeParameter.name);
       this.convertTypeNode(type);
+      this.popScope();
       return;
     }
     if (ts.isConditionalTypeNode(node)) {
       this.convertTypeNode(node.checkType);
-      // TODO: create scopes for `infer`
+      this.pushScope();
       this.convertTypeNode(node.extendsType);
       this.convertTypeNode(node.trueType);
       this.convertTypeNode(node.falseType);
+      this.popScope();
       return;
     }
     if (ts.isIndexedAccessTypeNode(node)) {
@@ -163,11 +215,8 @@ export class DeclarationScope {
       return;
     }
     // istanbul ignore else
-    if (ts.isTypeReferenceNode(node)) {
-      this.pushReference(this.convertEntityName(node.typeName));
-      for (const arg of node.typeArguments || []) {
-        this.convertTypeNode(arg);
-      }
+    if (ts.isInferTypeNode(node)) {
+      this.pushTypeVariable(node.typeParameter.name);
       return;
     } else {
       console.log(node.getSourceFile().getFullText());

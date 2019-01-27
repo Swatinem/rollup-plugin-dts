@@ -125,9 +125,10 @@ export class Transformer {
       scope.removeModifier(node, ts.SyntaxKind.DefaultKeyword);
     }
 
-    scope.convertTypeParameters(node.typeParameters);
+    const typeVariables = scope.convertTypeParameters(node.typeParameters);
     scope.convertHeritageClauses(node);
     scope.convertMembers(node.members);
+    scope.popScope(typeVariables);
   }
 
   convertTypeAliasDeclaration(node: ts.TypeAliasDeclaration) {
@@ -136,8 +137,9 @@ export class Transformer {
     const scope = this.createDeclaration(node.name, node);
     scope.removeModifier(node);
 
-    scope.convertTypeParameters(node.typeParameters);
+    const typeVariables = scope.convertTypeParameters(node.typeParameters);
     scope.convertTypeNode(node.type);
+    scope.popScope(typeVariables);
   }
 
   convertVariableStatement(node: ts.VariableStatement) {
