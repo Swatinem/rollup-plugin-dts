@@ -25,6 +25,7 @@ const IGNORE_TYPENODES = new Set([
   ts.SyntaxKind.SymbolKeyword,
   ts.SyntaxKind.NeverKeyword,
   ts.SyntaxKind.ThisKeyword,
+  ts.SyntaxKind.ThisType,
 ]);
 
 export class DeclarationScope {
