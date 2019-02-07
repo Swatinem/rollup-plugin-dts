@@ -10,6 +10,8 @@ export interface I {}
 export interface J {}
 export interface K {}
 export interface L {}
+export interface M {}
+export interface N {}
 
 export class GenericKlass<A = any, B = A> {
   a: A;
@@ -33,3 +35,5 @@ export type GenericType<K = any, L = K> = {
   k: K;
   l: L;
 };
+
+export interface GenericExtends<M = any, N = M> extends GenericInterface<M, N> {}
