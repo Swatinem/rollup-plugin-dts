@@ -4,5 +4,6 @@ export {
   genericFunction,
   ConditionalInfer,
   Mapped,
-  GenericType
+  GenericType,
+  GenericExtends
 } from "./exports";
