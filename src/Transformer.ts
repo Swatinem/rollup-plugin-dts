@@ -210,8 +210,11 @@ export class Transformer {
 
   convertImportDeclaration(node: ts.ImportDeclaration) {
     const source = convertExpression(node.moduleSpecifier) as any;
+    if (!node.importClause) {
+      return
+    }
     // istanbul ignore if
-    if (!node.importClause || (!node.importClause.name && !node.importClause.namedBindings)) {
+    if (!node.importClause.name && !node.importClause.namedBindings) {
       console.log({ code: node.getFullText() });
       throw new Error(`ImportDeclaration should have imports`);
     }
