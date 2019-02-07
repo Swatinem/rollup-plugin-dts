@@ -26,8 +26,10 @@ interface N {
 }
 interface O {
 }
+interface P {
+}
 declare type Gen<T> = T;
-interface I<T = A> {
+interface I1<T = A> {
     a: T;
     b: Gen<B>;
 }
@@ -42,4 +44,6 @@ declare class Cl<T = E> {
 declare function fn<T = G>(g: T, h: Gen<H>): void;
 declare type TyFn = <T = J>(j: T, k: Gen<K>) => L;
 declare type TyCtor = new <T = M>(m: T, n: Gen<N>) => O;
-export { I, Ty, Cl, fn, TyFn, TyCtor };
+interface I2 extends Gen<P> {
+}
+export { I1, Ty, Cl, fn, TyFn, TyCtor, I2 };
