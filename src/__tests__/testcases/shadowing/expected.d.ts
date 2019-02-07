@@ -11,4 +11,8 @@ declare type ConditionalInfer<G> = G extends Array<Array<infer H>> ? H : never;
 declare type Mapped<I> = {
     [J in keyof I]: I[J];
 };
-export { GenericInterface, GenericKlass, genericFunction, ConditionalInfer, Mapped };
+declare type GenericType<K = any, L = K> = {
+    k: K;
+    l: L;
+};
+export { GenericInterface, GenericKlass, genericFunction, ConditionalInfer, Mapped, GenericType };
