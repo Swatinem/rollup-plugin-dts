@@ -105,6 +105,9 @@ export class DeclarationScope {
     for (const heritage of node.heritageClauses || []) {
       for (const type of heritage.types) {
         this.pushReference(convertExpression(type.expression));
+        for (const arg of type.typeArguments || []) {
+          this.convertTypeNode(arg);
+        }
       }
     }
   }
