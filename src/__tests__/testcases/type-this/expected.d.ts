@@ -1,4 +1,5 @@
 declare class Foo {
     a: this;
 }
-export { Foo };
+declare function thisType(this: Foo): void;
+export { thisType };
