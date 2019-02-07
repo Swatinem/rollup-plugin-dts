@@ -14,7 +14,7 @@ export default class Foo {
   method(c: C): D;
   method(e: E): F;
 
-  method(c: C | D): D | F {
-    throw c;
+  method(ce: C | E): D | F {
+    throw ce;
   }
 }
