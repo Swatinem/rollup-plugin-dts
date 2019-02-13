@@ -1,0 +1,4 @@
+{
+  "skip": true,
+  "external": ["foo"]
+}

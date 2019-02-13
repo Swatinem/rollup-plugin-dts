@@ -51,7 +51,7 @@ export class Transformer {
   }
 
   createDeclaration(id: ts.Identifier, range: Ranged) {
-    const scope = new DeclarationScope(id, range);
+    const scope = new DeclarationScope({ id, range, transformer: this });
     this.pushStatement(scope.declaration);
     return scope;
   }
@@ -211,7 +211,7 @@ export class Transformer {
   convertImportDeclaration(node: ts.ImportDeclaration) {
     const source = convertExpression(node.moduleSpecifier) as any;
     if (!node.importClause) {
-      return
+      return;
     }
     // istanbul ignore if
     if (!node.importClause.name && !node.importClause.namedBindings) {

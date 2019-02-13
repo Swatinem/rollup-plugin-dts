@@ -10,6 +10,7 @@ import {
   convertExpression,
   isInternal,
 } from "./astHelpers";
+import { Transformer } from "./Transformer";
 
 const IGNORE_TYPENODES = new Set([
   ts.SyntaxKind.LiteralType,
@@ -28,10 +29,23 @@ const IGNORE_TYPENODES = new Set([
   ts.SyntaxKind.ThisType,
 ]);
 
+let inlineImports = 1;
+
+interface DeclarationScopeOptions {
+  id: ts.Identifier;
+  range: Ranged;
+  transformer: Transformer;
+}
+
 export class DeclarationScope {
+  // TODO: having this circular dependency is very unclean… figure out a way
+  // to avoid it for the usecase of inline imports
+  transformer: Transformer;
+
   declaration: ESTree.FunctionDeclaration;
 
-  constructor(id: ts.Identifier, range: Ranged) {
+  constructor({ id, range, transformer }: DeclarationScopeOptions) {
+    this.transformer = transformer;
     this.declaration = createDeclaration(id, range);
   }
 
@@ -219,11 +233,10 @@ export class DeclarationScope {
       this.convertParametersAndType(node);
       return;
     }
-    // if (ts.isImportTypeNode(node)) {
-    //   // TODO
-    //   // node.argument
-    //   // node.qualifier
-    // }
+    if (ts.isImportTypeNode(node)) {
+      this.convertImportTypeNode(node);
+      return;
+    }
     // istanbul ignore else
     if (ts.isInferTypeNode(node)) {
       this.pushTypeVariable(node.typeParameter.name);
@@ -232,6 +245,59 @@ export class DeclarationScope {
       console.log(node.getSourceFile().getFullText());
       console.log({ kind: node.kind, code: node.getFullText() });
       throw new Error(`Unknown TypeNode`);
+    }
+  }
+
+  // For import type nodes of the form
+  // `import("./foo").Bar`
+  // we create the following ESTree equivalent:
+  // 1. `import * as _ from "./foo";` on the toplevel
+  // 2. `_.Bar` in our declaration scope
+  convertImportTypeNode(node: ts.ImportTypeNode) {
+    if (!ts.isLiteralTypeNode(node.argument) || !ts.isStringLiteral(node.argument.literal)) {
+      console.log({ kind: node.kind, code: node.getFullText() });
+      throw new Error("inline imports should have a literal argument");
+    }
+    const fileId = node.argument.literal.text;
+    const importId = String(inlineImports++);
+    const importIdRef = withStartEnd(
+      {
+        type: "Identifier",
+        name: importId,
+      },
+      {
+        start: node.getStart(),
+        end: node.getEnd(),
+      },
+    );
+    this.transformer.pushStatement({
+      type: "ImportDeclaration",
+      specifiers: [
+        {
+          type: "ImportNamespaceSpecifier",
+          local: { type: "Identifier", name: importId },
+        },
+      ],
+      source: { type: "Literal", value: fileId },
+    });
+    if (node.qualifier && ts.isIdentifier(node.qualifier)) {
+      this.pushReference(
+        withStartEnd(
+          {
+            type: "MemberExpression",
+            computed: false,
+            object: importIdRef,
+            property: createIdentifier(node.qualifier),
+          },
+          { start: node.getStart(), end: node.getEnd() },
+        ),
+      );
+    } else {
+      // we definitely need to do some string manipulation on the source code,
+      // since rollup will not touch the `import("...")` bit at all.
+      // also, for *internal* namespace references, we have the same problem
+      // as with re-exporting references… -_-
+      this.pushReference(importIdRef);
     }
   }
 
