@@ -63,6 +63,13 @@ const plugin: PluginImpl<Options> = (options = {}) => {
       }
       return compiler.transform(code, id);
     },
+
+    // TODO: figure out if we could use this to "fix" namespace-re-exports
+    // renderChunk(code, chunk) {
+    //   const { exports, imports, modules } = chunk;
+    //   console.log({ code, exports, imports, modules });
+    //   return null;
+    // },
   };
 };
 
