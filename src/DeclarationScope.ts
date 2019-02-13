@@ -133,7 +133,8 @@ export class DeclarationScope {
         ts.isMethodDeclaration(node) ||
         ts.isMethodSignature(node) ||
         ts.isConstructorDeclaration(node) ||
-        ts.isConstructSignatureDeclaration(node)
+        ts.isConstructSignatureDeclaration(node) ||
+        ts.isCallSignatureDeclaration(node)
       ) {
         this.convertParametersAndType(node);
       } else {
