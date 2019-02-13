@@ -1,9 +1,9 @@
 import { rollup, RollupOptions } from "rollup";
-import { dts } from "../";
+import { dts } from "../src";
 import fsExtra from "fs-extra";
 import path from "path";
 
-const ROOT = path.join(__dirname, "..", "..");
+const ROOT = path.join(__dirname, "..");
 const TESTCASES = path.join(__dirname, "testcases");
 
 interface BundleOptions extends Partial<RollupOptions> {

@@ -23,5 +23,5 @@
     "noUnusedParameters": true,
     "noImplicitReturns": true
   },
-  "exclude": ["coverage", "dist", "src/__tests__/testcases"]
+  "exclude": ["coverage", "dist", "tests/testcases"]
 }

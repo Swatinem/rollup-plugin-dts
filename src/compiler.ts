@@ -180,8 +180,5 @@ export function getCachedCompiler(options: CacheOptions) {
         map: emitFiles.dtsMap,
       };
     },
-    // invalidate() {
-    //   COMPILERCACHE.delete(cacheKey);
-    // },
   };
 }

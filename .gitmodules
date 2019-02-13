@@ -1,3 +1,3 @@
 [submodule "src/__tests__/testcases/intl-codegen/intl-codegen"]
-	path = src/__tests__/testcases/intl-codegen/intl-codegen
+	path = tests/testcases/intl-codegen/intl-codegen
 	url = https://github.com/eversport/intl-codegen.git
