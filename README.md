@@ -59,6 +59,16 @@ And then instruct node or other bundles where to find your code
   "types": "dist/my-library.d.ts",
 ```
 
+## Limitations / Known Bugs
+
+Exporting namespaces currently does not work and will create invalid `.d.ts` files.
+
+```ts
+import * as ns from "./namespace";
+
+export { ns };
+```
+
 ## Why?
 
 Well, ideally TypeScript should just do all this itself, and it even has a
