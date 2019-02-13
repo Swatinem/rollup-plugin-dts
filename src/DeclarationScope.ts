@@ -219,6 +219,11 @@ export class DeclarationScope {
       this.convertParametersAndType(node);
       return;
     }
+    // if (ts.isImportTypeNode(node)) {
+    //   // TODO
+    //   // node.argument
+    //   // node.qualifier
+    // }
     // istanbul ignore else
     if (ts.isInferTypeNode(node)) {
       this.pushTypeVariable(node.typeParameter.name);
