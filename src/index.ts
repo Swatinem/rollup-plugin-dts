@@ -47,7 +47,13 @@ const plugin: PluginImpl<Options> = (options = {}) => {
     },
 
     async load(id) {
-      return id === TSLIB_ID ? tslib : compiler.load(id);
+      if (id === TSLIB_ID) {
+        return tslib;
+      }
+      if (id.endsWith(".ts") || id.endsWith(".tsx")) {
+        return compiler.load(id);
+      }
+      return null;
     },
 
     // TODO: figure out if we could use this to "fix" namespace-re-exports
