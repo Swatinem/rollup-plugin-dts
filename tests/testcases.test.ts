@@ -1,4 +1,4 @@
-import { rollup, RollupOptions } from "rollup";
+import { rollup, InputOption, RollupOptions } from "rollup";
 import { dts } from "../src";
 import fsExtra from "fs-extra";
 import path from "path";
@@ -10,16 +10,16 @@ interface BundleOptions extends Partial<RollupOptions> {
   tsconfig?: string;
 }
 interface Meta extends BundleOptions {
-  rootFile: string;
+  input: InputOption;
   skip: boolean;
 }
 
-async function createBundle(input: string, options: BundleOptions) {
+async function createBundle(input: InputOption, options: BundleOptions) {
   const { tsconfig, ...rest } = options;
   const bundle = await rollup({
     ...rest,
     input,
-    plugins: [dts({ tsconfig })],
+    plugins: [dts({ tsconfig, banner: false })],
   });
   return bundle.generate({
     format: "es",
@@ -28,28 +28,45 @@ async function createBundle(input: string, options: BundleOptions) {
   });
 }
 
-function clean(code: string = "") {
+function getInput(dir: string, input: InputOption): InputOption {
+  if (typeof input === "string") {
+    return path.join(dir, input);
+  }
+  if (Array.isArray(input)) {
+    return input.map(input => path.join(dir, input));
+  }
+  const mapped: { [alias: string]: string } = {};
+  for (const alias of Object.keys(input)) {
+    mapped[alias] = path.join(dir, input[alias]);
+  }
+  return mapped;
+}
+
+export function clean(code: string = "") {
   return (
     code
       .trim()
       // skip blank lines
-      .replace(/\n+/gm, "\n")
-      // ignore the banner
-      .replace(/^\/\/ FILE GENERATED.+\n\/\/.+\n/m, "") + "\n"
+      .replace(/\n+/gm, "\n") + "\n"
   );
 }
 
 async function assertTestcase(dir: string, meta: Meta) {
-  const { skip, rootFile, ...bundleOptions } = meta;
+  const { skip, input, ...bundleOptions } = meta;
   if (bundleOptions.tsconfig && !path.isAbsolute(bundleOptions.tsconfig)) {
     bundleOptions.tsconfig = path.join(dir, bundleOptions.tsconfig);
   }
   // TODO(swatinem): also test the js bundling code :-)
-  let {
-    output: [{ code }],
-  } = await createBundle(path.join(dir, rootFile), bundleOptions);
+  const { output } = await createBundle(getInput(dir, input), bundleOptions);
 
-  code = clean(code);
+  const hasMultipleOutputs = output.length > 1;
+  let code = clean(output[0].code);
+  if (hasMultipleOutputs) {
+    code = "";
+    for (const file of output) {
+      code += `// ${file.fileName}\n${clean(file.code)}`;
+    }
+  }
 
   const expectedDts = path.join(dir, "expected.d.ts");
   const hasExpected = await fsExtra.pathExists(expectedDts);
@@ -63,7 +80,7 @@ async function assertTestcase(dir: string, meta: Meta) {
   expect(code).toEqual(expectedCode);
   // expect(String(map)).toEqual(await fsExtra.readFile(expectedMap, "utf-8"));
 
-  if (hasExpected) {
+  if (hasExpected && !hasMultipleOutputs) {
     const {
       output: [sanityCheck],
     } = await createBundle(expectedDts, bundleOptions);
@@ -78,7 +95,7 @@ describe("rollup-plugin-dts", () => {
     const dir = path.join(TESTCASES, name);
     if (fsExtra.statSync(dir).isDirectory()) {
       const meta: Meta = {
-        rootFile: "index.ts",
+        input: "index.ts",
         skip: false,
         tsconfig: path.join(ROOT, "tsconfig.tests.json"),
       };

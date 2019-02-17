@@ -8,6 +8,7 @@ interface Options {
     tsconfig?: string;
     compilerOptions?: CompilerOptions;
     compileMode?: CompileMode;
+    banner?: boolean;
 }
 declare const plugin: PluginImpl<Options>;
 declare const dts: PluginImpl<Options>;

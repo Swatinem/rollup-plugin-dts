@@ -7,6 +7,7 @@ interface Options {
   tsconfig?: string;
   compilerOptions?: ts.CompilerOptions;
   compileMode?: CompileMode;
+  banner?: boolean;
 }
 
 const TSLIB_ID = "\0tslib";
@@ -31,7 +32,7 @@ const plugin: PluginImpl<Options> = (options = {}) => {
   return {
     name: "dts",
 
-    banner: mode === CompileMode.Types ? BANNER : undefined,
+    banner: mode === CompileMode.Types && options.banner !== false ? BANNER : undefined,
 
     resolveId(importee, importer) {
       // istanbul ignore if
