@@ -144,7 +144,7 @@ export function getCachedCompiler(options: CacheOptions) {
         return null;
       }
     },
-    transform(_code: string, fileName: string): { code: string; map: string; ast?: ESTree.Program } {
+    load(fileName: string): { code: string; map: string; ast?: ESTree.Program } {
       const { compiler } = lazyCreate();
 
       const emitFiles = getEmitFiles(compiler, fileName);

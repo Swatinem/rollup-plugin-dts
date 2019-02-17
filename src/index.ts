@@ -1,13 +1,9 @@
 import * as ts from "typescript";
 import { PluginImpl } from "rollup";
-// @ts-ignore
-import { createFilter } from "rollup-pluginutils";
 import { getCachedCompiler, CompileMode } from "./compiler";
 import { version } from "../package.json";
 
 interface Options {
-  include?: Array<string>;
-  exclude?: Array<string>;
   tsconfig?: string;
   compilerOptions?: ts.CompilerOptions;
   compileMode?: CompileMode;
@@ -22,8 +18,6 @@ const BANNER =
 `.trim() + "\n";
 
 const plugin: PluginImpl<Options> = (options = {}) => {
-  const filter = createFilter(options.include || ["*.ts+(|x)", "**/*.ts+(|x)"], options.exclude || []);
-
   const tslibFileName = require.resolve("tslib").replace("tslib.js", "tslib.es6.js");
   const tslib = ts.sys.readFile(tslibFileName, "utf-8") || null;
 
@@ -51,17 +45,8 @@ const plugin: PluginImpl<Options> = (options = {}) => {
       return compiler.resolve(importee, importer);
     },
 
-    load(id) {
-      // istanbul ignore next
-      return id === TSLIB_ID ? tslib : null;
-    },
-
-    async transform(code, id) {
-      // istanbul ignore if
-      if (!filter(id)) {
-        return;
-      }
-      return compiler.transform(code, id);
+    async load(id) {
+      return id === TSLIB_ID ? tslib : compiler.load(id);
     },
 
     // TODO: figure out if we could use this to "fix" namespace-re-exports

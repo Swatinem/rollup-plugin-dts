@@ -71,8 +71,5 @@
   "peerDependencies": {
     "tslib": "*",
     "typescript": ">= 3.3.3"
-  },
-  "dependencies": {
-    "rollup-pluginutils": "^2.4.1"
   }
 }

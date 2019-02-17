@@ -5,8 +5,6 @@ declare enum CompileMode {
     Js = "js"
 }
 interface Options {
-    include?: Array<string>;
-    exclude?: Array<string>;
     tsconfig?: string;
     compilerOptions?: CompilerOptions;
     compileMode?: CompileMode;
