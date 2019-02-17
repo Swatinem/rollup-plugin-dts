@@ -18,9 +18,10 @@ type ESTreeImports = ESTree.ImportDeclaration["specifiers"];
 export class Transformer {
   ast: ESTree.Program;
 
+  exports = new Set<string>();
+
   constructor(sourceFile: ts.SourceFile) {
     this.ast = createProgram(sourceFile);
-
     for (const stmt of sourceFile.statements) {
       this.convertStatement(stmt);
     }
@@ -44,7 +45,12 @@ export class Transformer {
       return true;
     } else if (matchesModifier(node as any, ts.ModifierFlags.Export)) {
       const start = node.pos;
+      const name = id.getText();
+      if (this.exports.has(name)) {
+        return true;
+      }
       this.pushStatement(createExport(id, { start, end: start }));
+      this.exports.add(name);
       return true;
     }
     return false;
@@ -75,6 +81,9 @@ export class Transformer {
     if (ts.isExportDeclaration(node) || ts.isExportAssignment(node)) {
       return this.convertExportDeclaration(node);
     }
+    if (ts.isModuleDeclaration(node)) {
+      return this.convertNamespaceDeclaration(node);
+    }
     // istanbul ignore else
     if (ts.isImportDeclaration(node)) {
       return this.convertImportDeclaration(node);
@@ -82,6 +91,22 @@ export class Transformer {
       console.log({ kind: node.kind, code: node.getFullText() });
       throw new Error(`unsupported node type`);
     }
+  }
+
+  convertNamespaceDeclaration(node: ts.ModuleDeclaration) {
+    // istanbul ignore if
+    if (!ts.isIdentifier(node.name)) {
+      console.log({ code: node.getFullText() });
+      throw new Error(`namespace name should be an "Identifier"`);
+    }
+    this.maybeMarkAsExported(node, node.name);
+
+    const scope = this.createDeclaration(node.name, node);
+    scope.removeModifier(node);
+
+    scope.pushIdentifierReference(node.name);
+
+    scope.convertNamespace(node);
   }
 
   convertEnumDeclaration(node: ts.EnumDeclaration) {

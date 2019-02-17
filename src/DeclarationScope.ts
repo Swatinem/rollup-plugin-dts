@@ -237,6 +237,10 @@ export class DeclarationScope {
       this.convertImportTypeNode(node);
       return;
     }
+    if (ts.isTypeQueryNode(node)) {
+      this.pushReference(this.convertEntityName(node.exprName));
+      return;
+    }
     // istanbul ignore else
     if (ts.isInferTypeNode(node)) {
       this.pushTypeVariable(node.typeParameter.name);
@@ -254,6 +258,7 @@ export class DeclarationScope {
   // 1. `import * as _ from "./foo";` on the toplevel
   // 2. `_.Bar` in our declaration scope
   convertImportTypeNode(node: ts.ImportTypeNode) {
+    // istanbul ignore if
     if (!ts.isLiteralTypeNode(node.argument) || !ts.isStringLiteral(node.argument.literal)) {
       console.log({ kind: node.kind, code: node.getFullText() });
       throw new Error("inline imports should have a literal argument");
@@ -315,5 +320,108 @@ export class DeclarationScope {
       // TODO: clean up all the `start` handling!
       { start: node.getStart(), end: node.end },
     );
+  }
+
+  convertNamespace(node: ts.ModuleDeclaration) {
+    this.pushScope();
+
+    // istanbul ignore if
+    if (!node.body || !ts.isModuleBlock(node.body)) {
+      console.log({ code: node.getFullText() });
+      throw new Error(`namespace must have a "ModuleBlock" body.`);
+    }
+
+    const { statements } = node.body;
+
+    // first, hoist all the declarations for correct shadowing
+    for (const stmt of statements) {
+      if (
+        ts.isEnumDeclaration(stmt) ||
+        ts.isFunctionDeclaration(stmt) ||
+        ts.isClassDeclaration(stmt) ||
+        ts.isInterfaceDeclaration(stmt) ||
+        ts.isTypeAliasDeclaration(stmt) ||
+        ts.isModuleDeclaration(stmt)
+      ) {
+        // istanbul ignore else
+        if (stmt.name && ts.isIdentifier(stmt.name)) {
+          this.pushTypeVariable(stmt.name);
+        } else {
+          console.log({ code: stmt.getFullText() });
+          throw new Error(`non-Identifier name not supported`);
+        }
+        continue;
+      }
+      if (ts.isVariableStatement(stmt)) {
+        for (const decl of stmt.declarationList.declarations) {
+          // istanbul ignore else
+          if (ts.isIdentifier(decl.name)) {
+            this.pushTypeVariable(decl.name);
+          } else {
+            console.log({ code: decl.getFullText() });
+            throw new Error(`non-Identifier name not supported`);
+          }
+        }
+        continue;
+      }
+      // istanbul ignore else
+      if (ts.isExportDeclaration(stmt)) {
+        // noop
+      } else {
+        console.log({ code: stmt.getFullText() });
+        throw new Error(`namespace child (hoisting) not supported yet`);
+      }
+    }
+
+    // and then walk all the children like normal…
+    for (const stmt of statements) {
+      if (ts.isVariableStatement(stmt)) {
+        for (const decl of stmt.declarationList.declarations) {
+          if (decl.type) {
+            this.convertTypeNode(decl.type);
+          }
+        }
+        continue;
+      }
+      if (ts.isFunctionDeclaration(stmt)) {
+        this.convertParametersAndType(stmt);
+        continue;
+      }
+      if (ts.isInterfaceDeclaration(stmt) || ts.isClassDeclaration(stmt)) {
+        const typeVariables = this.convertTypeParameters(stmt.typeParameters);
+        this.convertHeritageClauses(stmt);
+        this.convertMembers(stmt.members);
+        this.popScope(typeVariables);
+        continue;
+      }
+      if (ts.isTypeAliasDeclaration(stmt)) {
+        const typeVariables = this.convertTypeParameters(stmt.typeParameters);
+        this.convertTypeNode(stmt.type);
+        this.popScope(typeVariables);
+        continue;
+      }
+      if (ts.isModuleDeclaration(stmt)) {
+        this.convertNamespace(stmt);
+        continue;
+      }
+      if (ts.isEnumDeclaration(stmt)) {
+        // noop
+        continue;
+      }
+      // istanbul ignore else
+      if (ts.isExportDeclaration(stmt)) {
+        if (stmt.exportClause) {
+          for (const decl of stmt.exportClause.elements) {
+            const id = decl.propertyName || decl.name;
+            this.pushIdentifierReference(id);
+          }
+        }
+      } else {
+        console.log({ code: stmt.getFullText() });
+        throw new Error(`namespace child (walking) not supported yet`);
+      }
+    }
+
+    this.popScope();
   }
 }
