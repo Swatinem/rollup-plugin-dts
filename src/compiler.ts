@@ -137,6 +137,7 @@ export function getCachedCompiler(options: CacheOptions) {
       const { parsedCompilerOptions } = lazyCreate();
 
       const result = ts.nodeModuleNameResolver(importee, importer, parsedCompilerOptions, ts.sys);
+      // hm, maybe we should use `isExternalLibraryImport` at some point…
       // istanbul ignore else
       if (result.resolvedModule && result.resolvedModule.resolvedFileName) {
         return result.resolvedModule.resolvedFileName;
