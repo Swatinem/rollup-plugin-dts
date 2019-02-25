@@ -108,6 +108,14 @@ export function convertExpression(node: ts.Expression): ESTree.Expression {
   if (ts.isLiteralExpression(node)) {
     return { type: "Literal", value: node.text };
   }
+  if (ts.isPropertyAccessExpression(node)) {
+    return {
+      type: "MemberExpression",
+      computed: false,
+      object: convertExpression(node.expression),
+      property: convertExpression(node.name),
+    };
+  }
   // istanbul ignore else
   if (ts.isIdentifier(node)) {
     return createIdentifier(node);
