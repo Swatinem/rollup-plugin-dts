@@ -3,7 +3,6 @@ import { dts } from "../src";
 import fsExtra from "fs-extra";
 import path from "path";
 
-const ROOT = path.join(__dirname, "..");
 const TESTCASES = path.join(__dirname, "testcases");
 
 interface BundleOptions extends Partial<RollupOptions> {
@@ -97,7 +96,7 @@ describe("rollup-plugin-dts", () => {
       const meta: Meta = {
         input: "index.ts",
         skip: false,
-        tsconfig: path.join(ROOT, "tsconfig.tests.json"),
+        tsconfig: path.join(TESTCASES, "tsconfig.json"),
       };
       try {
         Object.assign(meta, require(path.join(dir, "meta.json")));

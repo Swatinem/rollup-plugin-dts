@@ -1,0 +1,7 @@
+{
+  "extends": "../../tsconfig",
+  "compilerOptions": {
+    "lib": ["es2018", "esnext", "dom"]
+  },
+  "exclude": []
+}
