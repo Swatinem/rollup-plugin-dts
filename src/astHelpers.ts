@@ -109,12 +109,15 @@ export function convertExpression(node: ts.Expression): ESTree.Expression {
     return { type: "Literal", value: node.text };
   }
   if (ts.isPropertyAccessExpression(node)) {
-    return {
+    return withStartEnd({
       type: "MemberExpression",
       computed: false,
       object: convertExpression(node.expression),
       property: convertExpression(node.name),
-    };
+    }, {
+      start: node.expression.getStart(),
+      end: node.name.getEnd(),
+    });
   }
   // istanbul ignore else
   if (ts.isIdentifier(node)) {
