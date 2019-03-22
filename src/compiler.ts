@@ -133,7 +133,7 @@ export function getCachedCompiler(options: CacheOptions) {
   }
 
   return {
-    resolve(importee: string, importer: string): string | null {
+    resolve(importee: string, importer: string): string | void {
       const { parsedCompilerOptions } = lazyCreate();
 
       const result = ts.nodeModuleNameResolver(importee, importer, parsedCompilerOptions, ts.sys);
@@ -142,7 +142,7 @@ export function getCachedCompiler(options: CacheOptions) {
       if (result.resolvedModule && result.resolvedModule.resolvedFileName) {
         return result.resolvedModule.resolvedFileName;
       } else {
-        return null;
+        return;
       }
     },
     load(fileName: string): { code: string; map: string; ast?: ESTree.Program } {

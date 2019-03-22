@@ -46,4 +46,4 @@ declare function Func$1(d: D$1): E$1;
 declare type Type$1 = {
     f: F$1;
 };
-export { Klass as AKlass, Interface as AInterface, Func as AFunc, Type as AType, Klass$1 as BKlass, Interface$1 as BInterface, Func$1 as BFunc, Type$1 as BType };
+export { Func as AFunc, Interface as AInterface, Klass as AKlass, Type as AType, Func$1 as BFunc, Interface$1 as BInterface, Klass$1 as BKlass, Type$1 as BType };

@@ -14,4 +14,4 @@ declare const plugin: PluginImpl<Options>;
 declare const dts: PluginImpl<Options>;
 declare const js: PluginImpl<Options>;
 export default plugin;
-export { CompileMode, plugin, dts, js, js as ts };
+export { CompileMode, dts, js, plugin, js as ts };

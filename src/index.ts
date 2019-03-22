@@ -34,13 +34,29 @@ const plugin: PluginImpl<Options> = (options = {}) => {
 
     banner: mode === CompileMode.Types && options.banner !== false ? BANNER : undefined,
 
+    outputOptions(options) {
+      if (mode === CompileMode.Js) {
+        return options;
+      }
+      return {
+        ...options,
+        format: "es",
+        exports: "named",
+        compact: false,
+        freeze: false,
+        interop: false,
+        namespaceToStringTag: false,
+        strict: false,
+      };
+    },
+
     resolveId(importee, importer) {
       // istanbul ignore if
       if (importee === "tslib") {
         return TSLIB_ID;
       }
       if (!importer) {
-        return null;
+        return;
       }
       importer = importer.split("\\").join("/");
       return compiler.resolve(importee, importer);

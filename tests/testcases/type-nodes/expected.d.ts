@@ -34,4 +34,4 @@ declare function intersection(a: G & H): I & J;
 declare function operator(a: keyof K): void;
 declare function arrayAndTuple(a: [L, M]): N[];
 declare function predicate(a: any): a is O;
-export { parenthesized, union, intersection, operator, arrayAndTuple, predicate };
+export { arrayAndTuple, intersection, operator, parenthesized, predicate, union };

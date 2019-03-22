@@ -46,4 +46,4 @@ declare type TyFn = <T = J>(j: T, k: Gen<K>) => L;
 declare type TyCtor = new <T = M>(m: T, n: Gen<N>) => O;
 interface I2 extends Gen<P> {
 }
-export { I1, Ty, Cl, fn, TyFn, TyCtor, I2 };
+export { Cl, I1, I2, Ty, TyCtor, TyFn, fn };
