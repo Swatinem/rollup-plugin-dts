@@ -69,24 +69,43 @@ import * as ns from "./namespace";
 export { ns };
 ```
 
+Using `import * as` itself is not a problem and works fine on its own. It is the
+*re-export* that breaks.
+
+---
+
+Using inline imports either as namespace or with `external` modules.
+
+```ts
+interface Foo {
+  namespace: import("./namespace");
+  external: import("external").Foo;
+}
+```
+
+Using specific items from a local inline import, such as
+`import("./local").Item`, works fine however.
+
 ## Why?
 
 Well, ideally TypeScript should just do all this itself, and it even has a
 [proposal](https://github.com/Microsoft/TypeScript/issues/4433) to do that.
 But there hasn’t been any progress in ~3 years.
 
-There are also some solutions for this already:
-
-- [API Extractor](https://github.com/Microsoft/web-build-tools/wiki/API-Extractor)
-  an official Microsoft project, which however is super complicated and I was not
-  able to get it to work.
-- [dts-bundle-generator](https://github.com/timocov/dts-bundle-generator) which
-  was a good inspiration for this project but in the end didn’t really work as
-  well for my use-cases.
-- [rollup-plugin-typescript2](https://github.com/ezolenko/rollup-plugin-typescript2/blob/master/README.md#declarations)
-  has support for outputting declarations, those are not rolled-up however.
-
 Some projects, like [rollup itself](https://github.com/rollup/rollup/blob/24fe07f39da8e4225f4bc4f797331930d8405ec2/src/rollup/types.d.ts)
 go the route of completely separating their public interfaces in a separate file.
+
+## Alternatives
+
+- [API Extractor](https://github.com/Microsoft/web-build-tools/wiki/API-Extractor)
+- [dts-bundle-generator](https://github.com/timocov/dts-bundle-generator)
+
+[See](https://github.com/Swatinem/rollup-plugin-dts/issues/5)
+[some](https://github.com/Swatinem/rollup-plugin-dts/issues/13)
+[discussions](https://github.com/timocov/dts-bundle-generator/issues/68)
+about all three of these projects and their tradeoffs.
+
+Surprisingly, all three projects struggle with similar edge-cases around
+namespaces and inline imports, as documented [above](#limitations--known-bugs).
 
 ## [How does it work](./docs/how-it-works.md)
