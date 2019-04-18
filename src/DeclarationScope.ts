@@ -29,8 +29,6 @@ const IGNORE_TYPENODES = new Set([
   ts.SyntaxKind.ThisType,
 ]);
 
-let inlineImports = 1;
-
 interface DeclarationScopeOptions {
   id: ts.Identifier;
   range: Ranged;
@@ -264,16 +262,15 @@ export class DeclarationScope {
       throw new Error("inline imports should have a literal argument");
     }
     const fileId = node.argument.literal.text;
-    const importId = String(inlineImports++);
+    const start = node.getStart() + (node.isTypeOf ? "typeof ".length : 0);
+    const range = { start, end: node.getEnd() };
+    const importId = this.transformer.addFixupLocation(range);
     const importIdRef = withStartEnd(
       {
         type: "Identifier",
         name: importId,
       },
-      {
-        start: node.getStart(),
-        end: node.getEnd(),
-      },
+      range,
     );
     this.transformer.pushStatement({
       type: "ImportDeclaration",
@@ -294,7 +291,7 @@ export class DeclarationScope {
             object: importIdRef,
             property: createIdentifier(node.qualifier),
           },
-          { start: node.getStart(), end: node.getEnd() },
+          range,
         ),
       );
     } else {

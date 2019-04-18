@@ -15,20 +15,40 @@ import { DeclarationScope } from "./DeclarationScope";
 
 type ESTreeImports = ESTree.ImportDeclaration["specifiers"];
 
+interface Fixup {
+  identifier: string;
+  original: string;
+  range: {
+    start: number;
+    end: number;
+  };
+}
+
 export class Transformer {
   ast: ESTree.Program;
+  fixups: Array<Fixup> = [];
 
   exports = new Set<string>();
 
-  constructor(sourceFile: ts.SourceFile) {
+  constructor(private sourceFile: ts.SourceFile) {
     this.ast = createProgram(sourceFile);
     for (const stmt of sourceFile.statements) {
       this.convertStatement(stmt);
     }
   }
 
-  transform() {
-    return this.ast;
+  transform(): { ast: ESTree.Program; fixups: Array<Fixup> } {
+    return { ast: this.ast, fixups: this.fixups };
+  }
+
+  addFixupLocation(range: { start: number; end: number }) {
+    const identifier = `ಠ_dts_${this.fixups.length}`;
+    this.fixups.push({
+      identifier,
+      original: this.sourceFile.text.slice(range.start, range.end),
+      range,
+    });
+    return identifier;
   }
 
   pushStatement(node: ESTree.Statement | ESTree.ModuleDeclaration) {

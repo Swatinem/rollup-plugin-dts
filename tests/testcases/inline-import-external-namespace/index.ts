@@ -1,3 +1,4 @@
 export interface Foo {
-  ns: typeof import("foo");
+  ns1: import("foo");
+  ns2: typeof import("foo");
 }

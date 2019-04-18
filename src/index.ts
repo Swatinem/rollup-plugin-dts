@@ -75,7 +75,8 @@ const plugin: PluginImpl<Options> = (options = {}) => {
     // TODO: figure out if we could use this to "fix" namespace-re-exports
     // renderChunk(code, chunk) {
     //   const { exports, imports, modules } = chunk;
-    //   console.log({ code, exports, imports, modules });
+    //   console.log({ code, exports, imports });
+    //   console.log(modules);
     //   return null;
     // },
   };

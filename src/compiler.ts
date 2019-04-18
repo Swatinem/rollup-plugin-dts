@@ -166,7 +166,7 @@ export function getCachedCompiler(options: CacheOptions) {
       const dtsSource = ts.createSourceFile(dtsFileName, code, ts.ScriptTarget.Latest, true);
 
       const converter = new Transformer(dtsSource);
-      const ast = converter.transform();
+      const { ast } = converter.transform();
 
       // NOTE(swatinem):
       // hm, typescript generates `export default` without a declare,
