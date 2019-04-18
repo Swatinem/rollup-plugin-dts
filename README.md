@@ -70,7 +70,7 @@ export { ns };
 ```
 
 Using `import * as` itself is not a problem and works fine on its own. It is the
-*re-export* that breaks.
+_re-export_ that breaks.
 
 ---
 
@@ -97,7 +97,7 @@ go the route of completely separating their public interfaces in a separate file
 
 ## Alternatives
 
-- [API Extractor](https://github.com/Microsoft/web-build-tools/wiki/API-Extractor)
+- [API Extractor](https://api-extractor.com/)
 - [dts-bundle-generator](https://github.com/timocov/dts-bundle-generator)
 
 [See](https://github.com/Swatinem/rollup-plugin-dts/issues/5)
