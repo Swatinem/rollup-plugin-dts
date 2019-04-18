@@ -1,6 +1,8 @@
 {
-  "input": {
-    "a": "main-a.ts",
-    "b": "main-b.ts"
+  "rollupOptions": {
+    "input": {
+      "a": "main-a.ts",
+      "b": "main-b.ts"
+    }
   }
 }

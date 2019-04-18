@@ -1,25 +1,21 @@
-import { rollup, InputOption, RollupOptions } from "rollup";
-import { dts } from "../src";
+import { rollup, InputOption, RollupOptions, InputOptions } from "rollup";
+import { dts, Options } from "../src";
 import fsExtra from "fs-extra";
 import path from "path";
 
 const TESTCASES = path.join(__dirname, "testcases");
 
-interface BundleOptions extends Partial<RollupOptions> {
-  tsconfig?: string;
-}
-interface Meta extends BundleOptions {
-  input: InputOption;
+interface Meta {
+  rollupOptions: RollupOptions;
+  pluginOptions: Options;
   skip: boolean;
   expectedError?: string;
 }
 
-async function createBundle(input: InputOption, options: BundleOptions) {
-  const { tsconfig, ...rest } = options;
+async function createBundle(rollupOptions: InputOptions, pluginOptions: Options) {
   const bundle = await rollup({
-    ...rest,
-    input,
-    plugins: [dts({ tsconfig, banner: false })],
+    ...rollupOptions,
+    plugins: [dts({ ...pluginOptions, banner: false })],
   });
   return bundle.generate({
     format: "es",
@@ -28,7 +24,7 @@ async function createBundle(input: InputOption, options: BundleOptions) {
   });
 }
 
-function getInput(dir: string, input: InputOption): InputOption {
+function withInput(dir: string, { input }: InputOptions): InputOption {
   if (typeof input === "string") {
     return path.join(dir, input);
   }
@@ -52,13 +48,13 @@ export function clean(code: string = "") {
 }
 
 async function assertTestcase(dir: string, meta: Meta) {
-  const { skip, input, expectedError, ...bundleOptions } = meta;
-  if (bundleOptions.tsconfig && !path.isAbsolute(bundleOptions.tsconfig)) {
-    bundleOptions.tsconfig = path.join(dir, bundleOptions.tsconfig);
+  const { expectedError, pluginOptions, rollupOptions } = meta;
+  if (pluginOptions.tsconfig && !path.isAbsolute(pluginOptions.tsconfig)) {
+    pluginOptions.tsconfig = path.join(dir, pluginOptions.tsconfig);
   }
 
   // TODO(swatinem): also test the js bundling code :-)
-  const creator = createBundle(getInput(dir, input), bundleOptions);
+  const creator = createBundle({ ...rollupOptions, input: withInput(dir, rollupOptions) }, pluginOptions);
   if (expectedError) {
     await expect(creator).rejects.toThrow(expectedError);
     return;
@@ -89,7 +85,7 @@ async function assertTestcase(dir: string, meta: Meta) {
   if (hasExpected && !hasMultipleOutputs) {
     const {
       output: [sanityCheck],
-    } = await createBundle(expectedDts, bundleOptions);
+    } = await createBundle({ ...rollupOptions, input: expectedDts }, pluginOptions);
     // typescript `.d.ts` output compresses whitespace, so make sure we ignore that
     expect(clean(sanityCheck.code)).toEqual(expectedCode);
   }
@@ -100,13 +96,21 @@ describe("rollup-plugin-dts", () => {
   for (const name of dirs) {
     const dir = path.join(TESTCASES, name);
     if (fsExtra.statSync(dir).isDirectory()) {
-      const meta: Meta = {
-        input: "index.ts",
-        skip: false,
+      const pluginOptions: Options = {
         tsconfig: path.join(TESTCASES, "tsconfig.json"),
+      };
+      const rollupOptions: InputOptions = {
+        input: "index.ts",
+      };
+      const meta: Meta = {
+        skip: false,
+        pluginOptions,
+        rollupOptions,
       };
       try {
         Object.assign(meta, require(path.join(dir, "meta")));
+        meta.pluginOptions = Object.assign(pluginOptions, meta.pluginOptions);
+        meta.rollupOptions = Object.assign(rollupOptions, meta.rollupOptions);
       } catch {}
 
       let testfn = meta.skip ? it.skip : it;

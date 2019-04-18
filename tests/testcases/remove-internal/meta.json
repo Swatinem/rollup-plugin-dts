@@ -1,0 +1,7 @@
+{
+  "pluginOptions": {
+    "compilerOptions": {
+      "stripInternal": true
+    }
+  }
+}

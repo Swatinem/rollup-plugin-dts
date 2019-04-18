@@ -9,7 +9,6 @@ import {
   createDefaultExport,
   matchesModifier,
   convertExpression,
-  isInternal,
 } from "./astHelpers";
 import { DeclarationScope } from "./DeclarationScope";
 import { UnsupportedSyntaxError, ReExportNamespaceError } from "./errors";
@@ -58,9 +57,6 @@ export class Transformer {
   }
 
   maybeMarkAsExported(node: ts.Node, id: ts.Identifier) {
-    if (isInternal(node)) {
-      return false;
-    }
     if (matchesModifier(node as any, ts.ModifierFlags.ExportDefault)) {
       const start = node.pos;
       this.pushStatement(createDefaultExport(id, { start, end: start }));

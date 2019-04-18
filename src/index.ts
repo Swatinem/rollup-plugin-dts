@@ -3,7 +3,7 @@ import { PluginImpl } from "rollup";
 import { getCachedCompiler, CompileMode } from "./compiler";
 import { version } from "../package.json";
 
-interface Options {
+export interface Options {
   tsconfig?: string;
   compilerOptions?: ts.CompilerOptions;
   compileMode?: CompileMode;

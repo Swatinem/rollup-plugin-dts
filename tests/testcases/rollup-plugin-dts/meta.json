@@ -1,3 +1,5 @@
 {
-  "external": ["typescript", "rollup"]
+  "rollupOptions": {
+    "external": ["typescript", "rollup"]
+  }
 }

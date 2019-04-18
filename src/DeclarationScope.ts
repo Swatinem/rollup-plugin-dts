@@ -8,7 +8,6 @@ import {
   removeNested,
   withStartEnd,
   convertExpression,
-  isInternal,
 } from "./astHelpers";
 import { Transformer } from "./Transformer";
 import { UnsupportedSyntaxError } from "./errors";
@@ -128,15 +127,6 @@ export class DeclarationScope {
 
   convertMembers(members: ts.NodeArray<ts.TypeElement | ts.ClassElement>) {
     for (const node of members) {
-      // NOTE(swatinem):
-      // Well, actually having `private`/`protected` members in the exported
-      // definitions is quite nice, so let’s keep them. Instead we look for an
-      // `@internal` tag
-      // if (matchesModifier(node, ts.ModifierFlags.Private) || matchesModifier(node, ts.ModifierFlags.Protected)) {
-      if (isInternal(node)) {
-        this.pushRaw(removeNested({ start: node.getFullStart(), end: node.getEnd() }));
-        continue;
-      }
       if (ts.isPropertyDeclaration(node) || ts.isPropertySignature(node) || ts.isIndexSignatureDeclaration(node)) {
         this.convertTypeNode(node.type);
         continue;

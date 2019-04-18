@@ -187,8 +187,3 @@ export function matchesModifier(node: ts.Node, flags: ts.ModifierFlags) {
   const nodeFlags = ts.getCombinedModifierFlags(node as any);
   return (nodeFlags & flags) === flags;
 }
-
-export function isInternal(node: ts.Node) {
-  const tags = ts.getJSDocTags(node);
-  return tags.some(t => ts.idText(t.tagName) === "internal");
-}
