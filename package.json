@@ -55,6 +55,7 @@
     "trailingComma": "all"
   },
   "devDependencies": {
+    "@types/babel__code-frame": "^7.0.1",
     "@types/fs-extra": "^5.0.5",
     "@types/jest": "^24.0.11",
     "@types/node": "^11.13.4",
@@ -74,5 +75,8 @@
     "rollup": "^1.7.0",
     "tslib": "*",
     "typescript": "^3.3.4000"
+  },
+  "optionalDependencies": {
+    "@babel/code-frame": "^7.0.0"
   }
 }

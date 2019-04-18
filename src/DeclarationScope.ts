@@ -11,6 +11,7 @@ import {
   isInternal,
 } from "./astHelpers";
 import { Transformer } from "./Transformer";
+import { UnsupportedSyntaxError } from "./errors";
 
 const IGNORE_TYPENODES = new Set([
   ts.SyntaxKind.LiteralType,
@@ -150,8 +151,7 @@ export class DeclarationScope {
       ) {
         this.convertParametersAndType(node);
       } else {
-        console.log({ kind: node.kind, code: node.getFullText() });
-        throw new Error(`Unknown TypeElement`);
+        throw new UnsupportedSyntaxError(node);
       }
     }
   }
@@ -244,9 +244,7 @@ export class DeclarationScope {
       this.pushTypeVariable(node.typeParameter.name);
       return;
     } else {
-      console.log(node.getSourceFile().getFullText());
-      console.log({ kind: node.kind, code: node.getFullText() });
-      throw new Error(`Unknown TypeNode`);
+      throw new UnsupportedSyntaxError(node);
     }
   }
 
@@ -258,8 +256,7 @@ export class DeclarationScope {
   convertImportTypeNode(node: ts.ImportTypeNode) {
     // istanbul ignore if
     if (!ts.isLiteralTypeNode(node.argument) || !ts.isStringLiteral(node.argument.literal)) {
-      console.log({ kind: node.kind, code: node.getFullText() });
-      throw new Error("inline imports should have a literal argument");
+      throw new UnsupportedSyntaxError(node, "inline imports should have a literal argument");
     }
     const fileId = node.argument.literal.text;
     const start = node.getStart() + (node.isTypeOf ? "typeof ".length : 0);
@@ -299,7 +296,9 @@ export class DeclarationScope {
       // since rollup will not touch the `import("...")` bit at all.
       // also, for *internal* namespace references, we have the same problem
       // as with re-exporting references… -_-
-      this.pushReference(importIdRef);
+
+      throw new UnsupportedSyntaxError(node, "Inline namespace imports are not supported");
+      // this.pushReference(importIdRef);
     }
   }
 
@@ -324,8 +323,7 @@ export class DeclarationScope {
 
     // istanbul ignore if
     if (!node.body || !ts.isModuleBlock(node.body)) {
-      console.log({ code: node.getFullText() });
-      throw new Error(`namespace must have a "ModuleBlock" body.`);
+      throw new UnsupportedSyntaxError(node, `namespace must have a "ModuleBlock" body.`);
     }
 
     const { statements } = node.body;
@@ -344,8 +342,7 @@ export class DeclarationScope {
         if (stmt.name && ts.isIdentifier(stmt.name)) {
           this.pushTypeVariable(stmt.name);
         } else {
-          console.log({ code: stmt.getFullText() });
-          throw new Error(`non-Identifier name not supported`);
+          throw new UnsupportedSyntaxError(stmt, `non-Identifier name not supported`);
         }
         continue;
       }
@@ -355,8 +352,7 @@ export class DeclarationScope {
           if (ts.isIdentifier(decl.name)) {
             this.pushTypeVariable(decl.name);
           } else {
-            console.log({ code: decl.getFullText() });
-            throw new Error(`non-Identifier name not supported`);
+            throw new UnsupportedSyntaxError(decl, `non-Identifier name not supported`);
           }
         }
         continue;
@@ -365,8 +361,7 @@ export class DeclarationScope {
       if (ts.isExportDeclaration(stmt)) {
         // noop
       } else {
-        console.log({ code: stmt.getFullText() });
-        throw new Error(`namespace child (hoisting) not supported yet`);
+        throw new UnsupportedSyntaxError(stmt, `namespace child (hoisting) not supported yet`);
       }
     }
 
@@ -414,8 +409,7 @@ export class DeclarationScope {
           }
         }
       } else {
-        console.log({ code: stmt.getFullText() });
-        throw new Error(`namespace child (walking) not supported yet`);
+        throw new UnsupportedSyntaxError(stmt, `namespace child (walking) not supported yet`);
       }
     }
 

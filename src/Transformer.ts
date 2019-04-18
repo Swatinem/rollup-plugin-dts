@@ -12,6 +12,7 @@ import {
   isInternal,
 } from "./astHelpers";
 import { DeclarationScope } from "./DeclarationScope";
+import { UnsupportedSyntaxError, ReExportNamespaceError } from "./errors";
 
 type ESTreeImports = ESTree.ImportDeclaration["specifiers"];
 
@@ -29,6 +30,7 @@ export class Transformer {
   fixups: Array<Fixup> = [];
 
   exports = new Set<string>();
+  namespaceImports = new Map<string, ts.Node>();
 
   constructor(private sourceFile: ts.SourceFile) {
     this.ast = createProgram(sourceFile);
@@ -108,16 +110,14 @@ export class Transformer {
     if (ts.isImportDeclaration(node)) {
       return this.convertImportDeclaration(node);
     } else {
-      console.log({ kind: node.kind, code: node.getFullText() });
-      throw new Error(`unsupported node type`);
+      throw new UnsupportedSyntaxError(node);
     }
   }
 
   convertNamespaceDeclaration(node: ts.ModuleDeclaration) {
     // istanbul ignore if
     if (!ts.isIdentifier(node.name)) {
-      console.log({ code: node.getFullText() });
-      throw new Error(`namespace name should be an "Identifier"`);
+      throw new UnsupportedSyntaxError(node, `namespace name should be an "Identifier"`);
     }
     this.maybeMarkAsExported(node, node.name);
 
@@ -141,8 +141,7 @@ export class Transformer {
   convertFunctionDeclaration(node: ts.FunctionDeclaration) {
     // istanbul ignore if
     if (!node.name) {
-      console.log({ code: node.getFullText() });
-      throw new Error(`FunctionDeclaration should have a name`);
+      throw new UnsupportedSyntaxError(node, `FunctionDeclaration should have a name`);
     }
 
     this.maybeMarkAsExported(node, node.name);
@@ -158,8 +157,7 @@ export class Transformer {
   convertClassOrInterfaceDeclaration(node: ts.ClassDeclaration | ts.InterfaceDeclaration) {
     // istanbul ignore if
     if (!node.name) {
-      console.log({ code: node.getFullText() });
-      throw new Error(`ClassDeclaration / InterfaceDeclaration should have a name`);
+      throw new UnsupportedSyntaxError(node, `ClassDeclaration / InterfaceDeclaration should have a name`);
     }
 
     this.maybeMarkAsExported(node, node.name);
@@ -191,14 +189,12 @@ export class Transformer {
     const { declarations } = node.declarationList;
     // istanbul ignore if
     if (declarations.length !== 1) {
-      console.log({ code: node.getFullText() });
-      throw new Error(`VariableStatement with more than one declaration not yet supported`);
+      throw new UnsupportedSyntaxError(node, `VariableStatement with more than one declaration not yet supported`);
     }
     for (const decl of declarations) {
       // istanbul ignore if
       if (!ts.isIdentifier(decl.name)) {
-        console.log({ code: node.getFullText() });
-        throw new Error(`VariableDeclaration must have a name`);
+        throw new UnsupportedSyntaxError(node, `VariableDeclaration must have a name`);
       }
 
       this.maybeMarkAsExported(node, decl.name);
@@ -212,6 +208,10 @@ export class Transformer {
 
   convertExportDeclaration(node: ts.ExportDeclaration | ts.ExportAssignment) {
     if (ts.isExportAssignment(node)) {
+      const correspondingImport = this.namespaceImports.get(node.expression.getText().trim());
+      if (correspondingImport) {
+        throw new ReExportNamespaceError([correspondingImport, node.expression]);
+      }
       this.pushStatement(
         withStartEnd(
           {
@@ -237,14 +237,20 @@ export class Transformer {
         ),
       );
     } else {
+      const specifiers = [];
+      for (const elem of node.exportClause.elements) {
+        const correspondingImport = this.namespaceImports.get(elem.getText().trim());
+        if (correspondingImport) {
+          throw new ReExportNamespaceError([correspondingImport, elem]);
+        }
+        specifiers.push(this.convertExportSpecifier(elem));
+      }
       this.pushStatement(
         withStartEnd(
           {
             type: "ExportNamedDeclaration",
             declaration: null,
-            specifiers: node.exportClause
-              ? node.exportClause.elements.map(e => this.convertExportSpecifier(e))
-              : /* istanbul ignore next */ [],
+            specifiers,
             source,
           },
           node,
@@ -260,8 +266,7 @@ export class Transformer {
     }
     // istanbul ignore if
     if (!node.importClause.name && !node.importClause.namedBindings) {
-      console.log({ code: node.getFullText() });
-      throw new Error(`ImportDeclaration should have imports`);
+      throw new UnsupportedSyntaxError(node, `ImportDeclaration should have imports`);
     }
     const specifiers: ESTreeImports = node.importClause.namedBindings
       ? this.convertNamedImportBindings(node.importClause.namedBindings)
@@ -297,6 +302,7 @@ export class Transformer {
         } as ESTree.ImportSpecifier;
       });
     }
+    this.namespaceImports.set(node.name.getText().trim(), node);
     return [
       {
         type: "ImportNamespaceSpecifier",

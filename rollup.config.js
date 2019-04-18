@@ -5,7 +5,7 @@ import pkg from "./package.json";
 require("ts-node").register({ transpileOnly: true });
 const { ts, dts } = require("./src");
 
-const external = ["fs", "path", "typescript", "rollup-pluginutils", "rollup"];
+const external = ["fs", "path", "typescript", "rollup-pluginutils", "rollup", "@babel/code-frame"];
 
 /** @type {Array<import("rollup").RollupWatchOptions>} */
 const config = [

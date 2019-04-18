@@ -1,3 +1,3 @@
 {
-  "skip": true
+  "expectedError": "Re-exporting namespace import is not supported yet."
 }

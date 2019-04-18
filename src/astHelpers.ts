@@ -1,5 +1,6 @@
 import * as ts from "typescript";
 import * as ESTree from "estree";
+import { UnsupportedSyntaxError } from "./errors";
 
 const MARKER = "0";
 let IDs = 1;
@@ -109,22 +110,24 @@ export function convertExpression(node: ts.Expression): ESTree.Expression {
     return { type: "Literal", value: node.text };
   }
   if (ts.isPropertyAccessExpression(node)) {
-    return withStartEnd({
-      type: "MemberExpression",
-      computed: false,
-      object: convertExpression(node.expression),
-      property: convertExpression(node.name),
-    }, {
-      start: node.expression.getStart(),
-      end: node.name.getEnd(),
-    });
+    return withStartEnd(
+      {
+        type: "MemberExpression",
+        computed: false,
+        object: convertExpression(node.expression),
+        property: convertExpression(node.name),
+      },
+      {
+        start: node.expression.getStart(),
+        end: node.name.getEnd(),
+      },
+    );
   }
   // istanbul ignore else
   if (ts.isIdentifier(node)) {
     return createIdentifier(node);
   } else {
-    console.log({ kind: node.kind, code: node.getFullText() });
-    throw new Error(`Unknown Expression`);
+    throw new UnsupportedSyntaxError(node);
   }
 }
 

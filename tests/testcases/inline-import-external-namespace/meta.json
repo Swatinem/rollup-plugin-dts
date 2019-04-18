@@ -1,4 +1,4 @@
 {
-  "skip": true,
-  "external": ["foo"]
+  "external": ["foo"],
+  "expectedError": "Inline namespace imports are not supported"
 }

@@ -11,6 +11,7 @@ interface BundleOptions extends Partial<RollupOptions> {
 interface Meta extends BundleOptions {
   input: InputOption;
   skip: boolean;
+  expectedError?: string;
 }
 
 async function createBundle(input: InputOption, options: BundleOptions) {
@@ -51,12 +52,18 @@ export function clean(code: string = "") {
 }
 
 async function assertTestcase(dir: string, meta: Meta) {
-  const { skip, input, ...bundleOptions } = meta;
+  const { skip, input, expectedError, ...bundleOptions } = meta;
   if (bundleOptions.tsconfig && !path.isAbsolute(bundleOptions.tsconfig)) {
     bundleOptions.tsconfig = path.join(dir, bundleOptions.tsconfig);
   }
+
   // TODO(swatinem): also test the js bundling code :-)
-  const { output } = await createBundle(getInput(dir, input), bundleOptions);
+  const creator = createBundle(getInput(dir, input), bundleOptions);
+  if (expectedError) {
+    await expect(creator).rejects.toThrow(expectedError);
+    return;
+  }
+  const { output } = await creator;
 
   const hasMultipleOutputs = output.length > 1;
   let code = clean(output[0].code);
@@ -99,7 +106,7 @@ describe("rollup-plugin-dts", () => {
         tsconfig: path.join(TESTCASES, "tsconfig.json"),
       };
       try {
-        Object.assign(meta, require(path.join(dir, "meta.json")));
+        Object.assign(meta, require(path.join(dir, "meta")));
       } catch {}
 
       let testfn = meta.skip ? it.skip : it;
