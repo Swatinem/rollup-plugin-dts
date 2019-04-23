@@ -166,7 +166,7 @@ export function getCachedCompiler(options: CacheOptions) {
       const dtsSource = ts.createSourceFile(dtsFileName, code, ts.ScriptTarget.Latest, true);
 
       const converter = new Transformer(dtsSource);
-      const { ast } = converter.transform();
+      const { ast, fixups } = converter.transform();
 
       // NOTE(swatinem):
       // hm, typescript generates `export default` without a declare,
@@ -174,6 +174,9 @@ export function getCachedCompiler(options: CacheOptions) {
       // the function declaration without a `declare`.
       // Well luckily both words have the same length, haha :-D
       code = code.replace(/(export\s+)default(\s+(function|class))/m, "$1declare$2");
+      for (const fixup of fixups) {
+        code = code.slice(0, fixup.range.start) + fixup.identifier + code.slice(fixup.range.end);
+      }
 
       return {
         code,

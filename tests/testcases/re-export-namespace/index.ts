@@ -1,3 +1,4 @@
-import * as ns from "./namespace";
+import * as ns1 from "./namespace";
+import * as ns2 from "./namespace";
 
-export { ns };
+export { ns1, ns2 };

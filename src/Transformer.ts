@@ -43,10 +43,13 @@ export class Transformer {
   }
 
   addFixupLocation(range: { start: number; end: number }) {
-    const identifier = `ಠ_dts_${this.fixups.length}`;
+    const original = this.sourceFile.text.slice(range.start, range.end);
+    let identifier = `ɨmport${this.fixups.length}`;
+    identifier += original.slice(identifier.length).replace(/[^a-zA-Z0-9_$]/g, () => "_");
+
     this.fixups.push({
       identifier,
-      original: this.sourceFile.text.slice(range.start, range.end),
+      original,
       range,
     });
     return identifier;

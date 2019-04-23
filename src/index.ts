@@ -43,7 +43,7 @@ const plugin: PluginImpl<Options> = (options = {}) => {
         format: "es",
         exports: "named",
         compact: false,
-        freeze: false,
+        freeze: true,
         interop: false,
         namespaceToStringTag: false,
         strict: false,
