@@ -1,0 +1,12 @@
+{
+  "extends": [
+    "config:base",
+    ":preserveSemverRanges",
+    "schedule:weekly",
+    ":automergeMinor",
+    ":automergeBranchPush",
+    ":automergeRequireAllStatusChecks"
+  ],
+  "supportPolicy": ["active"],
+  "travis": { "enabled": true }
+}
