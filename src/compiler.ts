@@ -1,6 +1,7 @@
 import * as ESTree from "estree";
 import * as ts from "typescript";
 import { Transformer } from "./Transformer";
+import fs from "fs";
 import path from "path";
 
 let SOURCEMAPPING_URL = "sourceMa";
@@ -41,7 +42,9 @@ const OPTIONS_OVERRIDES: ts.CompilerOptions = {
 const COMPILERCACHE = new Map<string, CacheEntry>();
 
 function createCompiler(options: CacheOptions) {
-  const file = path.basename(options.tsconfig);
+  const file = !fs.existsSync(options.tsconfig) || fs.lstatSync(options.tsconfig).isFile()
+    ? path.basename(options.tsconfig)
+    : undefined;
   const configFileName = ts.findConfigFile(
     options.tsconfig,
     ts.sys.fileExists,
