@@ -6,5 +6,7 @@
     ":automergeMinor",
     ":automergeBranchPush",
     ":automergeRequireAllStatusChecks"
-  ]
+  ],
+  "supportPolicy": ["active"],
+  "travis": { "enabled": true }
 }
