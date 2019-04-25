@@ -1,5 +1,10 @@
 {
   "extends": [
-    "config:base"
+    "config:base",
+    ":preserveSemverRanges",
+    "schedule:weekly",
+    ":automergeMinor",
+    ":automergeBranchPush",
+    ":automergeRequireAllStatusChecks"
   ]
 }
