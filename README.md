@@ -14,7 +14,7 @@ and it is used successfully for [intl-codegen](https://github.com/eversport/intl
 
 Install the package from `npm`:
 
-    $ npm install --save-dev tslib rollup rollup-plugin-dts rollup-plugin-dts
+    $ npm install --save-dev tslib rollup rollup-plugin-dts
 
 Create your `rollup.config.js`:
 
