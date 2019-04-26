@@ -1,12 +1,13 @@
 {
   "extends": [
     "config:base",
-    ":preserveSemverRanges",
     "schedule:weekly",
+    "group:allNonMajor",
     ":automergeMinor",
     ":automergeBranchPush",
     ":automergeRequireAllStatusChecks"
   ],
+  "rangeStrategy": "bump",
   "supportPolicy": ["active"],
   "travis": { "enabled": true }
 }
