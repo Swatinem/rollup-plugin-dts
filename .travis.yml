@@ -1,7 +1,8 @@
 language: node_js
 
 node_js:
-  - node
-  - 8
+  - "8"
+  - "10"
+  - "11"
 
 after_success: bash <(curl -s https://codecov.io/bash) -f coverage/coverage-final.json
