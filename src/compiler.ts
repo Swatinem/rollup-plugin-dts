@@ -42,9 +42,10 @@ const OPTIONS_OVERRIDES: ts.CompilerOptions = {
 const COMPILERCACHE = new Map<string, CacheEntry>();
 
 function createCompiler(options: CacheOptions) {
-  const file = !fs.existsSync(options.tsconfig) || fs.lstatSync(options.tsconfig).isFile()
-    ? path.basename(options.tsconfig)
-    : undefined;
+  const file =
+    !fs.existsSync(options.tsconfig) || fs.lstatSync(options.tsconfig).isFile()
+      ? path.basename(options.tsconfig)
+      : undefined;
   const configFileName = ts.findConfigFile(
     options.tsconfig,
     ts.sys.fileExists,
@@ -103,8 +104,7 @@ function getEmitFiles(compiler: ts.Program, fileName: string): EmitFiles {
   }
   const sourceFile = compiler.getSourceFile(fileName)!;
 
-  // XXX(swatinem): maybe we should look at the diagnostics? :-D
-  compiler.emit(sourceFile, (fileName, data) => {
+  const emitResult = compiler.emit(sourceFile, (fileName, data) => {
     data = data.replace(SOURCEMAPPING_URL_RE, "").trim();
     if (fileName.endsWith(".d.ts")) {
       result.dts = data;
@@ -119,6 +119,9 @@ function getEmitFiles(compiler: ts.Program, fileName: string): EmitFiles {
       result.jsMap = data;
     }
   });
+  if (emitResult.emitSkipped) {
+    throw new Error(emitResult.diagnostics.join("\n"));
+  }
 
   return result;
 }

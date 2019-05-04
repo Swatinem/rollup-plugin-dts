@@ -16,6 +16,7 @@ async function createBundle(rollupOptions: InputOptions, pluginOptions: Options)
   const bundle = await rollup({
     ...rollupOptions,
     plugins: [dts({ ...pluginOptions, banner: false })],
+    onwarn() {},
   });
   return bundle.generate({
     format: "es",
@@ -32,8 +33,8 @@ function withInput(dir: string, { input }: InputOptions): InputOption {
     return input.map(input => path.join(dir, input));
   }
   const mapped: { [alias: string]: string } = {};
-  for (const alias of Object.keys(input)) {
-    mapped[alias] = path.join(dir, input[alias]);
+  for (const alias of Object.keys(input!)) {
+    mapped[alias] = path.join(dir, input![alias]);
   }
   return mapped;
 }
