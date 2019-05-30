@@ -101,7 +101,7 @@ describe("rollup-plugin-dts", () => {
         tsconfig: path.join(TESTCASES, "tsconfig.json"),
       };
       const rollupOptions: InputOptions = {
-        input: "index.ts",
+        input: name.startsWith("ambient-") ? "index.d.ts" : "index.ts",
       };
       const meta: Meta = {
         skip: false,
