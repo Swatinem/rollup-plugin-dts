@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "noEmitOnError": true,
+    "noEmitOnError": false,
     "diagnostics": true,
     "lib": ["es2018", "esnext"],
 
@@ -8,7 +8,7 @@
 
     "resolveJsonModule": true,
     "moduleResolution": "node",
-    "module": "commonjs",
+    "module": "esnext",
     "esModuleInterop": true,
 
     "jsx": "react",
