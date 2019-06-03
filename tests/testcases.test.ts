@@ -1,5 +1,5 @@
 import { rollup, InputOption, RollupOptions, InputOptions } from "rollup";
-import { dts, Options } from "../src";
+import dts from "../src";
 import fsExtra from "fs-extra";
 import path from "path";
 
@@ -7,15 +7,14 @@ const TESTCASES = path.join(__dirname, "testcases");
 
 interface Meta {
   rollupOptions: RollupOptions;
-  pluginOptions: Options;
   skip: boolean;
   expectedError?: string;
 }
 
-async function createBundle(rollupOptions: InputOptions, pluginOptions: Options) {
+async function createBundle(rollupOptions: InputOptions) {
   const bundle = await rollup({
     ...rollupOptions,
-    plugins: [dts({ ...pluginOptions, banner: false })],
+    plugins: [dts()],
     onwarn() {},
   });
   return bundle.generate({
@@ -49,12 +48,9 @@ export function clean(code: string = "") {
 }
 
 async function assertTestcase(dir: string, meta: Meta) {
-  const { expectedError, pluginOptions, rollupOptions } = meta;
-  if (pluginOptions.tsconfig && !path.isAbsolute(pluginOptions.tsconfig)) {
-    pluginOptions.tsconfig = path.join(dir, pluginOptions.tsconfig);
-  }
+  const { expectedError, rollupOptions } = meta;
 
-  const creator = createBundle({ ...rollupOptions, input: withInput(dir, rollupOptions) }, pluginOptions);
+  const creator = createBundle({ ...rollupOptions, input: withInput(dir, rollupOptions) });
   if (expectedError) {
     await expect(creator).rejects.toThrow(expectedError);
     return;
@@ -85,7 +81,7 @@ async function assertTestcase(dir: string, meta: Meta) {
   if (hasExpected && !hasMultipleOutputs) {
     const {
       output: [sanityCheck],
-    } = await createBundle({ ...rollupOptions, input: expectedDts }, pluginOptions);
+    } = await createBundle({ ...rollupOptions, input: expectedDts });
     // typescript `.d.ts` output compresses whitespace, so make sure we ignore that
     expect(clean(sanityCheck.code)).toEqual(expectedCode);
   }
@@ -96,20 +92,15 @@ describe("rollup-plugin-dts", () => {
   for (const name of dirs) {
     const dir = path.join(TESTCASES, name);
     if (fsExtra.statSync(dir).isDirectory()) {
-      const pluginOptions: Options = {
-        tsconfig: path.join(TESTCASES, "tsconfig.json"),
-      };
       const rollupOptions: InputOptions = {
         input: "index.d.ts",
       };
       const meta: Meta = {
         skip: false,
-        pluginOptions,
         rollupOptions,
       };
       try {
         Object.assign(meta, require(path.join(dir, "meta")));
-        meta.pluginOptions = Object.assign(pluginOptions, meta.pluginOptions);
         meta.rollupOptions = Object.assign(rollupOptions, meta.rollupOptions);
       } catch {}
 
