@@ -286,8 +286,6 @@ export class DeclarationScope {
       // since rollup will not touch the `import("...")` bit at all.
       // also, for *internal* namespace references, we have the same problem
       // as with re-exporting references… -_-
-
-      // throw new UnsupportedSyntaxError(node, "Inline namespace imports are not supported");
       this.pushReference(importIdRef);
     }
   }

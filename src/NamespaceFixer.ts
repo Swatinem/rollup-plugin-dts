@@ -115,11 +115,6 @@ export class NamespaceFixer {
       code += codeAfter;
     }
 
-    if (namespaces.length) {
-      console.log(itemTypes);
-      console.log(code);
-    }
-
     return code;
   }
 }

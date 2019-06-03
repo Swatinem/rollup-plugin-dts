@@ -11,7 +11,7 @@ import {
   convertExpression,
 } from "./astHelpers";
 import { DeclarationScope } from "./DeclarationScope";
-import { UnsupportedSyntaxError /*, ReExportNamespaceError*/ } from "./errors";
+import { UnsupportedSyntaxError } from "./errors";
 
 type ESTreeImports = ESTree.ImportDeclaration["specifiers"];
 
@@ -29,7 +29,6 @@ export class Transformer {
   fixups: Array<Fixup> = [];
 
   exports = new Set<string>();
-  namespaceImports = new Map<string, ts.Node>();
 
   constructor(private sourceFile: ts.SourceFile) {
     this.ast = createProgram(sourceFile);
@@ -207,10 +206,6 @@ export class Transformer {
 
   convertExportDeclaration(node: ts.ExportDeclaration | ts.ExportAssignment) {
     if (ts.isExportAssignment(node)) {
-      const correspondingImport = this.namespaceImports.get(node.expression.getText().trim());
-      if (correspondingImport) {
-        // throw new ReExportNamespaceError([correspondingImport, node.expression]);
-      }
       this.pushStatement(
         withStartEnd(
           {
@@ -238,10 +233,6 @@ export class Transformer {
     } else {
       const specifiers = [];
       for (const elem of node.exportClause.elements) {
-        const correspondingImport = this.namespaceImports.get(elem.getText().trim());
-        if (correspondingImport) {
-          // throw new ReExportNamespaceError([correspondingImport, elem]);
-        }
         specifiers.push(this.convertExportSpecifier(elem));
       }
       this.pushStatement(
@@ -301,7 +292,6 @@ export class Transformer {
         } as ESTree.ImportSpecifier;
       });
     }
-    this.namespaceImports.set(node.name.getText().trim(), node);
     return [
       {
         type: "ImportNamespaceSpecifier",
