@@ -1,10 +1,10 @@
 // a.js
-export { a as A } from './chunk-6f9a0c56.js';
+export { A } from './chunk-ecf69fe7.js';
 // b.js
-export { b as B } from './chunk-6f9a0c56.js';
-// chunk-6f9a0c56.js
+export { B } from './chunk-ecf69fe7.js';
+// chunk-ecf69fe7.js
 interface A {
 }
 interface B {
 }
-export { A as a, B as b };
+export { A, B };
