@@ -1,8 +1,0 @@
-{
-  "pluginOptions": {
-    "tsconfig": "./"
-  },
-  "rollupOptions": {
-    "external": ["fs-extra", "path", "@babel/code-frame"]
-  }
-}

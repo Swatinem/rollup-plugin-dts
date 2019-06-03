@@ -34,12 +34,27 @@ const plugin: PluginImpl<Options> = (options = {}) => {
 
     banner: mode === CompileMode.Types && options.banner !== false ? BANNER : undefined,
 
+    options(options) {
+      if (mode === CompileMode.Js) {
+        return options;
+      }
+      return {
+        ...options,
+        treeshake: {
+          moduleSideEffects: "no-external",
+          propertyReadSideEffects: true,
+        },
+      };
+    },
+
     outputOptions(options) {
       if (mode === CompileMode.Js) {
         return options;
       }
       return {
         ...options,
+        chunkFileNames: options.chunkFileNames || "[name]-[hash].d.ts",
+        entryFileNames: options.entryFileNames || "[name].d.ts",
         format: "es",
         exports: "named",
         compact: false,

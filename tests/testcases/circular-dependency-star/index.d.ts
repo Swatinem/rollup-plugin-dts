@@ -1,0 +1,1 @@
+export { B } from "./a";

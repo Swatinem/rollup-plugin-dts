@@ -54,7 +54,6 @@ async function assertTestcase(dir: string, meta: Meta) {
     pluginOptions.tsconfig = path.join(dir, pluginOptions.tsconfig);
   }
 
-  // TODO(swatinem): also test the js bundling code :-)
   const creator = createBundle({ ...rollupOptions, input: withInput(dir, rollupOptions) }, pluginOptions);
   if (expectedError) {
     await expect(creator).rejects.toThrow(expectedError);
@@ -101,7 +100,7 @@ describe("rollup-plugin-dts", () => {
         tsconfig: path.join(TESTCASES, "tsconfig.json"),
       };
       const rollupOptions: InputOptions = {
-        input: "index.ts",
+        input: "index.d.ts",
       };
       const meta: Meta = {
         skip: false,

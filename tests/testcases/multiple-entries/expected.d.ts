@@ -1,8 +1,8 @@
-// a.js
-export { A } from './chunk-ecf69fe7.js';
-// b.js
-export { B } from './chunk-ecf69fe7.js';
-// chunk-ecf69fe7.js
+// a.d.ts
+export { A } from './chunk-b49336de.d.ts';
+// b.d.ts
+export { B } from './chunk-b49336de.d.ts';
+// chunk-b49336de.d.ts
 interface A {
 }
 interface B {
