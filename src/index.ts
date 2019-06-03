@@ -1,6 +1,7 @@
 import * as ts from "typescript";
 import { PluginImpl } from "rollup";
 import { Transformer } from "./Transformer";
+import { NamespaceFixer } from "./NamespaceFixer";
 
 const plugin: PluginImpl<{}> = () => {
   return {
@@ -80,13 +81,12 @@ const plugin: PluginImpl<{}> = () => {
       return { code, ast };
     },
 
-    // TODO: figure out if we could use this to "fix" namespace-re-exports
-    // renderChunk(code, chunk) {
-    //   const { exports, imports, modules } = chunk;
-    //   console.log({ code, exports, imports });
-    //   console.log(modules);
-    //   return null;
-    // },
+    renderChunk(code, chunk) {
+      const source = ts.createSourceFile(chunk.fileName, code, ts.ScriptTarget.Latest, true);
+      const fixer = new NamespaceFixer(source);
+      code = fixer.fix();
+      return { code, map: { mappings: "" } };
+    },
   };
 };
 

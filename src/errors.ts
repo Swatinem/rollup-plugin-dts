@@ -57,10 +57,3 @@ export class UnsupportedSyntaxError extends Error {
     super(`${message}\n${frameNodes([node])}`);
   }
 }
-
-export class ReExportNamespaceError extends Error {
-  constructor(nodes: Array<ts.Node>) {
-    const message = "Re-exporting namespace import is not supported yet.";
-    super(`${message}\n${frameNodes(nodes, ["imported here", "exported here"])}`);
-  }
-}

@@ -11,7 +11,7 @@ import {
   convertExpression,
 } from "./astHelpers";
 import { DeclarationScope } from "./DeclarationScope";
-import { UnsupportedSyntaxError, ReExportNamespaceError } from "./errors";
+import { UnsupportedSyntaxError /*, ReExportNamespaceError*/ } from "./errors";
 
 type ESTreeImports = ESTree.ImportDeclaration["specifiers"];
 
@@ -209,7 +209,7 @@ export class Transformer {
     if (ts.isExportAssignment(node)) {
       const correspondingImport = this.namespaceImports.get(node.expression.getText().trim());
       if (correspondingImport) {
-        throw new ReExportNamespaceError([correspondingImport, node.expression]);
+        // throw new ReExportNamespaceError([correspondingImport, node.expression]);
       }
       this.pushStatement(
         withStartEnd(
@@ -240,7 +240,7 @@ export class Transformer {
       for (const elem of node.exportClause.elements) {
         const correspondingImport = this.namespaceImports.get(elem.getText().trim());
         if (correspondingImport) {
-          throw new ReExportNamespaceError([correspondingImport, elem]);
+          // throw new ReExportNamespaceError([correspondingImport, elem]);
         }
         specifiers.push(this.convertExportSpecifier(elem));
       }

@@ -1,5 +1,5 @@
 {
-  "expectedError": "Inline namespace imports are not supported",
+  "__expectedError": "Inline namespace imports are not supported",
   "rollupOptions": {
     "external": ["foo"]
   }

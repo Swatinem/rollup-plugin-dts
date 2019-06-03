@@ -1,2 +1,4 @@
-export interface Bar {
+export interface IBar {
+}
+export declare class Bar {
 }
