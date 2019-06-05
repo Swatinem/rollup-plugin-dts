@@ -17,9 +17,6 @@ const config = [
   {
     input: "./.build/index.d.ts",
     output: [{ file: pkg.types, format: "es" }],
-
-    external,
-
     plugins: [dts()],
   },
 ];

@@ -3,47 +3,24 @@
 [![Build Status](https://img.shields.io/travis/Swatinem/rollup-plugin-dts.svg)](https://travis-ci.org/Swatinem/rollup-plugin-dts)
 [![Coverage Status](https://img.shields.io/codecov/c/github/Swatinem/rollup-plugin-dts.svg)](https://codecov.io/gh/Swatinem/rollup-plugin-dts)
 
-This is an **EXPERIMENT** to generate roll-upd `.d.ts` definition files from
-your `.ts` files.
-
-It is complete enough to generate
-[its own definition file](./src/__tests__/testcases/rollup-plugin-dts/expected.ts),
-and it is used successfully for [intl-codegen](https://github.com/eversport/intl-codegen) as well.
+This is a plugin that lets you roll-up your `.d.ts` definition files.
 
 ## Usage
 
 Install the package from `npm`:
 
-    $ npm install --save-dev tslib rollup rollup-plugin-dts
+    $ npm install --save-dev rollup-plugin-dts
 
-Create your `rollup.config.js`:
+Add it to your `rollup.config.js`:
 
 ```js
-import resolve from "rollup-plugin-node-resolve";
-// NOTE: The plugin has two different modes:
-// * one to transpile `.ts -> .js`
-// * one to create `.ts -> .d.ts` bundles
-import { ts, dts } from "rollup-plugin-dts";
+import dts from "rollup-plugin-dts";
 
 const config = [
+  // …
   {
-    input: "./src/index.ts",
-    // NOTE: The first output is your transpiled typescript
-    output: [{ file: "dist/my-library.js", format: "cjs" }, { file: "dist/my-library.mjs", format: "es" }],
-
-    plugins: [
-      resolve({
-        jsnext: true,
-        extensions: [".ts"],
-      }),
-      ts(),
-    ],
-  },
-  {
-    input: "./src/index.ts",
-    // NOTE: The second output is your bundled `.d.ts` file
+    input: "./my-input/index.d.ts",
     output: [{ file: "dist/my-library.d.ts", format: "es" }],
-
     plugins: [dts()],
   },
 ];
@@ -51,40 +28,22 @@ const config = [
 export default config;
 ```
 
-And then instruct node or other bundles where to find your code
+And then instruct typescript where to find your definitions inside your `package.json`:
 
 ```json
-  "main": "dist/my-library.js",
-  "module": "dist/my-library.mjs",
   "types": "dist/my-library.d.ts",
 ```
 
-## Limitations / Known Bugs
+**NOTE** that the plugin will automatically mark any external library
+(`@types` for example) as `external`, so those will be excluded from bundling.
 
-Exporting namespaces currently does not work and will create invalid `.d.ts` files.
+## Prerequisites
 
-```ts
-import * as ns from "./namespace";
-
-export { ns };
-```
-
-Using `import * as` itself is not a problem and works fine on its own. It is the
-_re-export_ that breaks.
-
----
-
-Using inline imports either as namespace or with `external` modules.
-
-```ts
-interface Foo {
-  namespace: import("./namespace");
-  external: import("external").Foo;
-}
-```
-
-Using specific items from a local inline import, such as
-`import("./local").Item`, works fine however.
+The plugin works by consuming pre-generated `.d.ts` files. So you will need to
+set up your `tsc` compiler or any other tool to output `.d.ts` files.
+You can do so by specifying either `declaration: true`
+or `emitDeclarationOnly: true` in your `tsconfig.json` file. Then point
+rollup to the output.
 
 ## Why?
 
@@ -104,8 +63,5 @@ go the route of completely separating their public interfaces in a separate file
 [some](https://github.com/Swatinem/rollup-plugin-dts/issues/13)
 [discussions](https://github.com/timocov/dts-bundle-generator/issues/68)
 about all three of these projects and their tradeoffs.
-
-Surprisingly, all three projects struggle with similar edge-cases around
-namespaces and inline imports, as documented [above](#limitations--known-bugs).
 
 ## [How does it work](./docs/how-it-works.md)
