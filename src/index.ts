@@ -13,7 +13,7 @@ const formatHost: ts.FormatDiagnosticsHost = {
   getCanonicalFileName: ts.sys.useCaseSensitiveFileNames ? f => f : f => f.toLowerCase(),
 };
 
-const getCompilerOptions = (input: string): ts.CompilerOptions => {
+function getCompilerOptions(input: string): ts.CompilerOptions {
   const configPath = ts.findConfigFile(path.dirname(input), ts.sys.fileExists);
   if (!configPath) {
     return {};
