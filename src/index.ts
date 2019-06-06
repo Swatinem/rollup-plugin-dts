@@ -1,6 +1,6 @@
 import * as ts from "typescript";
 import * as path from "path";
-import { PluginImpl, SourceDescription, InputOptions } from "rollup";
+import { PluginImpl, SourceDescription } from "rollup";
 import { Transformer } from "./Transformer";
 import { NamespaceFixer } from "./NamespaceFixer";
 
@@ -29,15 +29,12 @@ function getCompilerOptions(input: string): ts.CompilerOptions {
     return {};
   }
   return options;
-};
+}
 
-const createProgram = ({ input }: InputOptions) => {
-  if (typeof input !== "string") {
-    throw new TypeError('"input" option must be a string');
-  }
-  input = path.resolve(input);
+const createProgram = (main: string) => {
+  main = path.resolve(main);
   const compilerOptions: ts.CompilerOptions = {
-    ...getCompilerOptions(input),
+    ...getCompilerOptions(main),
     // Ensure ".d.ts" modules are generated
     declaration: true,
     // Skip ".js" generation
@@ -52,7 +49,7 @@ const createProgram = ({ input }: InputOptions) => {
     preserveSymlinks: true,
   };
   const host = ts.createCompilerHost(compilerOptions, true);
-  return ts.createProgram([input], compilerOptions, host);
+  return ts.createProgram([main], compilerOptions, host);
 };
 
 // Parse a TypeScript module into an ESTree program.
@@ -75,12 +72,46 @@ const transformFile = (input: ts.SourceFile): SourceDescription => {
 };
 
 const plugin: PluginImpl<{}> = () => {
-  let program: ts.Program;
+  // There exists one Program object per entry point,
+  // except when all entry points are ".d.ts" modules.
+  const programs = new Map<string, ts.Program>();
+  const getModule = (fileName: string) => {
+    let source: ts.SourceFile | null = null;
+    let program: ts.Program | null = null;
+    if (programs.size) {
+      // Rollup doesn't tell you the entry point of each module in the bundle,
+      // so we need to ask every TypeScript program for the given filename.
+      for (program of programs.values()) {
+        source = program.getSourceFile(fileName) || null;
+        if (source) break;
+      }
+    }
+    // Create any `ts.SourceFile` objects on-demand for ".d.ts" modules,
+    // but only when there are zero ".ts" entry points.
+    else if (fileName.endsWith(dts)) {
+      const code = ts.sys.readFile(fileName, "utf8");
+      if (code)
+        source = ts.createSourceFile(
+          fileName,
+          code,
+          ts.ScriptTarget.Latest,
+          true, // setParentNodes
+        );
+    }
+    return { source, program };
+  };
+
   return {
     name: "dts",
 
     options(options) {
-      program = createProgram(options);
+      let { input } = options;
+      if (!Array.isArray(input)) {
+        input = !input ? [] : typeof input === "string" ? [input] : Object.values(input);
+      }
+      if (!input.every(main => main.endsWith(dts))) {
+        input.forEach(main => programs.set(main, createProgram(main)));
+      }
       return {
         ...options,
         treeshake: {
@@ -109,26 +140,33 @@ const plugin: PluginImpl<{}> = () => {
       if (!tsx.test(id)) {
         return null;
       }
-      const source = program.getSourceFile(id);
-      if (!source) {
+      if (id.endsWith(dts)) {
+        const { source } = getModule(id);
+        return source ? transformFile(source) : null;
+      }
+      // Always try ".d.ts" before ".tsx?"
+      const declarationId = id.replace(tsx, dts);
+      let module = getModule(declarationId);
+      if (module.source) {
+        return transformFile(module.source);
+      }
+      // Generate in-memory ".d.ts" modules from ".tsx?" modules!
+      module = getModule(id);
+      if (!module.source || !module.program) {
         return null;
       }
-      if (id.endsWith(dts)) {
-        return transformFile(source);
-      }
-      const ambientId = id.replace(tsx, dts);
-      const ambientDefs = program.getSourceFile(ambientId);
-      if (ambientDefs) {
-        return transformFile(ambientDefs);
-      }
-      // Transform ".ts" modules into ".d.ts" in-memory!
       let generated!: SourceDescription;
-      const { emitSkipped, diagnostics } = program.emit(
-        source,
-        (_, code) => {
-          const ambientDefs = ts.createSourceFile(ambientId, code, ts.ScriptTarget.Latest, true);
-          generated = transformFile(ambientDefs);
-        },
+      const { emitSkipped, diagnostics } = module.program.emit(
+        module.source,
+        (_, declarationText) =>
+          (generated = transformFile(
+            ts.createSourceFile(
+              declarationId,
+              declarationText,
+              ts.ScriptTarget.Latest,
+              true, // setParentNodes
+            ),
+          )),
         undefined, // cancellationToken
         true, // emitOnlyDtsFiles
       );
