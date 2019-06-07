@@ -1,8 +1,8 @@
-import * as ts from "typescript";
 import * as path from "path";
 import { PluginImpl, SourceDescription } from "rollup";
-import { Transformer } from "./Transformer";
+import * as ts from "typescript";
 import { NamespaceFixer } from "./NamespaceFixer";
+import { Transformer } from "./Transformer";
 
 const dts = ".d.ts";
 const tsx = /\.tsx?$/;
@@ -31,7 +31,7 @@ function getCompilerOptions(input: string): ts.CompilerOptions {
   return options;
 }
 
-const createProgram = (main: string) => {
+function createProgram(main: string) {
   main = path.resolve(main);
   const compilerOptions: ts.CompilerOptions = {
     ...getCompilerOptions(main),
@@ -43,7 +43,7 @@ const createProgram = (main: string) => {
     noEmitOnError: true,
     // Avoid extra work
     checkJs: false,
-    sourceMap: false,
+    declarationMap: false,
     skipLibCheck: true,
     // Ensure TS2742 errors are visible
     preserveSymlinks: true,
@@ -53,7 +53,7 @@ const createProgram = (main: string) => {
 };
 
 // Parse a TypeScript module into an ESTree program.
-const transformFile = (input: ts.SourceFile): SourceDescription => {
+function transformFile(input: ts.SourceFile): SourceDescription {
   const transformer = new Transformer(input);
   const { ast, fixups } = transformer.transform();
 
@@ -75,14 +75,14 @@ const plugin: PluginImpl<{}> = () => {
   // There exists one Program object per entry point,
   // except when all entry points are ".d.ts" modules.
   const programs = new Map<string, ts.Program>();
-  const getModule = (fileName: string) => {
-    let source: ts.SourceFile | null = null;
-    let program: ts.Program | null = null;
+  function getModule(fileName: string) {
+    let source: ts.SourceFile | undefined;
+    let program: ts.Program | undefined;
     if (programs.size) {
       // Rollup doesn't tell you the entry point of each module in the bundle,
       // so we need to ask every TypeScript program for the given filename.
       for (program of programs.values()) {
-        source = program.getSourceFile(fileName) || null;
+        source = program.getSourceFile(fileName);
         if (source) break;
       }
     }
