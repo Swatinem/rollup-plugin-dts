@@ -1,56 +1,10 @@
-import * as path from "path";
 import { PluginImpl, SourceDescription } from "rollup";
 import * as ts from "typescript";
 import { NamespaceFixer } from "./NamespaceFixer";
+import { createPrograms, dts, formatHost } from "./program";
 import { Transformer } from "./Transformer";
 
-const dts = ".d.ts";
 const tsx = /\.tsx?$/;
-
-const formatHost: ts.FormatDiagnosticsHost = {
-  getCurrentDirectory: () => ts.sys.getCurrentDirectory(),
-  getNewLine: () => ts.sys.newLine,
-  getCanonicalFileName: ts.sys.useCaseSensitiveFileNames ? f => f : f => f.toLowerCase(),
-};
-
-function getCompilerOptions(input: string): ts.CompilerOptions {
-  const configPath = ts.findConfigFile(path.dirname(input), ts.sys.fileExists);
-  if (!configPath) {
-    return {};
-  }
-  const { config, error } = ts.readConfigFile(configPath, ts.sys.readFile);
-  if (error) {
-    console.error(ts.formatDiagnostic(error, formatHost));
-    return {};
-  }
-  const { options, errors } = ts.parseJsonConfigFileContent(config, ts.sys, path.dirname(configPath));
-  if (errors.length) {
-    console.error(ts.formatDiagnostics(errors, formatHost));
-    return {};
-  }
-  return options;
-}
-
-function createProgram(main: string) {
-  main = path.resolve(main);
-  const compilerOptions: ts.CompilerOptions = {
-    ...getCompilerOptions(main),
-    // Ensure ".d.ts" modules are generated
-    declaration: true,
-    // Skip ".js" generation
-    emitDeclarationOnly: true,
-    // Skip code generation when error occurs
-    noEmitOnError: true,
-    // Avoid extra work
-    checkJs: false,
-    declarationMap: false,
-    skipLibCheck: true,
-    // Ensure TS2742 errors are visible
-    preserveSymlinks: true,
-  };
-  const host = ts.createCompilerHost(compilerOptions, true);
-  return ts.createProgram([main], compilerOptions, host);
-};
 
 // Parse a TypeScript module into an ESTree program.
 function transformFile(input: ts.SourceFile): SourceDescription {
@@ -69,19 +23,20 @@ function transformFile(input: ts.SourceFile): SourceDescription {
   }
 
   return { code, ast };
-};
+}
 
 const plugin: PluginImpl<{}> = () => {
   // There exists one Program object per entry point,
   // except when all entry points are ".d.ts" modules.
-  const programs = new Map<string, ts.Program>();
+  let programs: Array<ts.Program> = [];
+
   function getModule(fileName: string) {
     let source: ts.SourceFile | undefined;
     let program: ts.Program | undefined;
-    if (programs.size) {
+    if (programs.length) {
       // Rollup doesn't tell you the entry point of each module in the bundle,
       // so we need to ask every TypeScript program for the given filename.
-      for (program of programs.values()) {
+      for (program of programs) {
         source = program.getSourceFile(fileName);
         if (source) break;
       }
@@ -99,7 +54,7 @@ const plugin: PluginImpl<{}> = () => {
         );
     }
     return { source, program };
-  };
+  }
 
   return {
     name: "dts",
@@ -109,9 +64,8 @@ const plugin: PluginImpl<{}> = () => {
       if (!Array.isArray(input)) {
         input = !input ? [] : typeof input === "string" ? [input] : Object.values(input);
       }
-      if (!input.every(main => main.endsWith(dts))) {
-        input.forEach(main => programs.set(main, createProgram(main)));
-      }
+      programs = createPrograms(input);
+
       return {
         ...options,
         treeshake: {
