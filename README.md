@@ -37,14 +37,6 @@ And then instruct typescript where to find your definitions inside your `package
 **NOTE** that the plugin will automatically mark any external library
 (`@types` for example) as `external`, so those will be excluded from bundling.
 
-## Prerequisites
-
-The plugin works by consuming pre-generated `.d.ts` files. So you will need to
-set up your `tsc` compiler or any other tool to output `.d.ts` files.
-You can do so by specifying either `declaration: true`
-or `emitDeclarationOnly: true` in your `tsconfig.json` file. Then point
-rollup to the output.
-
 ## Why?
 
 Well, ideally TypeScript should just do all this itself, and it even has a
