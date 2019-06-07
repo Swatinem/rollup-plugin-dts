@@ -151,9 +151,10 @@ export class DeclarationScope {
       return 0;
     }
     for (const node of params) {
+      this.convertTypeNode(node.constraint);
+      this.convertTypeNode(node.default);
       this.pushScope();
       this.pushTypeVariable(node.name);
-      this.convertTypeNode(node.default);
     }
     return params.length;
   }
