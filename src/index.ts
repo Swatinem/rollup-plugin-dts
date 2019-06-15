@@ -6,24 +6,14 @@ import { Transformer } from "./Transformer";
 
 const tsx = /\.tsx?$/;
 
-// Parse a TypeScript module into an ESTree program.
-function transformFile(input: ts.SourceFile): SourceDescription {
-  const transformer = new Transformer(input);
-  const { ast, fixups } = transformer.transform();
+const toArray = <T>(value: T): T extends ReadonlyArray<any> ? T : [T] =>
+  Array.isArray(value) ? (value as any) : [value];
 
-  // NOTE(swatinem):
-  // hm, typescript generates `export default` without a declare,
-  // but rollup moves the `export default` to a different place, which leaves
-  // the function declaration without a `declare`.
-  // Well luckily both words have the same length, haha :-D
-  let code = input.getFullText();
-  code = code.replace(/(export\s+)default(\s+(function|class))/m, "$1declare$2");
-  for (const fixup of fixups) {
-    code = code.slice(0, fixup.range.start) + fixup.identifier + code.slice(fixup.range.end);
-  }
-
-  return { code, ast };
-}
+type PragmaMap = Map<"reference", Pragma | Pragma[]>;
+type Pragma = {
+  arguments: any;
+  range: ts.CommentRange;
+};
 
 const plugin: PluginImpl<{}> = () => {
   // There exists one Program object per entry point,
@@ -54,6 +44,35 @@ const plugin: PluginImpl<{}> = () => {
         );
     }
     return { source, program };
+  }
+
+  // Parse a TypeScript module into an ESTree program.
+  const references = new Set<string>();
+  function transformFile(input: ts.SourceFile): SourceDescription {
+    let code = input.getFullText();
+
+    // Collect any reference directives
+    const pragmas: PragmaMap = (input as any).pragmas;
+    if (pragmas && pragmas.has("reference")) {
+      toArray(pragmas.get("reference")!).forEach(({ range }) => {
+        references.add(code.slice(range.pos, range.end));
+      });
+    }
+
+    const transformer = new Transformer(input);
+    const { ast, fixups } = transformer.transform();
+
+    // NOTE(swatinem):
+    // hm, typescript generates `export default` without a declare,
+    // but rollup moves the `export default` to a different place, which leaves
+    // the function declaration without a `declare`.
+    // Well luckily both words have the same length, haha :-D
+    code = code.replace(/(export\s+)default(\s+(function|class))/m, "$1declare$2");
+    for (const fixup of fixups) {
+      code = code.slice(0, fixup.range.start) + fixup.identifier + code.slice(fixup.range.end);
+    }
+
+    return { code, ast };
   }
 
   return {
@@ -156,6 +175,7 @@ const plugin: PluginImpl<{}> = () => {
       const source = ts.createSourceFile(chunk.fileName, code, ts.ScriptTarget.Latest, true);
       const fixer = new NamespaceFixer(source);
       code = fixer.fix();
+      code = Array.from(references).join("\n") + "\n" + code;
       return { code, map: { mappings: "" } };
     },
   };
