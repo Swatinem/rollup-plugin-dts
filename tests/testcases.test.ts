@@ -93,7 +93,7 @@ describe("rollup-plugin-dts", () => {
     const dir = path.join(TESTCASES, name);
     if (fsExtra.statSync(dir).isDirectory()) {
       const rollupOptions: InputOptions = {
-        input: "index.d.ts",
+        input: fsExtra.pathExistsSync(path.join(dir, "index.d.ts")) ? "index.d.ts" : "index.ts",
       };
       const meta: Meta = {
         skip: false,
