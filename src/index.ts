@@ -6,25 +6,6 @@ import { Transformer } from "./Transformer";
 
 const tsx = /\.tsx?$/;
 
-// Parse a TypeScript module into an ESTree program.
-function transformFile(input: ts.SourceFile): SourceDescription {
-  const transformer = new Transformer(input);
-  const { ast, fixups } = transformer.transform();
-
-  // NOTE(swatinem):
-  // hm, typescript generates `export default` without a declare,
-  // but rollup moves the `export default` to a different place, which leaves
-  // the function declaration without a `declare`.
-  // Well luckily both words have the same length, haha :-D
-  let code = input.getText();
-  code = code.replace(/(export\s+)default(\s+(function|class))/m, "$1declare$2");
-  for (const fixup of fixups) {
-    code = code.slice(0, fixup.range.start) + fixup.identifier + code.slice(fixup.range.end);
-  }
-
-  return { code, ast };
-}
-
 const plugin: PluginImpl<{}> = () => {
   // There exists one Program object per entry point,
   // except when all entry points are ".d.ts" modules.
@@ -54,6 +35,30 @@ const plugin: PluginImpl<{}> = () => {
         );
     }
     return { source, program };
+  }
+
+  // Parse a TypeScript module into an ESTree program.
+  const typeReferences = new Set<string>();
+  function transformFile(input: ts.SourceFile): SourceDescription {
+    for (const ref of input.typeReferenceDirectives) {
+      typeReferences.add(ref.fileName);
+    }
+
+    const transformer = new Transformer(input);
+    const { ast, fixups } = transformer.transform();
+
+    // NOTE(swatinem):
+    // hm, typescript generates `export default` without a declare,
+    // but rollup moves the `export default` to a different place, which leaves
+    // the function declaration without a `declare`.
+    // Well luckily both words have the same length, haha :-D
+    let code = input.getFullText();
+    code = code.replace(/(export\s+)default(\s+(function|class))/m, "$1declare$2");
+    for (const fixup of fixups) {
+      code = code.slice(0, fixup.range.start) + fixup.identifier + code.slice(fixup.range.end);
+    }
+
+    return { code, ast };
   }
 
   return {
@@ -153,9 +158,10 @@ const plugin: PluginImpl<{}> = () => {
     },
 
     renderChunk(code, chunk) {
+      const pragmas = Array.from(typeReferences, ref => `/// <reference types="${ref}" />\n`).join("");
       const source = ts.createSourceFile(chunk.fileName, code, ts.ScriptTarget.Latest, true);
       const fixer = new NamespaceFixer(source);
-      code = fixer.fix();
+      code = pragmas + fixer.fix();
       return { code, map: { mappings: "" } };
     },
   };
