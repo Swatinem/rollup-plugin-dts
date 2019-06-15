@@ -16,7 +16,7 @@ function transformFile(input: ts.SourceFile): SourceDescription {
   // but rollup moves the `export default` to a different place, which leaves
   // the function declaration without a `declare`.
   // Well luckily both words have the same length, haha :-D
-  let code = input.getText();
+  let code = input.getFullText();
   code = code.replace(/(export\s+)default(\s+(function|class))/m, "$1declare$2");
   for (const fixup of fixups) {
     code = code.slice(0, fixup.range.start) + fixup.identifier + code.slice(fixup.range.end);
