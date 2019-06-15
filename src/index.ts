@@ -40,9 +40,9 @@ const plugin: PluginImpl<{}> = () => {
   // Parse a TypeScript module into an ESTree program.
   const typeReferences = new Set<string>();
   function transformFile(input: ts.SourceFile): SourceDescription {
-    input.typeReferenceDirectives.forEach(ref => {
+    for (const ref of input.typeReferenceDirectives) {
       typeReferences.add(ref.fileName);
-    });
+    }
 
     const transformer = new Transformer(input);
     const { ast, fixups } = transformer.transform();
