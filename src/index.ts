@@ -6,17 +6,6 @@ import { Transformer } from "./Transformer";
 
 const tsx = /\.tsx?$/;
 
-function toArray<T>(value: T | ReadonlyArray<T>): Array<T> {
-  return Array.isArray(value) ? value : [value];
-}
-  Array.isArray(value) ? (value as any) : [value];
-
-type PragmaMap = Map<"reference", Pragma | Pragma[]>;
-type Pragma = {
-  arguments: any;
-  range: ts.CommentRange;
-};
-
 const plugin: PluginImpl<{}> = () => {
   // There exists one Program object per entry point,
   // except when all entry points are ".d.ts" modules.
@@ -49,17 +38,11 @@ const plugin: PluginImpl<{}> = () => {
   }
 
   // Parse a TypeScript module into an ESTree program.
-  const references = new Set<string>();
+  const typeReferences = new Set<string>();
   function transformFile(input: ts.SourceFile): SourceDescription {
-    let code = input.getFullText();
-
-    // Collect any reference directives
-    const pragmas: PragmaMap = (input as any).pragmas;
-    if (pragmas && pragmas.has("reference")) {
-      toArray(pragmas.get("reference")!).forEach(({ range }) => {
-        references.add(code.slice(range.pos, range.end));
-      });
-    }
+    input.typeReferenceDirectives.forEach(ref => {
+      typeReferences.add(ref.fileName);
+    });
 
     const transformer = new Transformer(input);
     const { ast, fixups } = transformer.transform();
@@ -69,6 +52,7 @@ const plugin: PluginImpl<{}> = () => {
     // but rollup moves the `export default` to a different place, which leaves
     // the function declaration without a `declare`.
     // Well luckily both words have the same length, haha :-D
+    let code = input.getFullText();
     code = code.replace(/(export\s+)default(\s+(function|class))/m, "$1declare$2");
     for (const fixup of fixups) {
       code = code.slice(0, fixup.range.start) + fixup.identifier + code.slice(fixup.range.end);
@@ -174,10 +158,10 @@ const plugin: PluginImpl<{}> = () => {
     },
 
     renderChunk(code, chunk) {
+      const pragmas = Array.from(typeReferences, ref => `/// <reference types="${ref}" />\n`).join("");
       const source = ts.createSourceFile(chunk.fileName, code, ts.ScriptTarget.Latest, true);
       const fixer = new NamespaceFixer(source);
-      code = fixer.fix();
-      code = Array.from(references).join("\n") + "\n" + code;
+      code = pragmas + fixer.fix();
       return { code, map: { mappings: "" } };
     },
   };
