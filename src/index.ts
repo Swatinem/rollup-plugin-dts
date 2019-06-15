@@ -6,7 +6,9 @@ import { Transformer } from "./Transformer";
 
 const tsx = /\.tsx?$/;
 
-const toArray = <T>(value: T): T extends ReadonlyArray<any> ? T : [T] =>
+function toArray<T>(value: T | ReadonlyArray<T>): Array<T> {
+  return Array.isArray(value) ? value : [value];
+}
   Array.isArray(value) ? (value as any) : [value];
 
 type PragmaMap = Map<"reference", Pragma | Pragma[]>;
