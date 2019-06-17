@@ -10,6 +10,8 @@
     "module": "esnext",
     "stripInternal": true,
 
+    "newLine": "lf",
+
     "declaration": true,
     "emitDeclarationOnly": true
     // "outDir": "./"
