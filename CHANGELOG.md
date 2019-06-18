@@ -1,4 +1,12 @@
-### 1.0.0 2019-06-07
+### 1.1.2 2019-06-18
+
+- normalize directory separators on windows
+
+### 1.1.1 2019-06-16
+
+- correctly preserve tripleslash reference directives
+
+### 1.1.0 2019-06-07
 
 - Re-add support for directly using `.ts` files.
 - Fix type parameters with `extends` constraints.

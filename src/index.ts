@@ -144,6 +144,9 @@ const plugin: PluginImpl<{}> = () => {
         return;
       }
 
+      // normalize directory separators to forward slashes
+      importer = importer.split("\\").join("/");
+
       // resolve this via typescript
       const { resolvedModule } = ts.nodeModuleNameResolver(source, importer, {}, ts.sys);
       if (!resolvedModule) {
