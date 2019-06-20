@@ -1,3 +1,4 @@
+import path from "path";
 import { PluginImpl, SourceDescription } from "rollup";
 import * as ts from "typescript";
 import { NamespaceFixer } from "./NamespaceFixer";
@@ -144,7 +145,7 @@ const plugin: PluginImpl<{}> = () => {
         return;
       }
 
-      // normalize directory separators to forward slashes
+      // normalize directory separators to forward slashes, as apparently typescript expects that?
       importer = importer.split("\\").join("/");
 
       // resolve this via typescript
@@ -157,7 +158,8 @@ const plugin: PluginImpl<{}> = () => {
       // maybe its a good idea to introduce an option for this?
       return resolvedModule.isExternalLibraryImport
         ? { id: source, external: true }
-        : { id: resolvedModule.resolvedFileName };
+        : // using `path.resolve` here converts paths back to the system specific separators
+          { id: path.resolve(resolvedModule.resolvedFileName) };
     },
 
     renderChunk(code, chunk) {
