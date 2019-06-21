@@ -95,13 +95,50 @@ export class DeclarationScope {
     this.pushReference(createIdentifier(id));
   }
 
-  removeModifier(node: ts.Node, kind: ts.SyntaxKind = ts.SyntaxKind.ExportKeyword) {
-    for (const mod of node.modifiers || []) {
-      if (mod.kind === kind) {
-        const start = node.getStart();
-        const end = mod.end + 1;
-        this.pushRaw(removeNested({ start, end }));
+  /**
+   * This will fix up the modifiers of a declaration.
+   * We want to remove `export (default)?` modifiers, and in that case add a
+   * missing `declare`. All the others should be untouched.
+   */
+  fixModifiers(node: ts.Node) {
+    if (!node.modifiers) {
+      return;
+    }
+    const modifiers: Array<string> = [];
+    let hasDeclare = false;
+    let start = Infinity;
+    let end = 0;
+    for (const mod of node.modifiers) {
+      if (mod.kind !== ts.SyntaxKind.ExportKeyword && mod.kind !== ts.SyntaxKind.DefaultKeyword) {
+        modifiers.push(mod.getText());
       }
+      if (mod.kind === ts.SyntaxKind.DeclareKeyword) {
+        hasDeclare = true;
+      }
+      start = Math.min(start, mod.getStart());
+      end = Math.max(end, mod.getEnd());
+    }
+
+    // function and class *must* have a `declare` modifier
+    if (!hasDeclare && (ts.isClassDeclaration(node) || ts.isFunctionDeclaration(node))) {
+      modifiers.unshift("declare");
+    }
+
+    const newModifiers = modifiers.join(" ");
+    if (!newModifiers && end) {
+      end += 1;
+    }
+    const original = this.transformer.sourceFile.text.slice(start, end);
+    const middle = start + newModifiers.length;
+
+    this.pushRaw(removeNested({ start: middle, end }));
+
+    if (newModifiers) {
+      this.transformer.fixups.push({
+        original,
+        replaceWith: newModifiers,
+        range: { start, end: middle },
+      });
     }
   }
 

@@ -1,14 +1,14 @@
-import * as ts from "typescript";
 import * as ESTree from "estree";
+import * as ts from "typescript";
 import {
-  Ranged,
+  convertExpression,
+  createDefaultExport,
   createExport,
   createIdentifier,
   createProgram,
-  withStartEnd,
-  createDefaultExport,
   matchesModifier,
-  convertExpression,
+  Ranged,
+  withStartEnd,
 } from "./astHelpers";
 import { DeclarationScope } from "./DeclarationScope";
 import { UnsupportedSyntaxError } from "./errors";
@@ -16,8 +16,8 @@ import { UnsupportedSyntaxError } from "./errors";
 type ESTreeImports = ESTree.ImportDeclaration["specifiers"];
 
 interface Fixup {
-  identifier: string;
   original: string;
+  replaceWith: string;
   range: {
     start: number;
     end: number;
@@ -28,9 +28,10 @@ export class Transformer {
   ast: ESTree.Program;
   fixups: Array<Fixup> = [];
 
+  declarations = new Map<string, DeclarationScope>();
   exports = new Set<string>();
 
-  constructor(private sourceFile: ts.SourceFile) {
+  constructor(public sourceFile: ts.SourceFile) {
     this.ast = createProgram(sourceFile);
     for (const stmt of sourceFile.statements) {
       this.convertStatement(stmt);
@@ -47,7 +48,7 @@ export class Transformer {
     identifier += original.slice(identifier.length).replace(/[^a-zA-Z0-9_$]/g, () => "_");
 
     this.fixups.push({
-      identifier,
+      replaceWith: identifier,
       original,
       range,
     });
@@ -59,26 +60,38 @@ export class Transformer {
   }
 
   maybeMarkAsExported(node: ts.Node, id: ts.Identifier) {
-    if (matchesModifier(node as any, ts.ModifierFlags.ExportDefault)) {
-      const start = node.pos;
-      this.pushStatement(createDefaultExport(id, { start, end: start }));
-      return true;
-    } else if (matchesModifier(node as any, ts.ModifierFlags.Export)) {
-      const start = node.pos;
-      const name = id.getText();
-      if (this.exports.has(name)) {
-        return true;
-      }
-      this.pushStatement(createExport(id, { start, end: start }));
-      this.exports.add(name);
+    const loc = { start: node.pos, end: node.pos };
+
+    if (!matchesModifier(node, ts.ModifierFlags.Export) || !node.modifiers) {
+      return false;
+    }
+
+    const isExportDefault = matchesModifier(node, ts.ModifierFlags.ExportDefault);
+    const name = isExportDefault ? "default" : id.getText();
+
+    if (this.exports.has(name)) {
       return true;
     }
-    return false;
+
+    this.pushStatement((isExportDefault ? createDefaultExport : createExport)(id, loc));
+
+    this.exports.add(name);
+    return true;
   }
 
   createDeclaration(id: ts.Identifier, range: Ranged) {
-    const scope = new DeclarationScope({ id, range, transformer: this });
-    this.pushStatement(scope.declaration);
+    const name = id.getText();
+    // rollup has problems with functions that are defined twice. For overrides,
+    // we can just reuse the already declared function, since overrides are
+    // supposed to be declared close to each other…
+    // if they are not close to each other, we do have a problem -_-
+    let scope = this.declarations.get(name);
+    if (!scope) {
+      scope = new DeclarationScope({ id, range, transformer: this });
+      this.pushStatement(scope.declaration);
+      this.declarations.set(name, scope);
+    }
+    (scope.declaration as any).end = range.end;
     return scope;
   }
 
@@ -120,7 +133,7 @@ export class Transformer {
     this.maybeMarkAsExported(node, node.name);
 
     const scope = this.createDeclaration(node.name, node);
-    scope.removeModifier(node);
+    scope.fixModifiers(node);
 
     scope.pushIdentifierReference(node.name);
 
@@ -131,7 +144,7 @@ export class Transformer {
     this.maybeMarkAsExported(node, node.name);
 
     const scope = this.createDeclaration(node.name, node);
-    scope.removeModifier(node);
+    scope.fixModifiers(node);
 
     scope.pushIdentifierReference(node.name);
   }
@@ -145,7 +158,7 @@ export class Transformer {
     this.maybeMarkAsExported(node, node.name);
 
     const scope = this.createDeclaration(node.name, node);
-    scope.removeModifier(node);
+    scope.fixModifiers(node);
 
     scope.pushIdentifierReference(node.name);
 
@@ -161,10 +174,7 @@ export class Transformer {
     this.maybeMarkAsExported(node, node.name);
 
     const scope = this.createDeclaration(node.name, node);
-    scope.removeModifier(node);
-    if (ts.isInterfaceDeclaration(node)) {
-      scope.removeModifier(node, ts.SyntaxKind.DefaultKeyword);
-    }
+    scope.fixModifiers(node);
 
     const typeVariables = scope.convertTypeParameters(node.typeParameters);
     scope.convertHeritageClauses(node);
@@ -176,7 +186,7 @@ export class Transformer {
     this.maybeMarkAsExported(node, node.name);
 
     const scope = this.createDeclaration(node.name, node);
-    scope.removeModifier(node);
+    scope.fixModifiers(node);
 
     const typeVariables = scope.convertTypeParameters(node.typeParameters);
     scope.convertTypeNode(node.type);
@@ -198,7 +208,7 @@ export class Transformer {
       this.maybeMarkAsExported(node, decl.name);
 
       const scope = this.createDeclaration(decl.name, node);
-      scope.removeModifier(node);
+      scope.fixModifiers(node);
 
       scope.convertTypeNode(decl.type);
     }
