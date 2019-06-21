@@ -1,3 +1,7 @@
+### 1.1.4 2019-06-21
+
+- fix issues around default exports and overrides
+
 ### 1.1.3 2019-06-21
 
 - fix duplicated definitions when having circular imports on windows
