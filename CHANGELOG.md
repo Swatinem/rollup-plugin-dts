@@ -1,3 +1,7 @@
+### 1.1.3 2019-06-21
+
+- fix duplicated definitions when having circular imports on windows
+
 ### 1.1.2 2019-06-18
 
 - normalize directory separators on windows
