@@ -165,6 +165,13 @@ export class DeclarationScope {
   convertMembers(members: ts.NodeArray<ts.TypeElement | ts.ClassElement>) {
     for (const node of members) {
       if (ts.isPropertyDeclaration(node) || ts.isPropertySignature(node) || ts.isIndexSignatureDeclaration(node)) {
+        if (node.name && ts.isComputedPropertyName(node.name)) {
+          const { expression } = node.name;
+          if (!ts.isEntityName(expression)) {
+            throw new UnsupportedSyntaxError(expression);
+          }
+          this.pushReference(this.convertEntityName(expression));
+        }
         this.convertTypeNode(node.type);
         continue;
       }
