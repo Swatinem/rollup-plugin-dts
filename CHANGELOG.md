@@ -1,3 +1,7 @@
+### 1.1.5 2019-07-01
+
+- properly handle computed properties
+
 ### 1.1.4 2019-06-21
 
 - fix issues around default exports and overrides
