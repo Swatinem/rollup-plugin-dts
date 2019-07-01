@@ -84,6 +84,34 @@ export function createIdentifier(node: ts.Identifier) {
 }
 
 /**
+ * Create a new Scope which is always included
+ * `(function (_ = MARKER) {})()`
+ */
+export function createIIFE(range: Ranged) {
+  const fn = withStartEnd<ESTree.FunctionExpression>(
+    {
+      type: "FunctionExpression",
+      id: null,
+      params: [],
+      body: { type: "BlockStatement", body: [] },
+    },
+    range,
+  );
+  const iife = withStartEnd<ESTree.ExpressionStatement>(
+    {
+      type: "ExpressionStatement",
+      expression: {
+        type: "CallExpression",
+        callee: { type: "Identifier", name: String(IDs++) },
+        arguments: [fn],
+      },
+    },
+    range,
+  );
+  return { fn, iife };
+}
+
+/**
  * Create a new Declaration and Scope for `id`:
  * `function ${id}(_ = MARKER) {}`
  */

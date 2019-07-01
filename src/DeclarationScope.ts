@@ -8,6 +8,7 @@ import {
   removeNested,
   withStartEnd,
   convertExpression,
+  createIIFE,
 } from "./astHelpers";
 import { Transformer } from "./Transformer";
 import { UnsupportedSyntaxError } from "./errors";
@@ -30,7 +31,7 @@ const IGNORE_TYPENODES = new Set([
 ]);
 
 interface DeclarationScopeOptions {
-  id: ts.Identifier;
+  id?: ts.Identifier;
   range: Ranged;
   transformer: Transformer;
 }
@@ -41,10 +42,17 @@ export class DeclarationScope {
   transformer: Transformer;
 
   declaration: ESTree.FunctionDeclaration;
+  iife?: ESTree.ExpressionStatement;
 
   constructor({ id, range, transformer }: DeclarationScopeOptions) {
     this.transformer = transformer;
-    this.declaration = createDeclaration(id, range);
+    if (id) {
+      this.declaration = createDeclaration(id, range);
+    } else {
+      const { iife, fn } = createIIFE(range);
+      this.iife = iife;
+      this.declaration = fn as any;
+    }
   }
 
   /**

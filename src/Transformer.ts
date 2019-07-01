@@ -79,7 +79,13 @@ export class Transformer {
     return true;
   }
 
-  createDeclaration(id: ts.Identifier, range: Ranged) {
+  createDeclaration(range: Ranged, id?: ts.Identifier) {
+    if (!id) {
+      const scope = new DeclarationScope({ range, transformer: this });
+      this.pushStatement(scope.iife!);
+      return scope;
+    }
+
     const name = id.getText();
     // rollup has problems with functions that are defined twice. For overrides,
     // we can just reuse the already declared function, since overrides are
@@ -126,13 +132,25 @@ export class Transformer {
   }
 
   convertNamespaceDeclaration(node: ts.ModuleDeclaration) {
+    // we want to keep `declare global` augmentations, and we want to
+    // to pull in all the things referenced inside.
+    // so for this case, we need to figure out some way so that rollup does
+    // the right thing and not rename these…
+    const isGlobalAugmentation = node.flags & ts.NodeFlags.GlobalAugmentation;
+
+    if (isGlobalAugmentation) {
+      const scope = this.createDeclaration(node);
+      scope.convertNamespace(node);
+      return;
+    }
+
     // istanbul ignore if
     if (!ts.isIdentifier(node.name)) {
       throw new UnsupportedSyntaxError(node, `namespace name should be an "Identifier"`);
     }
     this.maybeMarkAsExported(node, node.name);
 
-    const scope = this.createDeclaration(node.name, node);
+    const scope = this.createDeclaration(node, node.name);
     scope.fixModifiers(node);
 
     scope.pushIdentifierReference(node.name);
@@ -143,7 +161,7 @@ export class Transformer {
   convertEnumDeclaration(node: ts.EnumDeclaration) {
     this.maybeMarkAsExported(node, node.name);
 
-    const scope = this.createDeclaration(node.name, node);
+    const scope = this.createDeclaration(node, node.name);
     scope.fixModifiers(node);
 
     scope.pushIdentifierReference(node.name);
@@ -157,7 +175,7 @@ export class Transformer {
 
     this.maybeMarkAsExported(node, node.name);
 
-    const scope = this.createDeclaration(node.name, node);
+    const scope = this.createDeclaration(node, node.name);
     scope.fixModifiers(node);
 
     scope.pushIdentifierReference(node.name);
@@ -173,7 +191,7 @@ export class Transformer {
 
     this.maybeMarkAsExported(node, node.name);
 
-    const scope = this.createDeclaration(node.name, node);
+    const scope = this.createDeclaration(node, node.name);
     scope.fixModifiers(node);
 
     const typeVariables = scope.convertTypeParameters(node.typeParameters);
@@ -185,7 +203,7 @@ export class Transformer {
   convertTypeAliasDeclaration(node: ts.TypeAliasDeclaration) {
     this.maybeMarkAsExported(node, node.name);
 
-    const scope = this.createDeclaration(node.name, node);
+    const scope = this.createDeclaration(node, node.name);
     scope.fixModifiers(node);
 
     const typeVariables = scope.convertTypeParameters(node.typeParameters);
@@ -207,7 +225,7 @@ export class Transformer {
 
       this.maybeMarkAsExported(node, decl.name);
 
-      const scope = this.createDeclaration(decl.name, node);
+      const scope = this.createDeclaration(node, decl.name);
       scope.fixModifiers(node);
 
       scope.convertTypeNode(decl.type);
@@ -261,17 +279,12 @@ export class Transformer {
 
   convertImportDeclaration(node: ts.ImportDeclaration) {
     const source = convertExpression(node.moduleSpecifier) as any;
-    if (!node.importClause) {
-      return;
-    }
-    // istanbul ignore if
-    if (!node.importClause.name && !node.importClause.namedBindings) {
-      throw new UnsupportedSyntaxError(node, `ImportDeclaration should have imports`);
-    }
-    const specifiers: ESTreeImports = node.importClause.namedBindings
-      ? this.convertNamedImportBindings(node.importClause.namedBindings)
-      : [];
-    if (node.importClause.name) {
+
+    const specifiers: ESTreeImports =
+      node.importClause && node.importClause.namedBindings
+        ? this.convertNamedImportBindings(node.importClause.namedBindings)
+        : [];
+    if (node.importClause && node.importClause.name) {
       specifiers.push({
         type: "ImportDefaultSpecifier",
         local: createIdentifier(node.importClause.name),
