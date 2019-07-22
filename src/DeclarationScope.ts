@@ -150,7 +150,62 @@ export class DeclarationScope {
     }
   }
 
+  convertEntityName(node: ts.EntityName): ESTree.Expression {
+    if (ts.isIdentifier(node)) {
+      return createIdentifier(node);
+    }
+    return withStartEnd(
+      {
+        type: "MemberExpression",
+        computed: false,
+        object: this.convertEntityName(node.left),
+        property: createIdentifier(node.right),
+      },
+      // TODO: clean up all the `start` handling!
+      { start: node.getStart(), end: node.end },
+    );
+  }
+
+  convertPropertyAccess(node: ts.PropertyAccessExpression): ESTree.Expression {
+    // hm, we only care about property access expressions here…
+
+    if (ts.isIdentifier(node.expression)) {
+      return createIdentifier(node.expression);
+    }
+
+    if (ts.isPropertyAccessExpression(node.expression)) {
+      return withStartEnd(
+        {
+          type: "MemberExpression",
+          computed: false,
+          object: this.convertPropertyAccess(node.expression),
+          property: createIdentifier(node.name),
+        },
+        // TODO: clean up all the `start` handling!
+        { start: node.getStart(), end: node.end },
+      );
+    }
+
+    throw new UnsupportedSyntaxError(node.expression);
+  }
+
+  convertComputedPropertyName(node: { name?: ts.PropertyName }) {
+    if (!node.name || !ts.isComputedPropertyName(node.name)) {
+      return;
+    }
+    const { expression } = node.name;
+
+    if (ts.isIdentifier(expression)) {
+      return this.pushReference(createIdentifier(expression));
+    }
+    if (ts.isPropertyAccessExpression(expression)) {
+      return this.pushReference(this.convertPropertyAccess(expression));
+    }
+    throw new UnsupportedSyntaxError(expression);
+  }
+
   convertParametersAndType(node: ts.SignatureDeclarationBase) {
+    this.convertComputedPropertyName(node);
     const typeVariables = this.convertTypeParameters(node.typeParameters);
     for (const param of node.parameters) {
       this.convertTypeNode(param.type);
@@ -173,13 +228,7 @@ export class DeclarationScope {
   convertMembers(members: ts.NodeArray<ts.TypeElement | ts.ClassElement>) {
     for (const node of members) {
       if (ts.isPropertyDeclaration(node) || ts.isPropertySignature(node) || ts.isIndexSignatureDeclaration(node)) {
-        if (node.name && ts.isComputedPropertyName(node.name)) {
-          const { expression } = node.name;
-          if (!ts.isEntityName(expression)) {
-            throw new UnsupportedSyntaxError(expression);
-          }
-          this.pushReference(this.convertEntityName(expression));
-        }
+        this.convertComputedPropertyName(node);
         this.convertTypeNode(node.type);
         continue;
       }
@@ -341,22 +390,6 @@ export class DeclarationScope {
       // as with re-exporting references… -_-
       this.pushReference(importIdRef);
     }
-  }
-
-  convertEntityName(node: ts.EntityName): ESTree.Expression {
-    if (ts.isIdentifier(node)) {
-      return createIdentifier(node);
-    }
-    return withStartEnd(
-      {
-        type: "MemberExpression",
-        computed: false,
-        object: this.convertEntityName(node.left),
-        property: createIdentifier(node.right),
-      },
-      // TODO: clean up all the `start` handling!
-      { start: node.getStart(), end: node.end },
-    );
   }
 
   convertNamespace(node: ts.ModuleDeclaration) {
