@@ -28,6 +28,7 @@ const IGNORE_TYPENODES = new Set([
   ts.SyntaxKind.NeverKeyword,
   ts.SyntaxKind.ThisKeyword,
   ts.SyntaxKind.ThisType,
+  ts.SyntaxKind.BigIntKeyword,
 ]);
 
 interface DeclarationScopeOptions {
