@@ -1,3 +1,8 @@
+### 1.1.6 2019-07-31
+
+- further improve computed property handling
+- add support for `bigint` type
+
 ### 1.1.5 2019-07-01
 
 - properly handle computed properties
