@@ -1,0 +1,46 @@
+trigger:
+  - master
+
+strategy:
+  matrix:
+    lin_node_10:
+      imageName: "ubuntu-latest"
+      node_version: 10.x
+    lin_node_12:
+      imageName: "ubuntu-latest"
+      node_version: 12.x
+    win_node_10:
+      imageName: "windows-latest"
+      node_version: 10.x
+    win_node_12:
+      imageName: "windows-latest"
+      node_version: 12.x
+
+pool:
+  vmImage: $(imageName)
+
+steps:
+  - task: NodeTool@0
+    inputs:
+      versionSpec: $(node_version)
+
+  - script: npm ci
+    displayName: npm ci
+
+  - script: npm test
+    displayName: npm test
+
+  - task: PublishTestResults@2
+    condition: succeededOrFailed()
+    inputs:
+      testRunner: JUnit
+      testResultsFiles: "**/junit.xml"
+
+  - task: PublishCodeCoverageResults@1
+    inputs:
+      codeCoverageTool: Cobertura
+      summaryFileLocation: "$(System.DefaultWorkingDirectory)/**/*coverage.xml"
+  #      reportDirectory: "$(System.DefaultWorkingDirectory)/**/coverage"
+
+  - bash: bash <(curl -s https://codecov.io/bash) -f coverage/coverage-final.json
+    displayName: CodeCov

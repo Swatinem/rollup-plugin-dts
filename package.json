@@ -36,9 +36,14 @@
     "preset": "ts-jest/presets/js-with-ts",
     "collectCoverage": true,
     "coverageReporters": [
+      "cobertura",
       "html",
       "json",
       "text-summary"
+    ],
+    "reporters": [
+      "default",
+      "jest-junit"
     ],
     "coveragePathIgnorePatterns": [
       "tests",
@@ -65,6 +70,7 @@
     "esm": "^3.2.25",
     "fs-extra": "^8.1.0",
     "jest": "^24.9.0",
+    "jest-junit": "^8.0.0",
     "prettier": "^1.18.2",
     "react": "^16.10.1",
     "rollup": "1.22.0",
