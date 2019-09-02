@@ -1,8 +1,8 @@
 // a.d.ts
-export { A } from './common-ecf69fe7.d.ts';
+export { A } from './common-5119840e.d.ts';
 // b.d.ts
-export { B } from './common-ecf69fe7.d.ts';
-// common-ecf69fe7.d.ts
+export { B } from './common-5119840e.d.ts';
+// common-5119840e.d.ts
 interface A {
 }
 interface B {
