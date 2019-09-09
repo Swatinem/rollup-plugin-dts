@@ -62,7 +62,9 @@ async function assertTestcase(dir: string, meta: Meta) {
   if (hasMultipleOutputs) {
     code = "";
     for (const file of output) {
-      code += `// ${file.fileName}\n${clean(file.code)}`;
+      if (file.type === "chunk") {
+        code += `// ${file.fileName}\n${clean(file.code)}`;
+      }
     }
   }
 

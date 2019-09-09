@@ -72,6 +72,7 @@ const plugin: PluginImpl<{}> = () => {
         treeshake: {
           moduleSideEffects: "no-external",
           propertyReadSideEffects: true,
+          unknownGlobalSideEffects: false,
         },
       };
     },
