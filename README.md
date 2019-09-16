@@ -50,10 +50,11 @@ go the route of completely separating their public interfaces in a separate file
 
 - [API Extractor](https://api-extractor.com/)
 - [dts-bundle-generator](https://github.com/timocov/dts-bundle-generator)
+- [rollup-plugin-ts](https://github.com/wessberg/rollup-plugin-ts)
 
 [See](https://github.com/Swatinem/rollup-plugin-dts/issues/5)
 [some](https://github.com/Swatinem/rollup-plugin-dts/issues/13)
 [discussions](https://github.com/timocov/dts-bundle-generator/issues/68)
-about all three of these projects and their tradeoffs.
+about some of these projects and their tradeoffs.
 
 ## [How does it work](./docs/how-it-works.md)
