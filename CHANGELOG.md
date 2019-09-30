@@ -1,3 +1,7 @@
+### 1.1.8 2019-09-30
+
+- make it compatible with `rollup@1.22`
+
 ### 1.1.7 2019-09-09
 
 - make it compatible with `rollup@1.21`
