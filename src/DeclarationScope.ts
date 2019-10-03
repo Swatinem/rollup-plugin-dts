@@ -332,6 +332,10 @@ export class DeclarationScope {
       this.pushReference(this.convertEntityName(node.exprName));
       return;
     }
+    if (ts.isTypeNode(node) && node.kind === ts.SyntaxKind.RestType) {
+      this.convertTypeNode((node as ts.RestTypeNode).type);
+      return;
+    }
     // istanbul ignore else
     if (ts.isInferTypeNode(node)) {
       this.pushTypeVariable(node.typeParameter.name);
