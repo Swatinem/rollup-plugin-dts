@@ -1,3 +1,7 @@
+### 1.1.9 2019-10-03
+
+- support `RestType` Nodes
+
 ### 1.1.8 2019-09-30
 
 - make it compatible with `rollup@1.22`
