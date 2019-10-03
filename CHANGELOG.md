@@ -1,3 +1,8 @@
+### 1.1.10 2019-10-03
+
+- fix trailing comments being removed from rendered chunks
+- fix issues with multiple inline-imports
+
 ### 1.1.9 2019-10-03
 
 - support `RestType` Nodes
