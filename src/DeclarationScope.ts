@@ -137,16 +137,14 @@ export class DeclarationScope {
     if (!newModifiers && end) {
       end += 1;
     }
-    const original = this.transformer.sourceFile.text.slice(start, end);
     const middle = start + newModifiers.length;
 
     this.pushRaw(removeNested({ start: middle, end }));
 
     if (newModifiers) {
       this.transformer.fixups.push({
-        original,
-        replaceWith: newModifiers,
         range: { start, end: middle },
+        replaceWith: newModifiers,
       });
     }
   }

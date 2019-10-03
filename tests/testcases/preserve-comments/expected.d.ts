@@ -1,3 +1,6 @@
+/**
+ * A function with doc-comment that is imported first
+ */
 declare function first(): void;
 /**
  * A function with doc-comment that is imported second

@@ -82,7 +82,7 @@ export class NamespaceFixer {
   }
 
   public fix() {
-    let code = this.sourceFile.getText();
+    let code = this.sourceFile.getFullText();
 
     const { namespaces, itemTypes } = this.findNamespaces();
 

@@ -16,41 +16,66 @@ import { UnsupportedSyntaxError } from "./errors";
 type ESTreeImports = ESTree.ImportDeclaration["specifiers"];
 
 interface Fixup {
-  original: string;
-  replaceWith: string;
   range: {
     start: number;
     end: number;
   };
+  replaceWith: string;
+}
+
+export interface TransformOutput {
+  ast: ESTree.Program;
+  fixups: Array<Fixup>;
+  typeReferences: Set<string>;
 }
 
 export class Transformer {
   ast: ESTree.Program;
   fixups: Array<Fixup> = [];
+  typeReferences = new Set<string>();
 
   declarations = new Map<string, DeclarationScope>();
   exports = new Set<string>();
 
   constructor(public sourceFile: ts.SourceFile) {
+    // collect all the type references and create fixups to remove them from the code,
+    // we will add all of these later on to the whole chunk…
+    const lineStarts = sourceFile.getLineStarts();
+    for (const ref of sourceFile.typeReferenceDirectives) {
+      this.typeReferences.add(ref.fileName);
+
+      const { line } = sourceFile.getLineAndCharacterOfPosition(ref.pos);
+      const start = lineStarts[line];
+      const end = sourceFile.getLineEndOfPosition(ref.pos);
+      this.fixups.push({
+        range: { start, end },
+        // just overwrite them with whitespace, which will get compressed later on anyway :-)
+        replaceWith: " ".repeat(end - start),
+      });
+    }
+
     this.ast = createProgram(sourceFile);
     for (const stmt of sourceFile.statements) {
       this.convertStatement(stmt);
     }
   }
 
-  transform(): { ast: ESTree.Program; fixups: Array<Fixup> } {
-    return { ast: this.ast, fixups: this.fixups };
+  transform(): TransformOutput {
+    return {
+      ast: this.ast,
+      fixups: this.fixups,
+      typeReferences: this.typeReferences,
+    };
   }
 
   addFixupLocation(range: { start: number; end: number }) {
     const original = this.sourceFile.text.slice(range.start, range.end);
-    let identifier = `ɨmport${this.fixups.length}`;
+    let identifier = `_mp_rt${this.fixups.length}`;
     identifier += original.slice(identifier.length).replace(/[^a-zA-Z0-9_$]/g, () => "_");
 
     this.fixups.push({
-      replaceWith: identifier,
-      original,
       range,
+      replaceWith: identifier,
     });
     return identifier;
   }

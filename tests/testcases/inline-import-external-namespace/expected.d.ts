@@ -1,6 +1,6 @@
-import * as ɨmport0_foo__ from 'foo';
+import * as _mp_rt0_foo__ from 'foo';
 interface Foo {
-    ns1: ɨmport0_foo__;
-    ns2: typeof ɨmport0_foo__;
+    ns1: _mp_rt0_foo__;
+    ns2: typeof _mp_rt0_foo__;
 }
 export { Foo };
