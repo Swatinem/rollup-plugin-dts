@@ -1,8 +1,7 @@
-import { square } from './utils';
+export { first } from "./first";
+export { second } from "./second";
+
 /**
- * Cube a number.
- *
- * @param n The number to cube
+ * A function with doc-comment in the main file
  */
-export declare function cube(n: number): number;
-export { square };
+export declare function main(): void;

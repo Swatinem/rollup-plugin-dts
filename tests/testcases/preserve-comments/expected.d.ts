@@ -1,13 +1,10 @@
+declare function first(): void;
 /**
- * Square a number.
- *
- * @param n The number to square
+ * A function with doc-comment that is imported second
  */
-declare function square(n: number): number;
+declare function second(): void;
 /**
- * Cube a number.
- *
- * @param n The number to cube
+ * A function with doc-comment in the main file
  */
-declare function cube(n: number): number;
-export { cube, square };
+declare function main(): void;
+export { first, main, second };
