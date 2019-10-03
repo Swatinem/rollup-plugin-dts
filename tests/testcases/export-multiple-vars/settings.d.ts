@@ -1,9 +1,2 @@
-/**
- * @public
- */
-declare type In = { a: string };
-
-/**
- * @public
- */
-declare type Out = { b: number };
+export declare type In = { a: string };
+export declare type Out = { b: number };
