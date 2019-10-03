@@ -1,6 +1,5 @@
 # rollup-plugin-dts
 
-![](https://github.com/actions/hello-world/workflows/Greet%20Everyone/badge.svg)
 [![Build Status](https://github.com/Swatinem/rollup-plugin-dts/workflows/CI/badge.svg)](https://github.com/Swatinem/rollup-plugin-dts/actions?workflow=CI)
 [![Coverage Status](https://img.shields.io/codecov/c/github/Swatinem/rollup-plugin-dts.svg)](https://codecov.io/gh/Swatinem/rollup-plugin-dts)
 
