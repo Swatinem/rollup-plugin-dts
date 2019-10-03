@@ -1,6 +1,7 @@
 # rollup-plugin-dts
 
-[![Build Status](https://img.shields.io/travis/Swatinem/rollup-plugin-dts.svg)](https://travis-ci.org/Swatinem/rollup-plugin-dts)
+![](https://github.com/actions/hello-world/workflows/Greet%20Everyone/badge.svg)
+[![Build Status](https://github.com/Swatinem/rollup-plugin-dts/workflows/CI/badge.svg)](https://github.com/Swatinem/rollup-plugin-dts/actions?workflow=CI)
 [![Coverage Status](https://img.shields.io/codecov/c/github/Swatinem/rollup-plugin-dts.svg)](https://codecov.io/gh/Swatinem/rollup-plugin-dts)
 
 This is a plugin that lets you roll-up your `.d.ts` definition files.
