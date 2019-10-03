@@ -364,7 +364,7 @@ export class DeclarationScope {
       },
       range,
     );
-    this.transformer.pushStatement({
+    this.transformer.unshiftStatement({
       type: "ImportDeclaration",
       specifiers: [
         {

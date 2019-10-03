@@ -80,6 +80,9 @@ export class Transformer {
     return identifier;
   }
 
+  unshiftStatement(node: ESTree.Statement | ESTree.ModuleDeclaration) {
+    this.ast.body.unshift(withStartEnd(node, { start: 0, end: 0 }));
+  }
   pushStatement(node: ESTree.Statement | ESTree.ModuleDeclaration) {
     this.ast.body.push(node);
   }
