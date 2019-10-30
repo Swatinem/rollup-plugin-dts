@@ -112,7 +112,7 @@ export class NamespaceFixer {
         if (exportedName === localName) {
           code += `    ${ns.name}_${exportedName} as ${exportedName},\n`;
         } else {
-          code += `    ${localName} as ${exportedName}\n`;
+          code += `    ${localName} as ${exportedName},\n`;
         }
       }
 
