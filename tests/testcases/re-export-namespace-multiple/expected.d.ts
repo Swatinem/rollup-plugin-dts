@@ -26,7 +26,7 @@ declare namespace defs {
 }
 declare namespace deep {
   export {
-    defs as ns
+    defs as ns,
   };
 }
 type onlyOne_A = A;
