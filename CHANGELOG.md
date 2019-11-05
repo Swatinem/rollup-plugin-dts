@@ -1,3 +1,7 @@
+### 1.1.11 2019-11-05
+
+- fix generic type parameters of inline-imports
+
 ### 1.1.10 2019-10-03
 
 - fix leading comments being removed from rendered chunks
