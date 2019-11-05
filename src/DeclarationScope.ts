@@ -355,7 +355,10 @@ export class DeclarationScope {
     }
     const fileId = node.argument.literal.text;
     const start = node.getStart() + (node.isTypeOf ? "typeof ".length : 0);
-    const range = { start, end: node.getEnd() };
+    const range = {
+      start,
+      end: (node.qualifier ? node.qualifier : node).getEnd(),
+    };
     const importId = this.transformer.addFixupLocation(range);
     const importIdRef = withStartEnd(
       {
