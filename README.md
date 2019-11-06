@@ -58,3 +58,15 @@ go the route of completely separating their public interfaces in a separate file
 about some of these projects and their tradeoffs.
 
 ## [How does it work](./docs/how-it-works.md)
+
+## Compatibility Notice
+
+This plugin tracks the latest versions of both `rollup` and `typescript`.
+I do not guarantee backwards compatibility to older versions of these peer
+dependencies, so breakage may occur.
+This may not strictly adhere to the definition of semver, but meh…
+
+## License
+
+The code is licensed under the copyleft **LGPL-3.0**. I have no intention to
+license this under any non-copyleft license.
