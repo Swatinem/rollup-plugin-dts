@@ -238,7 +238,8 @@ export class DeclarationScope {
         ts.isConstructorDeclaration(node) ||
         ts.isConstructSignatureDeclaration(node) ||
         ts.isCallSignatureDeclaration(node) ||
-        ts.isGetAccessorDeclaration(node)
+        ts.isGetAccessorDeclaration(node) ||
+        ts.isSetAccessorDeclaration(node)
       ) {
         this.convertParametersAndType(node);
       } else {

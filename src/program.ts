@@ -9,7 +9,7 @@ export const formatHost: ts.FormatDiagnosticsHost = {
   getCanonicalFileName: ts.sys.useCaseSensitiveFileNames ? f => f : f => f.toLowerCase(),
 };
 
-const OPTIONS_OVERRIDE = {
+const OPTIONS_OVERRIDE: ts.CompilerOptions = {
   // Ensure ".d.ts" modules are generated
   declaration: true,
   // Skip ".js" generation
@@ -22,6 +22,8 @@ const OPTIONS_OVERRIDE = {
   skipLibCheck: true,
   // Ensure TS2742 errors are visible
   preserveSymlinks: true,
+  // Ensure we can parse the latest code
+  target: ts.ScriptTarget.ESNext,
 };
 
 function getCompilerOptions(input: string): { dirName: string; compilerOptions: ts.CompilerOptions } {

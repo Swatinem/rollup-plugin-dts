@@ -115,15 +115,15 @@ const plugin: PluginImpl<{}> = () => {
       let generated!: SourceDescription;
       const { emitSkipped, diagnostics } = module.program.emit(
         module.source,
-        (_, declarationText) =>
-          (generated = transformFile(
-            ts.createSourceFile(
-              declarationId,
-              declarationText,
-              ts.ScriptTarget.Latest,
-              true, // setParentNodes
-            ),
-          )),
+        (_, declarationText) => {
+          const source = ts.createSourceFile(
+            declarationId,
+            declarationText,
+            ts.ScriptTarget.Latest,
+            true, // setParentNodes
+          );
+          generated = transformFile(source);
+        },
         undefined, // cancellationToken
         true, // emitOnlyDtsFiles
       );
