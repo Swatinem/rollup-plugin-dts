@@ -237,7 +237,8 @@ export class DeclarationScope {
         ts.isMethodSignature(node) ||
         ts.isConstructorDeclaration(node) ||
         ts.isConstructSignatureDeclaration(node) ||
-        ts.isCallSignatureDeclaration(node)
+        ts.isCallSignatureDeclaration(node) ||
+        ts.isGetAccessorDeclaration(node)
       ) {
         this.convertParametersAndType(node);
       } else {
