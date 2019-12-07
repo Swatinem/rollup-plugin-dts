@@ -61,19 +61,19 @@
     "@types/fs-extra": "^8.0.1",
     "@types/jest": "^24.0.23",
     "@types/node": "^12.12.14",
-    "@types/react": "^16.9.13",
+    "@types/react": "^16.9.15",
     "esm": "^3.2.25",
     "fs-extra": "^8.1.0",
     "jest": "^24.9.0",
     "prettier": "^1.19.1",
     "react": "^16.12.0",
-    "rollup": "1.27.7",
+    "rollup": "1.27.8",
     "ts-jest": "^24.2.0",
-    "typescript": "3.7.2"
+    "typescript": "3.7.3"
   },
   "peerDependencies": {
-    "rollup": "^1.27.7",
-    "typescript": "^3.7.2"
+    "rollup": "^1.27.8",
+    "typescript": "^3.7.3"
   },
   "optionalDependencies": {
     "@babel/code-frame": "^7.5.5"
