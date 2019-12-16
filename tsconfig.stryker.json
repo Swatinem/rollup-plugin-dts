@@ -1,0 +1,18 @@
+{
+  "extends": "./tsconfig",
+  "compilerOptions": {
+    "allowJs": false,
+    "checkJs": false,
+
+    "incremental": true,
+    "tsBuildInfoFile": ".build/tsconfig.build.tsbuildinfo",
+
+    "declaration": true,
+    // "declarationMap": true,
+    // "sourceMap": true,
+    "module": "esnext",
+
+    "noEmit": false
+  },
+  "include": ["tests", "src"]
+}

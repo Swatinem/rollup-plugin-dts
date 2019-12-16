@@ -57,6 +57,9 @@
     "trailingComma": "all"
   },
   "devDependencies": {
+    "@stryker-mutator/core": "^2.4.0",
+    "@stryker-mutator/jest-runner": "^2.4.0",
+    "@stryker-mutator/typescript": "^2.4.0",
     "@types/babel__code-frame": "^7.0.1",
     "@types/fs-extra": "^8.0.1",
     "@types/jest": "^24.0.23",
