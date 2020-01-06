@@ -1,20 +1,21 @@
 import { rollup, InputOption, RollupOptions, InputOptions } from "rollup";
-import dts from "../src";
+import dts, { Options } from "../src";
 import fsExtra from "fs-extra";
 import path from "path";
 
 const TESTCASES = path.join(__dirname, "testcases");
 
 interface Meta {
+  options: Options;
   rollupOptions: RollupOptions;
   skip: boolean;
   expectedError?: string;
 }
 
-async function createBundle(rollupOptions: InputOptions) {
+async function createBundle(options: Options, rollupOptions: InputOptions) {
   const bundle = await rollup({
     ...rollupOptions,
-    plugins: [dts()],
+    plugins: [dts(options)],
     onwarn() {},
   });
   return bundle.generate({
@@ -48,9 +49,9 @@ export function clean(code: string = "") {
 }
 
 async function assertTestcase(dir: string, meta: Meta) {
-  const { expectedError, rollupOptions } = meta;
+  const { expectedError, options, rollupOptions } = meta;
 
-  const creator = createBundle({ ...rollupOptions, input: withInput(dir, rollupOptions) });
+  const creator = createBundle(options, { ...rollupOptions, input: withInput(dir, rollupOptions) });
   if (expectedError) {
     await expect(creator).rejects.toThrow(expectedError);
     return;
@@ -83,7 +84,7 @@ async function assertTestcase(dir: string, meta: Meta) {
   if (hasExpected && !hasMultipleOutputs) {
     const {
       output: [sanityCheck],
-    } = await createBundle({ ...rollupOptions, input: expectedDts });
+    } = await createBundle(options, { ...rollupOptions, input: expectedDts });
     // typescript `.d.ts` output compresses whitespace, so make sure we ignore that
     expect(clean(sanityCheck.code)).toEqual(expectedCode);
   }
@@ -98,6 +99,7 @@ describe("rollup-plugin-dts", () => {
         input: fsExtra.pathExistsSync(path.join(dir, "index.d.ts")) ? "index.d.ts" : "index.ts",
       };
       const meta: Meta = {
+        options: {},
         skip: false,
         rollupOptions,
       };
