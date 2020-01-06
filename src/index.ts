@@ -7,7 +7,19 @@ import { Transformer } from "./Transformer";
 
 const tsx = /\.tsx?$/;
 
-const plugin: PluginImpl<{}> = () => {
+export interface Options {
+  /**
+   * The plugin will by default flag *all* external libraries as `external`,
+   * and thus prevent them from be bundled.
+   * If you set the `respectExternal` option to `true`, the plugin will not do
+   * any default classification, but rather use the `external` option as
+   * configured via rollup.
+   */
+  respectExternal?: boolean;
+}
+
+const plugin: PluginImpl<Options> = (options = {}) => {
+  const { respectExternal = false } = options;
   // There exists one Program object per entry point,
   // except when all entry points are ".d.ts" modules.
   let programs: Array<ts.Program> = [];
@@ -151,12 +163,13 @@ const plugin: PluginImpl<{}> = () => {
         return;
       }
 
-      // here, we define everything that comes from `node_modules` as `external`.
-      // maybe its a good idea to introduce an option for this?
-      return resolvedModule.isExternalLibraryImport
-        ? { id: source, external: true }
-        : // using `path.resolve` here converts paths back to the system specific separators
-          { id: path.resolve(resolvedModule.resolvedFileName) };
+      if (!respectExternal && resolvedModule.isExternalLibraryImport) {
+        // here, we define everything that comes from `node_modules` as `external`.
+        return { id: source, external: true };
+      } else {
+        // using `path.resolve` here converts paths back to the system specific separators
+        return { id: path.resolve(resolvedModule.resolvedFileName) };
+      }
     },
 
     renderChunk(code, chunk) {
