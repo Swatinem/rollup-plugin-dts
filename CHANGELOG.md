@@ -1,3 +1,8 @@
+### 1.2.0 2020-01-06
+
+- add a new `respectExternal` option, which will _not_ exclude all external
+  dependencies from bundling, but rather respect the `external` rollup option.
+
 ### 1.1.13 2019-12-07
 
 - add support for optional type nodes
