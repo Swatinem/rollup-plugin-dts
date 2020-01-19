@@ -26,24 +26,30 @@ const OPTIONS_OVERRIDE: ts.CompilerOptions = {
   target: ts.ScriptTarget.ESNext,
 };
 
-function getCompilerOptions(input: string): { dirName: string; compilerOptions: ts.CompilerOptions } {
+function getCompilerOptions(
+  input: string,
+): { dtsFiles: Array<string>; dirName: string; compilerOptions: ts.CompilerOptions } {
   let dirName = path.dirname(input);
+  let dtsFiles: Array<string> = [];
   const configPath = ts.findConfigFile(path.dirname(input), ts.sys.fileExists);
   if (!configPath) {
-    return { dirName, compilerOptions: { ...OPTIONS_OVERRIDE } };
+    return { dtsFiles, dirName, compilerOptions: { ...OPTIONS_OVERRIDE } };
   }
   dirName = path.dirname(configPath);
   const { config, error } = ts.readConfigFile(configPath, ts.sys.readFile);
   if (error) {
     console.error(ts.formatDiagnostic(error, formatHost));
-    return { dirName, compilerOptions: { ...OPTIONS_OVERRIDE } };
+    return { dtsFiles, dirName, compilerOptions: { ...OPTIONS_OVERRIDE } };
   }
-  const { options, errors } = ts.parseJsonConfigFileContent(config, ts.sys, dirName);
+  const { fileNames, options, errors } = ts.parseJsonConfigFileContent(config, ts.sys, dirName);
+
+  dtsFiles = fileNames.filter(name => name.endsWith(dts));
   if (errors.length) {
     console.error(ts.formatDiagnostics(errors, formatHost));
-    return { dirName, compilerOptions: { ...OPTIONS_OVERRIDE } };
+    return { dtsFiles, dirName, compilerOptions: { ...OPTIONS_OVERRIDE } };
   }
   return {
+    dtsFiles,
     dirName,
     compilerOptions: {
       ...options,
@@ -55,6 +61,7 @@ function getCompilerOptions(input: string): { dirName: string; compilerOptions: 
 export function createPrograms(input: Array<string>) {
   const programs = [];
   let inputs: Array<string> = [];
+  let dtsFiles: Set<string> = new Set();
   let dirName = "";
   let compilerOptions: ts.CompilerOptions = {};
 
@@ -65,6 +72,7 @@ export function createPrograms(input: Array<string>) {
 
     main = path.resolve(main);
     const options = getCompilerOptions(main);
+    options.dtsFiles.forEach(dtsFiles.add, dtsFiles);
 
     if (!inputs.length) {
       inputs.push(main);
@@ -76,7 +84,7 @@ export function createPrograms(input: Array<string>) {
       inputs.push(main);
     } else {
       const host = ts.createCompilerHost(compilerOptions, true);
-      const program = ts.createProgram(inputs, compilerOptions, host);
+      const program = ts.createProgram(inputs.concat(Array.from(dtsFiles)), compilerOptions, host);
       programs.push(program);
 
       inputs = [main];
@@ -86,7 +94,7 @@ export function createPrograms(input: Array<string>) {
 
   if (inputs.length) {
     const host = ts.createCompilerHost(compilerOptions, true);
-    const program = ts.createProgram(inputs, compilerOptions, host);
+    const program = ts.createProgram(inputs.concat(Array.from(dtsFiles)), compilerOptions, host);
     programs.push(program);
   }
 
