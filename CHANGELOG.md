@@ -1,3 +1,9 @@
+### 1.2.1 2020-01-26
+
+- try to correctly resolve `.d.ts` files when building `.ts` files
+- fix using literals for computed properties
+- ignore `export as namespace` declarations
+
 ### 1.2.0 2020-01-06
 
 - add a new `respectExternal` option, which will _not_ exclude all external
