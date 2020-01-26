@@ -1,6 +1,13 @@
-declare const A: "a";
+declare const Aprop: "a";
+declare const Dprop: unique symbol;
+interface A {}
 interface B {}
-type C = {
-  [A]?: B[];
+interface C {}
+interface D {}
+type Klass = {
+  [Aprop]?: A[];
+  ["B"]: B;
+  [0]: C;
+  [Dprop]: D;
 };
-export { C };
+export { Klass };

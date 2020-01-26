@@ -193,8 +193,10 @@ export class DeclarationScope {
       return;
     }
     const { expression } = node.name;
-
-    if (ts.isIdentifier(expression) || ts.isStringLiteral(expression)) {
+    if (ts.isLiteralExpression(expression)) {
+      return;
+    }
+    if (ts.isIdentifier(expression)) {
       return this.pushReference(createIdentifier(expression));
     }
     if (ts.isPropertyAccessExpression(expression)) {
