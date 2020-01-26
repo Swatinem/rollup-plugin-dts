@@ -151,12 +151,28 @@ export class Transformer {
     if (ts.isModuleDeclaration(node)) {
       return this.convertNamespaceDeclaration(node);
     }
+    if (node.kind == ts.SyntaxKind.NamespaceExportDeclaration) {
+      // just ignore `export as namespace FOO` statements…
+      return this.removeStatement(node);
+    }
     // istanbul ignore else
     if (ts.isImportDeclaration(node)) {
       return this.convertImportDeclaration(node);
     } else {
       throw new UnsupportedSyntaxError(node);
     }
+  }
+
+  removeStatement(node: ts.Node) {
+    this.pushStatement(
+      withStartEnd(
+        {
+          type: "ExpressionStatement",
+          expression: { type: "Literal", value: "pls remove me" },
+        },
+        node,
+      ),
+    );
   }
 
   convertNamespaceDeclaration(node: ts.ModuleDeclaration) {

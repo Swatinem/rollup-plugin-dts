@@ -67,6 +67,12 @@ const plugin: PluginImpl<Options> = (options = {}) => {
       code = code.slice(0, fixup.range.start) + fixup.replaceWith + code.slice(fixup.range.end);
     }
 
+    if (process.env.DTS_DUMP_AST) {
+      console.log(input.fileName);
+      console.log(code);
+      console.log(output.ast.body);
+    }
+
     return { code, ast: output.ast };
   }
 
