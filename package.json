@@ -60,20 +60,20 @@
     "@types/babel__code-frame": "^7.0.1",
     "@types/d3-drag": "^1.2.3",
     "@types/fs-extra": "^8.0.1",
-    "@types/jest": "^24.9.0",
+    "@types/jest": "^24.9.1",
     "@types/node": "^12.12.25",
-    "@types/react": "^16.9.17",
+    "@types/react": "^16.9.19",
     "esm": "^3.2.25",
     "fs-extra": "^8.1.0",
     "jest": "^24.9.0",
     "prettier": "^1.19.1",
     "react": "^16.12.0",
-    "rollup": "1.29.0",
+    "rollup": "1.29.1",
     "ts-jest": "^24.3.0",
     "typescript": "3.7.5"
   },
   "peerDependencies": {
-    "rollup": "^1.29.0",
+    "rollup": "^1.29.1",
     "typescript": "^3.7.5"
   },
   "optionalDependencies": {
