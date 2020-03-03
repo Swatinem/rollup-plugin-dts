@@ -292,6 +292,10 @@ export class Transformer {
 
     const source = node.moduleSpecifier ? (convertExpression(node.moduleSpecifier) as any) : undefined;
 
+    if (node.exportClause && ts.isNamespaceExport(node.exportClause)) {
+      throw new UnsupportedSyntaxError(node.exportClause);
+    }
+
     if (!node.exportClause) {
       this.pushStatement(
         withStartEnd(

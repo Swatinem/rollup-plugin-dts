@@ -138,6 +138,9 @@ export function convertExpression(node: ts.Expression): ESTree.Expression {
     return { type: "Literal", value: node.text };
   }
   if (ts.isPropertyAccessExpression(node)) {
+    if (ts.isPrivateIdentifier(node.name)) {
+      throw new UnsupportedSyntaxError(node.name);
+    }
     return withStartEnd(
       {
         type: "MemberExpression",

@@ -173,6 +173,9 @@ export class DeclarationScope {
     }
 
     if (ts.isPropertyAccessExpression(node.expression)) {
+      if (ts.isPrivateIdentifier(node.name)) {
+        throw new UnsupportedSyntaxError(node.name);
+      }
       return withStartEnd(
         {
           type: "MemberExpression",
@@ -492,6 +495,9 @@ export class DeclarationScope {
       // istanbul ignore else
       if (ts.isExportDeclaration(stmt)) {
         if (stmt.exportClause) {
+          if (ts.isNamespaceExport(stmt.exportClause)) {
+            throw new UnsupportedSyntaxError(stmt.exportClause);
+          }
           for (const decl of stmt.exportClause.elements) {
             const id = decl.propertyName || decl.name;
             this.pushIdentifierReference(id);
