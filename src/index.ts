@@ -73,7 +73,7 @@ const plugin: PluginImpl<Options> = (options = {}) => {
       console.log(output.ast.body);
     }
 
-    return { code, ast: output.ast };
+    return { code, ast: output.ast as any };
   }
 
   return {

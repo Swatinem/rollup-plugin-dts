@@ -59,6 +59,7 @@
   "devDependencies": {
     "@types/babel__code-frame": "^7.0.1",
     "@types/d3-drag": "^1.2.3",
+    "@types/estree": "0.0.42",
     "@types/fs-extra": "^8.1.0",
     "@types/jest": "^25.1.4",
     "@types/node": "^13.9.0",
