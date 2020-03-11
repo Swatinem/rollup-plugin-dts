@@ -1,3 +1,8 @@
+### 1.3.0 2020-03-11
+
+- support rollup > 2
+- correctly output `declare global` and `module "foo"` declarations.
+
 ### 1.2.1 2020-01-26
 
 - try to correctly resolve `.d.ts` files when building `.ts` files
