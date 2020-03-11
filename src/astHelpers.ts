@@ -218,7 +218,3 @@ export function matchesModifier(node: ts.Node, flags: ts.ModifierFlags) {
   const nodeFlags = ts.getCombinedModifierFlags(node as any);
   return (nodeFlags & flags) === flags;
 }
-
-export const isNamespaceDeclaration = (node: ts.ModuleDeclaration) => {
-  return node.modifiers && (node.name.pos - node.modifiers[node.modifiers?.length - 1].end) === 10 /* "namespace".length + 1 */
-}

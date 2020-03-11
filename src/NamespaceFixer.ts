@@ -1,5 +1,4 @@
 import * as ts from "typescript";
-import { isNamespaceDeclaration } from "./astHelpers";
 import { UnsupportedSyntaxError } from "./errors";
 
 interface Export {
@@ -20,16 +19,34 @@ export class NamespaceFixer {
     const itemTypes: { [key: string]: string } = {};
 
     for (const node of this.sourceFile.statements) {
+      const location = {
+        start: node.getStart(),
+        end: node.getEnd(),
+      };
+
+      // Well, this is a big hack:
+      // For some global `namespace` and `module` declarations, we generate
+      // some fake IIFE code, so rollup can correctly scan its scope.
+      // However, rollup will then insert bogus semicolons,
+      // these `EmptyStatement`s, which are a syntax error and we want to
+      // remove them. Well, we do that here…
+      if (ts.isEmptyStatement(node)) {
+        namespaces.unshift({
+          name: "",
+          exports: [],
+          location,
+        });
+        continue;
+      }
+
       if (ts.isClassDeclaration(node)) {
         itemTypes[node.name!.getText()] = "class";
       } else if (ts.isFunctionDeclaration(node)) {
         itemTypes[node.name!.getText()] = "function";
       } else if (ts.isInterfaceDeclaration(node)) {
         itemTypes[node.name.getText()] = "interface";
-      } else if (ts.isModuleDeclaration(node)) {
-        if (isNamespaceDeclaration(node)) {
-          itemTypes[node.name.getText()] = "namespace";
-        }
+      } else if (ts.isModuleDeclaration(node) && ts.isIdentifier(node.name)) {
+        itemTypes[node.name.getText()] = "namespace";
       } else if (ts.isEnumDeclaration(node)) {
         itemTypes[node.name.getText()] = "enum";
       }
@@ -75,10 +92,7 @@ export class NamespaceFixer {
       namespaces.unshift({
         name,
         exports,
-        location: {
-          start: node.getStart(),
-          end: node.getEnd(),
-        },
+        location,
       });
     }
     return { namespaces, itemTypes };
@@ -109,18 +123,20 @@ export class NamespaceFixer {
           }
         }
       }
-      code += `declare namespace ${ns.name} {\n`;
-      code += `  export {\n`;
-      for (const { exportedName, localName } of ns.exports) {
-        if (exportedName === localName) {
-          code += `    ${ns.name}_${exportedName} as ${exportedName},\n`;
-        } else {
-          code += `    ${localName} as ${exportedName},\n`;
+      if (ns.name) {
+        code += `declare namespace ${ns.name} {\n`;
+        code += `  export {\n`;
+        for (const { exportedName, localName } of ns.exports) {
+          if (exportedName === localName) {
+            code += `    ${ns.name}_${exportedName} as ${exportedName},\n`;
+          } else {
+            code += `    ${localName} as ${exportedName},\n`;
+          }
         }
-      }
 
-      code += `  };\n`;
-      code += `}`;
+        code += `  };\n`;
+        code += `}`;
+      }
 
       code += codeAfter;
     }

@@ -1,7 +1,5 @@
-declare class Foo {
-  manager: FooManager;
-  constructor(manager: FooManager);
-}
+import Foo from "./Foo";
+
 declare class FooManager {
   foos: Array<Foo>;
   constructor();

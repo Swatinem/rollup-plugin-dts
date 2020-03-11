@@ -52,7 +52,6 @@ const plugin: PluginImpl<Options> = (options = {}) => {
 
   // Parse a TypeScript module into an ESTree program.
   const typeReferences = new Set<string>();
-  const moduleDeclarations = new Set<string>();
 
   function transformFile(input: ts.SourceFile): SourceDescription {
     let code = input.getFullText();
@@ -62,10 +61,6 @@ const plugin: PluginImpl<Options> = (options = {}) => {
 
     for (const ref of output.typeReferences) {
       typeReferences.add(ref);
-    }
-
-    for (const ref of output.moduleDeclarations) {
-      moduleDeclarations.add(ref);
     }
 
     // apply fixups, which means replacing certain text ranges before we hand off the code to rollup
@@ -189,7 +184,6 @@ const plugin: PluginImpl<Options> = (options = {}) => {
       const fixer = new NamespaceFixer(source);
 
       code = writeBlock(Array.from(typeReferences, ref => `/// <reference types="${ref}" />`));
-      code += writeBlock(Array.from(moduleDeclarations, moduleDeclaration => moduleDeclaration));
       code += fixer.fix();
 
       return { code, map: { mappings: "" } };
@@ -197,7 +191,7 @@ const plugin: PluginImpl<Options> = (options = {}) => {
   };
 };
 
-function writeBlock(codes: string[]): string {
+function writeBlock(codes: Array<string>): string {
   if (codes.length) {
     return codes.join("\n") + "\n";
   }

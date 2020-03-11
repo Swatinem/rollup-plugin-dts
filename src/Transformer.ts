@@ -6,7 +6,6 @@ import {
   createExport,
   createIdentifier,
   createProgram,
-  isNamespaceDeclaration,
   matchesModifier,
   Ranged,
   withStartEnd,
@@ -28,14 +27,12 @@ export interface TransformOutput {
   ast: ESTree.Program;
   fixups: Array<Fixup>;
   typeReferences: Set<string>;
-  moduleDeclarations: Set<string>;
 }
 
 export class Transformer {
   ast: ESTree.Program;
   fixups: Array<Fixup> = [];
   typeReferences = new Set<string>();
-  moduleDeclarations = new Set<string>();
 
   declarations = new Map<string, DeclarationScope>();
   exports = new Set<string>();
@@ -68,7 +65,6 @@ export class Transformer {
       ast: this.ast,
       fixups: this.fixups,
       typeReferences: this.typeReferences,
-      moduleDeclarations: this.moduleDeclarations,
     };
   }
 
@@ -154,13 +150,7 @@ export class Transformer {
       return this.convertExportDeclaration(node);
     }
     if (ts.isModuleDeclaration(node)) {
-      if (isNamespaceDeclaration(node)) {
-        return this.convertNamespaceDeclaration(node);
-      }
-
-      this.moduleDeclarations.add(node.getFullText());
-      this.removeStatement(node)
-      return;
+      return this.convertNamespaceDeclaration(node);
     }
     if (node.kind == ts.SyntaxKind.NamespaceExportDeclaration) {
       // just ignore `export as namespace FOO` statements…
@@ -188,21 +178,17 @@ export class Transformer {
 
   convertNamespaceDeclaration(node: ts.ModuleDeclaration) {
     // we want to keep `declare global` augmentations, and we want to
-    // to pull in all the things referenced inside.
+    // pull in all the things referenced inside.
     // so for this case, we need to figure out some way so that rollup does
     // the right thing and not rename these…
     const isGlobalAugmentation = node.flags & ts.NodeFlags.GlobalAugmentation;
 
-    if (isGlobalAugmentation) {
+    if (isGlobalAugmentation || !ts.isIdentifier(node.name)) {
       const scope = this.createDeclaration(node);
       scope.convertNamespace(node);
       return;
     }
 
-    // istanbul ignore if
-    if (!ts.isIdentifier(node.name)) {
-      throw new UnsupportedSyntaxError(node, `namespace name should be an "Identifier"`);
-    }
     this.maybeMarkAsExported(node, node.name);
 
     const scope = this.createDeclaration(node, node.name);
