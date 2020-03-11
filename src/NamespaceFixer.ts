@@ -1,4 +1,5 @@
 import * as ts from "typescript";
+import { isNamespaceDeclaration } from "./astHelpers";
 import { UnsupportedSyntaxError } from "./errors";
 
 interface Export {
@@ -26,7 +27,9 @@ export class NamespaceFixer {
       } else if (ts.isInterfaceDeclaration(node)) {
         itemTypes[node.name.getText()] = "interface";
       } else if (ts.isModuleDeclaration(node)) {
-        itemTypes[node.name.getText()] = "namespace";
+        if (isNamespaceDeclaration(node)) {
+          itemTypes[node.name.getText()] = "namespace";
+        }
       } else if (ts.isEnumDeclaration(node)) {
         itemTypes[node.name.getText()] = "enum";
       }
