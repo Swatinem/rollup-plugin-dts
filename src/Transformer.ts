@@ -6,6 +6,7 @@ import {
   createExport,
   createIdentifier,
   createProgram,
+  isNamespaceDeclaration,
   matchesModifier,
   Ranged,
   withStartEnd,
@@ -27,12 +28,14 @@ export interface TransformOutput {
   ast: ESTree.Program;
   fixups: Array<Fixup>;
   typeReferences: Set<string>;
+  moduleDeclarations: Set<string>;
 }
 
 export class Transformer {
   ast: ESTree.Program;
   fixups: Array<Fixup> = [];
   typeReferences = new Set<string>();
+  moduleDeclarations = new Set<string>();
 
   declarations = new Map<string, DeclarationScope>();
   exports = new Set<string>();
@@ -65,6 +68,7 @@ export class Transformer {
       ast: this.ast,
       fixups: this.fixups,
       typeReferences: this.typeReferences,
+      moduleDeclarations: this.moduleDeclarations,
     };
   }
 
@@ -83,6 +87,7 @@ export class Transformer {
   unshiftStatement(node: ESTree.Statement | ESTree.ModuleDeclaration) {
     this.ast.body.unshift(withStartEnd(node, { start: 0, end: 0 }));
   }
+
   pushStatement(node: ESTree.Statement | ESTree.ModuleDeclaration) {
     this.ast.body.push(node);
   }
@@ -149,7 +154,13 @@ export class Transformer {
       return this.convertExportDeclaration(node);
     }
     if (ts.isModuleDeclaration(node)) {
-      return this.convertNamespaceDeclaration(node);
+      if (isNamespaceDeclaration(node)) {
+        return this.convertNamespaceDeclaration(node);
+      }
+
+      this.moduleDeclarations.add(node.getFullText());
+      this.removeStatement(node)
+      return;
     }
     if (node.kind == ts.SyntaxKind.NamespaceExportDeclaration) {
       // just ignore `export as namespace FOO` statements…
