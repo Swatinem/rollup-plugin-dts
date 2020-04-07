@@ -16,10 +16,11 @@ export interface Options {
    * configured via rollup.
    */
   respectExternal?: boolean;
+  compilerOptions?: ts.CompilerOptions;
 }
 
 const plugin: PluginImpl<Options> = (options = {}) => {
-  const { respectExternal = false } = options;
+  const { respectExternal = false, compilerOptions = {} } = options;
   // There exists one Program object per entry point,
   // except when all entry points are ".d.ts" modules.
   let programs: Array<ts.Program> = [];
@@ -165,7 +166,7 @@ const plugin: PluginImpl<Options> = (options = {}) => {
       importer = importer.split("\\").join("/");
 
       // resolve this via typescript
-      const { resolvedModule } = ts.nodeModuleNameResolver(source, importer, {}, ts.sys);
+      const { resolvedModule } = ts.nodeModuleNameResolver(source, importer, compilerOptions, ts.sys);
       if (!resolvedModule) {
         return;
       }
