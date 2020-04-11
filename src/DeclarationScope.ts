@@ -160,28 +160,28 @@ export class DeclarationScope {
 
   convertPropertyAccess(node: ts.PropertyAccessExpression): ESTree.Expression {
     // hm, we only care about property access expressions here…
-
-    if (ts.isIdentifier(node.expression)) {
-      return createIdentifier(node.expression);
+    if (!ts.isIdentifier(node.expression) && !ts.isPropertyAccessExpression(node.expression)) {
+      throw new UnsupportedSyntaxError(node.expression);
     }
 
-    if (ts.isPropertyAccessExpression(node.expression)) {
-      if (ts.isPrivateIdentifier(node.name)) {
-        throw new UnsupportedSyntaxError(node.name);
-      }
-      return withStartEnd(
-        {
-          type: "MemberExpression",
-          computed: false,
-          object: this.convertPropertyAccess(node.expression),
-          property: createIdentifier(node.name),
-        },
-        // TODO: clean up all the `start` handling!
-        { start: node.getStart(), end: node.end },
-      );
+    if (ts.isPrivateIdentifier(node.name)) {
+      throw new UnsupportedSyntaxError(node.name);
     }
 
-    throw new UnsupportedSyntaxError(node.expression);
+    let object = ts.isIdentifier(node.expression)
+      ? createIdentifier(node.expression)
+      : this.convertPropertyAccess(node.expression);
+
+    return withStartEnd(
+      {
+        type: "MemberExpression",
+        computed: false,
+        object,
+        property: createIdentifier(node.name),
+      },
+      // TODO: clean up all the `start` handling!
+      { start: node.getStart(), end: node.end },
+    );
   }
 
   convertComputedPropertyName(node: { name?: ts.PropertyName }) {

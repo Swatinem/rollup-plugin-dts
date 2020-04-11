@@ -82,7 +82,7 @@ const plugin: PluginImpl<Options> = (options = {}) => {
     if (process.env.DTS_DUMP_AST) {
       console.log(input.fileName);
       console.log(code);
-      console.log(output.ast.body);
+      console.log(JSON.stringify(output.ast.body, undefined, 2));
     }
 
     return { code, ast: output.ast as any };

@@ -4,6 +4,6 @@ declare const deep: { deep: { a: "deep" } };
 declare class Test {
   [inspect.custom](): string;
   [b](): string;
-  [deep.a]: string;
+  [deep.deep.a]: string;
 }
 export { Test };
