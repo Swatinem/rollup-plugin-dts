@@ -1,3 +1,9 @@
+### 1.4.0 2020-04-11
+
+- Fix renaming of `MemberExpression`s.
+- Make modifier rewriting more resilient to missing `declare` modifier.
+- Support TS path-mapping via `compilerOptions`.
+
 ### 1.3.0 2020-03-11
 
 - support rollup > 2
