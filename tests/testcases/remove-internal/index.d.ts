@@ -1,2 +1,1 @@
-export declare class Foo {
-}
+export declare class Foo {}

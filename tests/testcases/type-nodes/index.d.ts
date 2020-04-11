@@ -1,36 +1,20 @@
-interface A {
-}
-interface B {
-}
-interface C {
-}
-interface D {
-}
-interface E {
-}
-interface F {
-}
-interface G {
-}
-interface H {
-}
-interface I {
-}
-interface J {
-}
-interface K {
-}
-interface L {
-}
-interface M {
-}
-interface N {
-}
-interface O {
-}
-interface P {
-}
-export declare function parenthesized(a: (A)): (B);
+interface A {}
+interface B {}
+interface C {}
+interface D {}
+interface E {}
+interface F {}
+interface G {}
+interface H {}
+interface I {}
+interface J {}
+interface K {}
+interface L {}
+interface M {}
+interface N {}
+interface O {}
+interface P {}
+export declare function parenthesized(a: A): B;
 export declare function union(a: C | D): E | F;
 export declare function intersection(a: G & H): I & J;
 export declare function operator(a: keyof K): void;

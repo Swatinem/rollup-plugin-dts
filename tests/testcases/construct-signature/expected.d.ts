@@ -1,4 +1,4 @@
 interface Foo {
-    new (): any;
+  new (): any;
 }
 export { Foo };

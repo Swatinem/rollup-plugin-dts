@@ -1,5 +1,5 @@
 declare class Foo {
-    a: this;
+  a: this;
 }
 declare function thisType(this: Foo): void;
 export { thisType };

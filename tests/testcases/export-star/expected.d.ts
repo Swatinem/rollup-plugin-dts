@@ -1,5 +1,3 @@
-interface B {
-}
-declare class A {
-}
+interface B {}
+declare class A {}
 export { A, B };

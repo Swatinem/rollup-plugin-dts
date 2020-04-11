@@ -1,3 +1,2 @@
 export { B } from "./b";
-export declare class A {
-}
+export declare class A {}

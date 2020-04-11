@@ -1,3 +1,2 @@
-interface Foo {
-}
+interface Foo {}
 export { Foo };

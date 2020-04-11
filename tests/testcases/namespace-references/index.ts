@@ -1,1 +1,0 @@
-export { ns } from "./ns";

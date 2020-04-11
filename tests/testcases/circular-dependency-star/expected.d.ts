@@ -1,3 +1,2 @@
-declare class B {
-}
+declare class B {}
 export { B };

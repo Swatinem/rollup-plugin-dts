@@ -5,7 +5,6 @@ import {
   createDeclaration,
   createReference,
   createIdentifier,
-  removeNested,
   withStartEnd,
   convertExpression,
   createIIFE,
@@ -137,16 +136,10 @@ export class DeclarationScope {
     if (!newModifiers && end) {
       end += 1;
     }
-    const middle = start + newModifiers.length;
-
-    this.pushRaw(removeNested({ start: middle, end }));
-
-    if (newModifiers) {
-      this.transformer.fixups.push({
-        range: { start, end: middle },
-        replaceWith: newModifiers,
-      });
-    }
+    this.transformer.fixups.push({
+      range: { start, end },
+      replaceWith: newModifiers,
+    });
   }
 
   convertEntityName(node: ts.EntityName): ESTree.Expression {

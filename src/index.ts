@@ -53,6 +53,9 @@ const plugin: PluginImpl<Options> = (options = {}) => {
   // Parse a TypeScript module into an ESTree program.
   const typeReferences = new Set<string>();
 
+  // All the fixups we have applied, which we need to fix in the final render step
+  const fixups: Array<string> = [];
+
   function transformFile(input: ts.SourceFile): SourceDescription {
     let code = input.getFullText();
 
@@ -65,7 +68,14 @@ const plugin: PluginImpl<Options> = (options = {}) => {
 
     // apply fixups, which means replacing certain text ranges before we hand off the code to rollup
     for (const fixup of output.fixups) {
-      code = code.slice(0, fixup.range.start) + fixup.replaceWith + code.slice(fixup.range.end);
+      let placeholder = `✂${fixups.length}`;
+      const len = fixup.range.end - fixup.range.start;
+      if (placeholder.length + 1 > len) {
+        throw new Error("Unable to apply fixup.");
+      }
+      placeholder = placeholder.padEnd(len - 1) + "✂";
+      code = code.slice(0, fixup.range.start) + placeholder + code.slice(fixup.range.end);
+      fixups.push(fixup.replaceWith);
     }
 
     if (process.env.DTS_DUMP_AST) {
@@ -180,6 +190,7 @@ const plugin: PluginImpl<Options> = (options = {}) => {
     },
 
     renderChunk(code, chunk) {
+      code = code.replace(/✂(\d+)\s*✂/g, (_, num) => fixups[num]);
       const source = ts.createSourceFile(chunk.fileName, code, ts.ScriptTarget.Latest, true);
       const fixer = new NamespaceFixer(source);
 

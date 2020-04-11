@@ -1,2 +1,1 @@
-export interface Bar {
-}
+export interface Bar {}

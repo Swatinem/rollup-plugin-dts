@@ -49,8 +49,7 @@ export class Transformer {
       const end = sourceFile.getLineEndOfPosition(ref.pos);
       this.fixups.push({
         range: { start, end },
-        // just overwrite them with whitespace, which will get compressed later on anyway :-)
-        replaceWith: " ".repeat(end - start),
+        replaceWith: "",
       });
     }
 

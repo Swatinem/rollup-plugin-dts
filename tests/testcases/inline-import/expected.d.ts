@@ -1,8 +1,7 @@
-interface Bar {
-}
+interface Bar {}
 declare const Baz = 123;
 interface Foo {
-    bar: Bar;
-    baz: typeof Baz;
+  bar: Bar;
+  baz: typeof Baz;
 }
 export { Foo };

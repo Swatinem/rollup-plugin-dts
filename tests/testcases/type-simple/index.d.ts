@@ -12,6 +12,6 @@ export declare const K: undefined;
 export declare const L: symbol;
 export declare const M: never;
 export interface N {
-    foo(): this;
+  foo(): this;
 }
 export declare const O: bigint;

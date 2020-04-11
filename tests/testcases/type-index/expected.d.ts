@@ -1,6 +1,5 @@
-interface A {
-}
+interface A {}
 declare type Foo = {
-    [k: string]: A;
+  [k: string]: A;
 };
 export { Foo };

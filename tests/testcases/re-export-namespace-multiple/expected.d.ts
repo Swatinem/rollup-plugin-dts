@@ -1,41 +1,39 @@
-interface A {
-}
+interface A {}
 declare function b(): void;
-declare class C {
-}
+declare class C {}
 declare enum D {
-    A = 0,
-    B = 1
+  A = 0,
+  B = 1,
 }
 declare const E: string;
-type defs_A = A;
-declare const defs_b: typeof b;
-type defs_C = C;
-declare const defs_C: typeof C;
-type defs_D = D;
-declare const defs_D: typeof D;
-declare const defs_E: typeof E;
-declare namespace defs {
+type defs_d_A = A;
+declare const defs_d_b: typeof b;
+type defs_d_C = C;
+declare const defs_d_C: typeof C;
+type defs_d_D = D;
+declare const defs_d_D: typeof D;
+declare const defs_d_E: typeof E;
+declare namespace defs_d {
   export {
-    defs_A as A,
-    defs_b as b,
-    defs_C as C,
-    defs_D as D,
-    defs_E as E,
+    defs_d_A as A,
+    defs_d_b as b,
+    defs_d_C as C,
+    defs_d_D as D,
+    defs_d_E as E,
   };
 }
-declare namespace deep {
+declare namespace deep_d {
   export {
-    defs as ns,
+    defs_d as ns,
   };
 }
-type onlyOne_A = A;
-declare namespace onlyOne {
+type onlyOne_d_A = A;
+declare namespace onlyOne_d {
   export {
-    onlyOne_A as A,
+    onlyOne_d_A as A,
   };
 }
 interface WithA {
-    a: A;
+  a: A;
 }
-export { WithA, deep, defs as ns, onlyOne };
+export { WithA, deep_d as deep, defs_d as ns, onlyOne_d as onlyOne };

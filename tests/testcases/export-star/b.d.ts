@@ -1,2 +1,1 @@
-export interface B {
-}
+export interface B {}

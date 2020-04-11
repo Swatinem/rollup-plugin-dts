@@ -1,6 +1,5 @@
-interface Bar {
-}
+interface Bar {}
 interface Foo {
-    bar: Bar;
+  bar: Bar;
 }
 export { Foo };

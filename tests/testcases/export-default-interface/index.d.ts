@@ -1,2 +1,1 @@
-export default interface Foo {
-}
+export default interface Foo {}

@@ -2,7 +2,6 @@ import * as ts from "typescript";
 import * as ESTree from "estree";
 import { UnsupportedSyntaxError } from "./errors";
 
-const MARKER = "0";
 let IDs = 1;
 
 /**
@@ -160,36 +159,6 @@ export function convertExpression(node: ts.Expression): ESTree.Expression {
   } else {
     throw new UnsupportedSyntaxError(node);
   }
-}
-
-/**
- * Mark the nested `range` to be removed, by creating dead code:
- * `_ = () => {MARKER}`
- */
-export function removeNested(range: Ranged) {
-  return createReference({
-    type: "FunctionExpression",
-    id: null,
-    body: withStartEnd(
-      {
-        type: "BlockStatement",
-        body: [
-          withStartEnd(
-            {
-              type: "ExpressionStatement",
-              expression: { type: "Identifier", name: MARKER },
-            },
-            range,
-          ),
-        ],
-      },
-      {
-        start: getStart(range) - 1,
-        end: range.end + 1,
-      },
-    ),
-    params: [],
-  });
 }
 
 export interface Ranged {

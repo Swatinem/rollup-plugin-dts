@@ -1,13 +1,13 @@
 declare enum A {
-    A = 0
+  A = 0,
 }
 declare enum B {
-    B = "B"
+  B = "B",
 }
 declare const enum C {
-    C = 0
+  C = 0,
 }
 declare const enum D {
-    D = "D"
+  D = "D",
 }
 export { A, B, C, D };

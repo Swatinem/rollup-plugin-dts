@@ -1,4 +1,4 @@
 export interface Foo {
-    a: string;
-    b: Array<number>;
+  a: string;
+  b: Array<number>;
 }

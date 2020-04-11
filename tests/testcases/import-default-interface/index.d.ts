@@ -1,3 +1,2 @@
 import Bar from "./bar";
-export interface Foo extends Bar {
-}
+export interface Foo extends Bar {}

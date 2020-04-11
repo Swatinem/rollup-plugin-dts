@@ -1,3 +1,2 @@
 import "./bar";
-export interface Foo {
-}
+export interface Foo {}

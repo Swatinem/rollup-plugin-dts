@@ -1,4 +1,2 @@
-export interface Iface {
-}
-export declare abstract class Base {
-}
+export interface Iface {}
+export declare abstract class Base {}

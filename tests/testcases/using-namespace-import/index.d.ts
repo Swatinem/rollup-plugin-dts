@@ -1,4 +1,4 @@
 import * as ns from "./namespace";
 export interface Foo {
-    bar: ns.Bar;
+  bar: ns.Bar;
 }
