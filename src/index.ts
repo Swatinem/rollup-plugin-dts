@@ -16,6 +16,10 @@ export interface Options {
    * configured via rollup.
    */
   respectExternal?: boolean;
+  /**
+   * In case you want to use TypeScript path-mapping feature, using the
+   * `baseUrl` and `paths` properties, you can pass in `compilerOptions`.
+   */
   compilerOptions?: ts.CompilerOptions;
 }
 
