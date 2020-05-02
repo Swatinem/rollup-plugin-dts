@@ -5,7 +5,7 @@ jobs:
   build:
     strategy:
       matrix:
-        node: [10, 13]
+        node: [10, 14]
         os: [ubuntu-latest, windows-latest]
 
     name: Node ${{ matrix.node }} on ${{ matrix.os }}
@@ -25,6 +25,6 @@ jobs:
       # frequently hangs for whatever reason,
       # and we have no platform-specific code anyway…
       - name: upload coverage
-        if: matrix.os == 'ubuntu-latest' && matrix.node == 13
+        if: matrix.os == 'ubuntu-latest' && matrix.node == 14
         timeout-minutes: 1
         run: bash <(curl -s https://codecov.io/bash) -t ${{secrets.CODECOV_TOKEN}} -B ${{ github.ref }} -f coverage/coverage-final.json
