@@ -6,7 +6,7 @@ export const dts = ".d.ts";
 export const formatHost: ts.FormatDiagnosticsHost = {
   getCurrentDirectory: () => ts.sys.getCurrentDirectory(),
   getNewLine: () => ts.sys.newLine,
-  getCanonicalFileName: ts.sys.useCaseSensitiveFileNames ? f => f : f => f.toLowerCase(),
+  getCanonicalFileName: ts.sys.useCaseSensitiveFileNames ? (f) => f : (f) => f.toLowerCase(),
 };
 
 const OPTIONS_OVERRIDE: ts.CompilerOptions = {
@@ -43,7 +43,7 @@ function getCompilerOptions(
   }
   const { fileNames, options, errors } = ts.parseJsonConfigFileContent(config, ts.sys, dirName);
 
-  dtsFiles = fileNames.filter(name => name.endsWith(dts));
+  dtsFiles = fileNames.filter((name) => name.endsWith(dts));
   if (errors.length) {
     console.error(ts.formatDiagnostics(errors, formatHost));
     return { dtsFiles, dirName, compilerOptions: { ...OPTIONS_OVERRIDE } };

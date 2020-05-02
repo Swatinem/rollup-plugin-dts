@@ -349,7 +349,7 @@ export class Transformer {
 
   convertNamedImportBindings(node: ts.NamedImportBindings): ESTreeImports {
     if (ts.isNamedImports(node)) {
-      return node.elements.map(el => {
+      return node.elements.map((el) => {
         const local = createIdentifier(el.name);
         const imported = el.propertyName ? createIdentifier(el.propertyName) : local;
         return {

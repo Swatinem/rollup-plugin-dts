@@ -162,7 +162,7 @@ const plugin: PluginImpl<Options> = (options = {}) => {
         true, // emitOnlyDtsFiles
       );
       if (emitSkipped) {
-        const errors = diagnostics.filter(diag => diag.category === ts.DiagnosticCategory.Error);
+        const errors = diagnostics.filter((diag) => diag.category === ts.DiagnosticCategory.Error);
         if (errors.length) {
           console.error(ts.formatDiagnostics(errors, formatHost));
           this.error("Failed to compile. Check the logs above.");
@@ -199,7 +199,7 @@ const plugin: PluginImpl<Options> = (options = {}) => {
       const source = ts.createSourceFile(chunk.fileName, code, ts.ScriptTarget.Latest, true);
       const fixer = new NamespaceFixer(source);
 
-      code = writeBlock(Array.from(typeReferences, ref => `/// <reference types="${ref}" />`));
+      code = writeBlock(Array.from(typeReferences, (ref) => `/// <reference types="${ref}" />`));
       code += fixer.fix();
 
       return { code, map: { mappings: "" } };
