@@ -288,10 +288,6 @@ export class Transformer {
 
     const source = node.moduleSpecifier ? (convertExpression(node.moduleSpecifier) as any) : undefined;
 
-    if (node.exportClause && ts.isNamespaceExport(node.exportClause)) {
-      throw new UnsupportedSyntaxError(node.exportClause);
-    }
-
     if (!node.exportClause) {
       this.pushStatement(
         withStartEnd(
@@ -303,9 +299,17 @@ export class Transformer {
         ),
       );
     } else {
-      const specifiers = [];
-      for (const elem of node.exportClause.elements) {
-        specifiers.push(this.convertExportSpecifier(elem));
+      const specifiers: Array<ESTree.ExportSpecifier> = [];
+      if (ts.isNamespaceExport(node.exportClause)) {
+        specifiers.push({
+          // @ts-ignore: ESTree doesn‘t have this yet
+          type: "ExportNamespaceSpecifier",
+          exported: createIdentifier(node.exportClause.name),
+        });
+      } else {
+        for (const elem of node.exportClause.elements) {
+          specifiers.push(this.convertExportSpecifier(elem));
+        }
       }
       this.pushStatement(
         withStartEnd(
