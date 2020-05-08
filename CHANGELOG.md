@@ -1,3 +1,7 @@
+### 1.4.1 202-05-08
+
+- Add support for `export * as foo` declarations.
+
 ### 1.4.0 2020-04-11
 
 - Fix renaming of `MemberExpression`s.
