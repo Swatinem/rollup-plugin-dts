@@ -1,4 +1,8 @@
-### 1.4.1 202-05-08
+### 1.4.2 2020-05-10
+
+- Reorder same-named declarations.
+
+### 1.4.1 2020-05-08
 
 - Add support for `export * as foo` declarations.
 
