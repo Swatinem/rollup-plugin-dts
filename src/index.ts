@@ -4,6 +4,7 @@ import * as ts from "typescript";
 import { NamespaceFixer } from "./NamespaceFixer";
 import { createPrograms, dts, formatHost } from "./program";
 import { Transformer } from "./Transformer";
+import { reorderStatements } from "./reorder";
 
 const tsx = /\.tsx?$/;
 
@@ -62,6 +63,7 @@ const plugin: PluginImpl<Options> = (options = {}) => {
   const fixups: Array<string> = [];
 
   function transformFile(input: ts.SourceFile): SourceDescription {
+    input = reorderStatements(input);
     let code = input.getFullText();
 
     const transformer = new Transformer(input);

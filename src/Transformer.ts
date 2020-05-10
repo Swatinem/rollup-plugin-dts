@@ -115,18 +115,18 @@ export class Transformer {
     }
 
     const name = id.getText();
-    // rollup has problems with functions that are defined twice. For overrides,
-    // we can just reuse the already declared function, since overrides are
-    // supposed to be declared close to each other…
-    // if they are not close to each other, we do have a problem -_-
-    let scope = this.declarations.get(name);
-    if (!scope) {
-      scope = new DeclarationScope({ id, range, transformer: this });
+    // We have re-ordered and grouped declarations in `reorderStatements`,
+    // so we can assume same-name statements are next to each other, so we just
+    // bump the `end` range.
+    const scope = new DeclarationScope({ id, range, transformer: this });
+    const existingScope = this.declarations.get(name);
+    if (existingScope) {
+      (existingScope.declaration as any).end = range.end;
+    } else {
       this.pushStatement(scope.declaration);
       this.declarations.set(name, scope);
     }
-    (scope.declaration as any).end = range.end;
-    return scope;
+    return existingScope || scope;
   }
 
   convertStatement(node: ts.Node) {
