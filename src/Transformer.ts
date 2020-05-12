@@ -289,6 +289,7 @@ export class Transformer {
     const source = node.moduleSpecifier ? (convertExpression(node.moduleSpecifier) as any) : undefined;
 
     if (!node.exportClause) {
+      // export * from './other'
       this.pushStatement(
         withStartEnd(
           {
@@ -298,19 +299,25 @@ export class Transformer {
           node,
         ),
       );
+    } else if (ts.isNamespaceExport(node.exportClause)) {
+      // export * as name from './other'
+      this.pushStatement(
+        withStartEnd(
+          {
+            type: "ExportAllDeclaration",
+            source,
+            exported: createIdentifier(node.exportClause.name),
+          },
+          node,
+        ),
+      );
     } else {
+      // export { name } from './other'
       const specifiers: Array<ESTree.ExportSpecifier> = [];
-      if (ts.isNamespaceExport(node.exportClause)) {
-        specifiers.push({
-          // @ts-ignore: ESTree doesn‘t have this yet
-          type: "ExportNamespaceSpecifier",
-          exported: createIdentifier(node.exportClause.name),
-        });
-      } else {
-        for (const elem of node.exportClause.elements) {
-          specifiers.push(this.convertExportSpecifier(elem));
-        }
+      for (const elem of node.exportClause.elements) {
+        specifiers.push(this.convertExportSpecifier(elem));
       }
+
       this.pushStatement(
         withStartEnd(
           {
