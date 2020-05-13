@@ -10,7 +10,10 @@ const external = ["path", "typescript", "rollup", "@babel/code-frame"];
 const config = [
   {
     input: "./.build/index.js",
-    output: [{ exports: "named", file: pkg.main, format: "cjs" }, { file: pkg.module, format: "es" }],
+    output: [
+      { exports: "named", file: pkg.main, format: "cjs" },
+      { file: pkg.module, format: "es" },
+    ],
 
     external,
   },
