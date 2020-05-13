@@ -1,3 +1,7 @@
+### 1.4.3 2020-05-13
+
+- Fixes to work with newest rollup.
+
 ### 1.4.2 2020-05-10
 
 - Reorder same-named declarations.
