@@ -98,11 +98,17 @@ const plugin: PluginImpl<Options> = (options = {}) => {
     name: "dts",
 
     options(options) {
-      let { input } = options;
-      if (!Array.isArray(input)) {
-        input = !input ? [] : typeof input === "string" ? [input] : Object.values(input);
+      let { input = [] } = options;
+      if (typeof input === "string" || Array.isArray(input)) {
+        // transport the inputs into an explicit object, which strips the file extension
+        input = options.input = Object.fromEntries(
+          (Array.isArray(input) ? input : [input]).map((filename) => {
+            return [path.basename(filename).replace(/((\.d)?\.tsx?)$/, ""), filename];
+          }),
+        );
       }
-      programs = createPrograms(input);
+
+      programs = createPrograms(Object.values(input));
 
       return {
         ...options,

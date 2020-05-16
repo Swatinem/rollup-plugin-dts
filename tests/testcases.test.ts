@@ -12,13 +12,14 @@ interface Meta {
   expectedError?: string;
 }
 
-async function createBundle(options: Options, rollupOptions: InputOptions) {
+async function createBundle(options: Options, rollupOptions: RollupOptions) {
   const bundle = await rollup({
     ...rollupOptions,
     plugins: [dts(options)],
     onwarn() {},
   });
   return bundle.generate({
+    ...rollupOptions.output,
     format: "es",
     // sourcemap: true,
     sourcemapExcludeSources: true,
@@ -30,7 +31,7 @@ function withInput(dir: string, { input }: InputOptions): InputOption {
     return path.join(dir, input);
   }
   if (Array.isArray(input)) {
-    return input.map(input => path.join(dir, input));
+    return input.map((input) => path.join(dir, input));
   }
   const mapped: { [alias: string]: string } = {};
   for (const alias of Object.keys(input!)) {

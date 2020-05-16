@@ -1,8 +1,6 @@
 {
   "rollupOptions": {
-    "input": {
-      "a": "main-a.d.ts",
-      "b": "main-b.d.ts"
-    }
+    "input": ["main-a.d.ts", "main-b.d.ts"],
+    "output": { "entryFileNames": ">[name]<.d.ts" }
   }
 }
