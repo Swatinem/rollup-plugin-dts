@@ -1,10 +1,11 @@
 import path from "path";
 import { PluginImpl, SourceDescription } from "rollup";
 import * as ts from "typescript";
+
 import { NamespaceFixer } from "./NamespaceFixer";
 import { createPrograms, dts, formatHost } from "./program";
-import { Transformer } from "./Transformer";
 import { reorderStatements } from "./reorder";
+import { Transformer } from "./Transformer";
 
 const tsx = /\.tsx?$/;
 
@@ -101,14 +102,14 @@ const plugin: PluginImpl<Options> = (options = {}) => {
       let { input = [] } = options;
       if (typeof input === "string" || Array.isArray(input)) {
         // transport the inputs into an explicit object, which strips the file extension
-        input = options.input = Object.fromEntries(
-          (Array.isArray(input) ? input : [input]).map((filename) => {
-            return [path.basename(filename).replace(/((\.d)?\.tsx?)$/, ""), filename];
-          }),
-        );
+        options.input = {};
+        for (const filename of Array.isArray(input) ? input : [input]) {
+          const name = path.basename(filename).replace(/((\.d)?\.tsx?)$/, "");
+          options.input[name] = filename;
+        }
       }
 
-      programs = createPrograms(Object.values(input));
+      programs = createPrograms(Object.values(options.input as any));
 
       return {
         ...options,
