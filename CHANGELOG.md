@@ -1,3 +1,9 @@
+### 1.4.4 2020-05-17
+
+- Add support for ImportEquals (`import foo = require("bar");`).
+- Work around rollup not stripping the complete `.d.ts` extension for
+  `entryFileNames` `[name]` placeholder.
+
 ### 1.4.3 2020-05-13
 
 - Fixes to work with newest rollup.
