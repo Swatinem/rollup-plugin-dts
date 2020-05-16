@@ -156,7 +156,7 @@ export class Transformer {
       return this.removeStatement(node);
     }
     // istanbul ignore else
-    if (ts.isImportDeclaration(node)) {
+    if (ts.isImportDeclaration(node) || ts.isImportEqualsDeclaration(node)) {
       return this.convertImportDeclaration(node);
     } else {
       throw new UnsupportedSyntaxError(node);
@@ -332,7 +332,29 @@ export class Transformer {
     }
   }
 
-  convertImportDeclaration(node: ts.ImportDeclaration) {
+  convertImportDeclaration(node: ts.ImportDeclaration | ts.ImportEqualsDeclaration) {
+    if (ts.isImportEqualsDeclaration(node)) {
+      // assume its like `import default`
+      if (!ts.isExternalModuleReference(node.moduleReference)) {
+        throw new UnsupportedSyntaxError(node, "ImportEquals should have a literal source.");
+      }
+      this.pushStatement(
+        withStartEnd(
+          {
+            type: "ImportDeclaration",
+            specifiers: [
+              {
+                type: "ImportDefaultSpecifier",
+                local: createIdentifier(node.name),
+              },
+            ],
+            source: convertExpression(node.moduleReference.expression) as any,
+          },
+          node,
+        ),
+      );
+      return;
+    }
     const source = convertExpression(node.moduleSpecifier) as any;
 
     const specifiers: ESTreeImports =
