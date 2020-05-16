@@ -100,16 +100,19 @@ const plugin: PluginImpl<Options> = (options = {}) => {
 
     options(options) {
       let { input = [] } = options;
-      if (typeof input === "string" || Array.isArray(input)) {
-        // transport the inputs into an explicit object, which strips the file extension
+      if (!Array.isArray(input)) {
+        input = typeof input === "string" ? [input] : Object.values(input);
+      } else if (input.length > 1) {
+        // when dealing with multiple unnamed inputs, transform the inputs into
+        // an explicit object, which strips the file extension
         options.input = {};
-        for (const filename of Array.isArray(input) ? input : [input]) {
+        for (const filename of input) {
           const name = path.basename(filename).replace(/((\.d)?\.tsx?)$/, "");
           options.input[name] = filename;
         }
       }
 
-      programs = createPrograms(Object.values(options.input as any));
+      programs = createPrograms(Object.values(input));
 
       return {
         ...options,

@@ -30,6 +30,7 @@
     "prebuild": "npm run clean",
     "build": "tsc --project tsconfig.build.json && rollup -c",
     "prepublishOnly": "npm run test && npm run build",
+    "pretest": "npm run build",
     "test": "jest --runInBand"
   },
   "jest": {
