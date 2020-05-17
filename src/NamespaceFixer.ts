@@ -38,6 +38,27 @@ export class NamespaceFixer {
         });
         continue;
       }
+      // When generating multiple chunks, rollup links those via import
+      // statements, obviously. But rollup uses full filenames with extension,
+      // which typescript does not like. So make sure to remove those here.
+      if (
+        (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) &&
+        node.moduleSpecifier &&
+        ts.isStringLiteral(node.moduleSpecifier)
+      ) {
+        let { text } = node.moduleSpecifier;
+        if (text.startsWith(".") && text.endsWith(".d.ts")) {
+          let end = node.moduleSpecifier.getEnd() - 1; // -1 to account for the quote
+          namespaces.unshift({
+            name: "",
+            exports: [],
+            location: {
+              start: end - 5,
+              end,
+            },
+          });
+        }
+      }
 
       if (ts.isClassDeclaration(node)) {
         itemTypes[node.name!.getText()] = "class";
