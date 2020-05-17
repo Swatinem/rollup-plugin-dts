@@ -1,3 +1,9 @@
+### 1.4.5 2020-05-17
+
+- Ignore/Remove `EmptyStatement`s.
+- Strip file extensions for import/re-export statements when using multiple
+  entry points.
+
 ### 1.4.4 2020-05-17
 
 - Add support for ImportEquals (`import foo = require("bar");`).
