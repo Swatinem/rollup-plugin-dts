@@ -155,6 +155,9 @@ export class Transformer {
       // just ignore `export as namespace FOO` statements…
       return this.removeStatement(node);
     }
+    if (ts.isEmptyStatement(node)) {
+      return this.removeStatement(node);
+    }
     // istanbul ignore else
     if (ts.isImportDeclaration(node) || ts.isImportEqualsDeclaration(node)) {
       return this.convertImportDeclaration(node);
