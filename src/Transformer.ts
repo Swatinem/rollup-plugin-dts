@@ -298,6 +298,7 @@ export class Transformer {
           {
             type: "ExportAllDeclaration",
             source,
+            exported: null
           },
           node,
         ),
