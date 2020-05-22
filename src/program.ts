@@ -13,6 +13,7 @@ const OPTIONS_OVERRIDE: ts.CompilerOptions = {
   // Ensure ".d.ts" modules are generated
   declaration: true,
   // Skip ".js" generation
+  noEmit: false,
   emitDeclarationOnly: true,
   // Skip code generation when error occurs
   noEmitOnError: true,

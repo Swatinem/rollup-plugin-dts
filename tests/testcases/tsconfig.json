@@ -12,6 +12,7 @@
 
     "newLine": "lf",
 
+    "noEmit": true,
     "declaration": true,
     "emitDeclarationOnly": true
     // "outDir": "./"
