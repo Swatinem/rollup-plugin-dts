@@ -1,3 +1,8 @@
+### 1.4.7 2020-05-22
+
+- Fix AST incompatibility with rollup.
+- Override `noEmit` option to correctly generate intermediate artifacts.
+
 ### 1.4.6 2020-05-17
 
 - Ignore/Remove `EmptyStatement`s.
