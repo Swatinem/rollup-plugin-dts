@@ -71,7 +71,7 @@
     "prettier": "^2.0.5",
     "react": "^16.13.1",
     "rollup": "2.10.2",
-    "ts-jest": "^25.5.1",
+    "ts-jest": "^26.0.0",
     "typescript": "3.9.2"
   },
   "peerDependencies": {
