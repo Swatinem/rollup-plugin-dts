@@ -7,7 +7,7 @@ import { createPrograms, dts, formatHost } from "./program";
 import { reorderStatements } from "./reorder";
 import { Transformer } from "./Transformer";
 
-const tsx = /\.tsx?$/;
+const tsx = /\.(t|j)sx?$/;
 
 export interface Options {
   /**
@@ -107,12 +107,12 @@ const plugin: PluginImpl<Options> = (options = {}) => {
         // an explicit object, which strips the file extension
         options.input = {};
         for (const filename of input) {
-          const name = path.basename(filename).replace(/((\.d)?\.tsx?)$/, "");
+          const name = path.basename(filename).replace(/((\.d)?\.(t|j)sx?)$/, "");
           options.input[name] = filename;
         }
       }
 
-      programs = createPrograms(Object.values(input));
+      programs = createPrograms(Object.values(input), compilerOptions);
 
       return {
         ...options,

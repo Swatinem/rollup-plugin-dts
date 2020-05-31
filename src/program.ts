@@ -29,37 +29,40 @@ const OPTIONS_OVERRIDE: ts.CompilerOptions = {
 
 function getCompilerOptions(
   input: string,
+  overrideOptions: ts.CompilerOptions,
 ): { dtsFiles: Array<string>; dirName: string; compilerOptions: ts.CompilerOptions } {
+  const compilerOptions = { ...overrideOptions, ...OPTIONS_OVERRIDE };
+
   let dirName = path.dirname(input);
   let dtsFiles: Array<string> = [];
   const configPath = ts.findConfigFile(path.dirname(input), ts.sys.fileExists);
   if (!configPath) {
-    return { dtsFiles, dirName, compilerOptions: { ...OPTIONS_OVERRIDE } };
+    return { dtsFiles, dirName, compilerOptions };
   }
   dirName = path.dirname(configPath);
   const { config, error } = ts.readConfigFile(configPath, ts.sys.readFile);
   if (error) {
     console.error(ts.formatDiagnostic(error, formatHost));
-    return { dtsFiles, dirName, compilerOptions: { ...OPTIONS_OVERRIDE } };
+    return { dtsFiles, dirName, compilerOptions };
   }
   const { fileNames, options, errors } = ts.parseJsonConfigFileContent(config, ts.sys, dirName);
 
   dtsFiles = fileNames.filter((name) => name.endsWith(dts));
   if (errors.length) {
     console.error(ts.formatDiagnostics(errors, formatHost));
-    return { dtsFiles, dirName, compilerOptions: { ...OPTIONS_OVERRIDE } };
+    return { dtsFiles, dirName, compilerOptions };
   }
   return {
     dtsFiles,
     dirName,
     compilerOptions: {
       ...options,
-      ...OPTIONS_OVERRIDE,
+      ...compilerOptions,
     },
   };
 }
 
-export function createPrograms(input: Array<string>) {
+export function createPrograms(input: Array<string>, overrideOptions: ts.CompilerOptions) {
   const programs = [];
   let inputs: Array<string> = [];
   let dtsFiles: Set<string> = new Set();
@@ -72,7 +75,7 @@ export function createPrograms(input: Array<string>) {
     }
 
     main = path.resolve(main);
-    const options = getCompilerOptions(main);
+    const options = getCompilerOptions(main, overrideOptions);
     options.dtsFiles.forEach(dtsFiles.add, dtsFiles);
 
     if (!inputs.length) {
