@@ -37,6 +37,24 @@ And then instruct typescript where to find your definitions inside your `package
 **NOTE** that the plugin will automatically mark any external library
 (`@types` for example) as `external`, so those will be excluded from bundling.
 
+## What to expect
+
+While this plugin is fairly complete, it does not support all imaginable use-cases.
+In particular, the plugin works best with already existing `.d.ts` files generated
+by the typescript compiler from idiomatic code.
+
+Working with `.ts(x)` or even `.js(x)` (when setting `allowJs: true`) does work,
+but is not recommended.
+
+The plugin does its own import resolution through the typescript compiler, and
+usage together with other resolution plugins, such as `node-resolve` can lead
+to errors and is not recommended.
+
+All external dependencies from `node_modules` are automatically excluded from
+bundling. This can be overridden using the `respectExternal` setting, but it is
+generally not recommended. While rollup of external `@types` generally works,
+it is not recommended.
+
 ## Why?
 
 Well, ideally TypeScript should just do all this itself, and it even has a
