@@ -103,6 +103,7 @@ export function createIIFE(range: Ranged) {
         type: "CallExpression",
         callee: { type: "Identifier", name: String(IDs++) },
         arguments: [fn],
+        optional: false,
       },
     },
     range,
@@ -144,6 +145,7 @@ export function convertExpression(node: ts.Expression): ESTree.Expression {
       {
         type: "MemberExpression",
         computed: false,
+        optional: false,
         object: convertExpression(node.expression),
         property: convertExpression(node.name),
       },

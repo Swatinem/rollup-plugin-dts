@@ -150,6 +150,7 @@ export class DeclarationScope {
       {
         type: "MemberExpression",
         computed: false,
+        optional: false,
         object: this.convertEntityName(node.left),
         property: createIdentifier(node.right),
       },
@@ -176,6 +177,7 @@ export class DeclarationScope {
       {
         type: "MemberExpression",
         computed: false,
+        optional: false,
         object,
         property: createIdentifier(node.name),
       },
@@ -388,6 +390,7 @@ export class DeclarationScope {
           {
             type: "MemberExpression",
             computed: false,
+            optional: false,
             object: importIdRef,
             property: createIdentifier(node.qualifier),
           },
