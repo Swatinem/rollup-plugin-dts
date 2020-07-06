@@ -70,15 +70,15 @@
     "jest": "^26.1.0",
     "prettier": "^2.0.5",
     "react": "^16.13.1",
-    "rollup": "2.18.1",
+    "rollup": "2.19.0",
     "ts-jest": "^26.1.1",
-    "typescript": "3.9.5"
+    "typescript": "3.9.6"
   },
   "peerDependencies": {
-    "rollup": "^2.18.1",
-    "typescript": "^3.9.5"
+    "rollup": "^2.19.0",
+    "typescript": "^3.9.6"
   },
   "optionalDependencies": {
-    "@babel/code-frame": "^7.10.3"
+    "@babel/code-frame": "^7.10.4"
   }
 }
