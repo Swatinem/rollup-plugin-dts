@@ -1,3 +1,20 @@
+# Changelog
+
+## 1.4.8
+
+Released on **2020-07-12**
+
+**Fixes**:
+
+- Make `allowJs` work correctly.
+- Make type-aliases and generics work in namespace exports.
+
+**Thank you**:
+
+Features, fixes and improvements in this release have been contributed by:
+
+- [@IlyaSV](https://github.com/IlyaSV)
+
 ### 1.4.7 2020-05-22
 
 - Fix AST incompatibility with rollup.
