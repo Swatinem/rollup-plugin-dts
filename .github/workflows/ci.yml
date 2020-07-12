@@ -27,4 +27,5 @@ jobs:
       - name: upload coverage
         if: matrix.os == 'ubuntu-latest' && matrix.node == 14
         timeout-minutes: 1
+        continue-on-error: true
         run: bash <(curl -s https://codecov.io/bash) -t ${{secrets.CODECOV_TOKEN}} -B ${{ github.ref }} -f coverage/coverage-final.json
