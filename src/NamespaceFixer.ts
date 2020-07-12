@@ -66,6 +66,8 @@ export class NamespaceFixer {
         itemTypes[node.name!.getText()] = "function";
       } else if (ts.isInterfaceDeclaration(node)) {
         itemTypes[node.name.getText()] = "interface";
+      } else if (ts.isTypeAliasDeclaration(node)) {
+        itemTypes[node.name.getText()] = "type";
       } else if (ts.isModuleDeclaration(node) && ts.isIdentifier(node.name)) {
         itemTypes[node.name.getText()] = "namespace";
       } else if (ts.isEnumDeclaration(node)) {
@@ -131,7 +133,7 @@ export class NamespaceFixer {
       for (const { exportedName, localName } of ns.exports) {
         if (exportedName === localName) {
           const type = itemTypes[localName];
-          if (type === "interface") {
+          if (type === "interface" || type === "type") {
             // an interface is just a type
             code += `type ${ns.name}_${exportedName} = ${localName};\n`;
           } else if (type === "enum" || type === "class") {
