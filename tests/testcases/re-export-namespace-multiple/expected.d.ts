@@ -6,6 +6,7 @@ declare enum D {
   B = 1,
 }
 declare const E: string;
+declare type F = string;
 type defs_d_A = A;
 declare const defs_d_b: typeof b;
 type defs_d_C = C;
@@ -13,6 +14,7 @@ declare const defs_d_C: typeof C;
 type defs_d_D = D;
 declare const defs_d_D: typeof D;
 declare const defs_d_E: typeof E;
+type defs_d_F = F;
 declare namespace defs_d {
   export {
     defs_d_A as A,
@@ -20,6 +22,7 @@ declare namespace defs_d {
     defs_d_C as C,
     defs_d_D as D,
     defs_d_E as E,
+    defs_d_F as F,
   };
 }
 declare namespace deep_d {

@@ -6,3 +6,4 @@ export declare enum D {
   B = 1,
 }
 export declare const E: string;
+export declare type F = string;
