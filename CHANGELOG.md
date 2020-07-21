@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.4.9
+
+Released on **2020-07-21**
+
+**Fixes**:
+
+- Correctly resolve type-arguments of inline imports.
+
 ## 1.4.8
 
 Released on **2020-07-12**
