@@ -217,10 +217,17 @@ export class DeclarationScope {
     for (const heritage of node.heritageClauses || []) {
       for (const type of heritage.types) {
         this.pushReference(convertExpression(type.expression));
-        for (const arg of type.typeArguments || []) {
-          this.convertTypeNode(arg);
-        }
+        this.convertTypeArguments(type);
       }
+    }
+  }
+
+  convertTypeArguments(node: ts.NodeWithTypeArguments) {
+    if (!node.typeArguments) {
+      return;
+    }
+    for (const arg of node.typeArguments) {
+      this.convertTypeNode(arg);
     }
   }
 
@@ -270,9 +277,7 @@ export class DeclarationScope {
     }
     if (ts.isTypeReferenceNode(node)) {
       this.pushReference(this.convertEntityName(node.typeName));
-      for (const arg of node.typeArguments || []) {
-        this.convertTypeNode(arg);
-      }
+      this.convertTypeArguments(node);
       return;
     }
     if (ts.isTypeLiteralNode(node)) {
@@ -404,6 +409,7 @@ export class DeclarationScope {
       // as with re-exporting references… -_-
       this.pushReference(importIdRef);
     }
+    this.convertTypeArguments(node);
   }
 
   convertNamespace(node: ts.ModuleDeclaration) {
