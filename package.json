@@ -17,6 +17,7 @@
   "bugs": {
     "url": "https://github.com/Swatinem/rollup-plugin-dts/issues"
   },
+  "funding": "https://github.com/sponsors/Swatinem",
   "homepage": "https://github.com/Swatinem/rollup-plugin-dts#readme",
   "main": "dist/rollup-plugin-dts.js",
   "module": "dist/rollup-plugin-dts.mjs",
