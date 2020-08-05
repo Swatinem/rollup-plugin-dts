@@ -127,8 +127,11 @@ export class DeclarationScope {
       end = Math.max(end, mod.getEnd());
     }
 
-    // function and class *must* have a `declare` modifier
-    if (!hasDeclare && (ts.isClassDeclaration(node) || ts.isFunctionDeclaration(node))) {
+    // function, class and variables *must* have a `declare` modifier
+    if (
+      !hasDeclare &&
+      (ts.isClassDeclaration(node) || ts.isFunctionDeclaration(node) || ts.isVariableStatement(node))
+    ) {
       modifiers.unshift("declare");
     }
 
