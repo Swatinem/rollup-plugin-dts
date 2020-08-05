@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.4.10
+
+Released on **2020-08-05**
+
+**Fixes**:
+
+- Correctly add `declare` keyword to any variable statement.
+
 ## 1.4.9
 
 Released on **2020-07-21**
