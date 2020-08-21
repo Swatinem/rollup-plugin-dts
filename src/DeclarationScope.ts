@@ -291,7 +291,8 @@ export class DeclarationScope {
       return this.convertTypeNode(node.elementType);
     }
     if (ts.isTupleTypeNode(node)) {
-      for (const type of node.elementTypes) {
+      // ts@v4 renamed `elementTypes` to `elements`
+      for (const type of ((node as any).elements || node.elementTypes)) {
         this.convertTypeNode(type);
       }
       return;
