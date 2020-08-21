@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.4.11
+
+Released on **2020-08-21**
+
+**Fixes**:
+
+- Make the plugin compatible with `typescript` 4.
+
+**Thank you**:
+
+Features, fixes and improvements in this release have been contributed by:
+
+- [@morlay](https://github.com/morlay)
+
 ## 1.4.10
 
 Released on **2020-08-05**
