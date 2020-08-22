@@ -297,7 +297,7 @@ export class DeclarationScope {
       }
       return;
     }
-    if (ts.isParenthesizedTypeNode(node) || ts.isTypeOperatorNode(node) || ts.isTypePredicateNode(node)) {
+    if (ts.isNamedTupleMember(node) || ts.isParenthesizedTypeNode(node) || ts.isTypeOperatorNode(node) || ts.isTypePredicateNode(node)) {
       return this.convertTypeNode(node.type);
     }
     if (ts.isUnionTypeNode(node) || ts.isIntersectionTypeNode(node)) {
