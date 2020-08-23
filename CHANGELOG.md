@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.4.12
+
+Released on **2020-08-23**
+
+**Fixes**:
+
+- Add support for variadic tuple types and named tuple members that were added in `typescript@4`.
+
+**Thank you**:
+
+Features, fixes and improvements in this release have been contributed by:
+
+- [@morlay](https://github.com/morlay)
+
 ## 1.4.11
 
 Released on **2020-08-21**
