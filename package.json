@@ -68,15 +68,15 @@
     "@types/react": "^16.9.46",
     "esm": "^3.2.25",
     "fs-extra": "^9.0.1",
-    "jest": "^26.4.1",
+    "jest": "^26.4.2",
     "prettier": "^2.0.5",
     "react": "^16.13.1",
-    "rollup": "2.26.4",
+    "rollup": "2.26.5",
     "ts-jest": "^26.2.0",
     "typescript": "4.0.2"
   },
   "peerDependencies": {
-    "rollup": "^2.26.4",
+    "rollup": "^2.26.5",
     "typescript": "^4.0.2"
   },
   "optionalDependencies": {
