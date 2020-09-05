@@ -88,8 +88,6 @@ export class Transformer {
   }
 
   maybeMarkAsExported(node: ts.Node, id: ts.Identifier) {
-    const loc = { start: node.pos, end: node.pos };
-
     if (!matchesModifier(node, ts.ModifierFlags.Export) || !node.modifiers) {
       return false;
     }
@@ -101,6 +99,7 @@ export class Transformer {
       return true;
     }
 
+    const loc = { start: node.pos, end: node.pos };
     this.pushStatement((isExportDefault ? createDefaultExport : createExport)(id, loc));
 
     this.exports.add(name);
@@ -121,7 +120,16 @@ export class Transformer {
     const scope = new DeclarationScope({ id, range, transformer: this });
     const existingScope = this.declarations.get(name);
     if (existingScope) {
+      existingScope.pushIdentifierReference(id);
       (existingScope.declaration as any).end = range.end;
+
+      // we possibly have other declarations, such as an ExportDeclaration in
+      // between, which should also be updated to the correct start/end.
+      let selfIdx = this.ast.body.findIndex((node) => node == existingScope.declaration);
+      for (let i = selfIdx + 1; i < this.ast.body.length; i++) {
+        const decl = this.ast.body[i] as any;
+        decl.start = decl.end = range.end;
+      }
     } else {
       this.pushStatement(scope.declaration);
       this.declarations.set(name, scope);
@@ -298,7 +306,7 @@ export class Transformer {
           {
             type: "ExportAllDeclaration",
             source,
-            exported: null
+            exported: null,
           },
           node,
         ),
