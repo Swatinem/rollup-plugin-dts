@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.4.13
+
+Released on **2020-09-05**
+
+**Fixes**:
+
+- Correctly update ranges when merging declarations.
+
 ## 1.4.12
 
 Released on **2020-08-23**
