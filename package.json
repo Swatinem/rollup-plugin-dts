@@ -81,5 +81,8 @@
   },
   "optionalDependencies": {
     "@babel/code-frame": "^7.10.4"
+  },
+  "dependencies": {
+    "magic-string": "^0.25.7"
   }
 }
