@@ -8,6 +8,8 @@ import ts from "typescript";
 import { matchesModifier } from "./astHelpers";
 import { UnsupportedSyntaxError } from "./errors";
 
+type Range = [start: number, end: number];
+
 interface PreProcessInput {
   sourceFile: ts.SourceFile;
 }
@@ -113,7 +115,7 @@ function removeEmptyStatements({ code, sourceFile }: State) {
 }
 
 function reorderNames({ code, sourceFile }: State) {
-  let namedNodes = new Map<string, Array<ts.Node>>();
+  let namedNodes = new Map<string, Array<Range>>();
   for (const node of sourceFile.statements) {
     if (
       ts.isEnumDeclaration(node) ||
@@ -126,38 +128,43 @@ function reorderNames({ code, sourceFile }: State) {
         continue;
       }
       const name = node.name.getText();
-      pushNamedNode(name, node);
+      pushNamedNode(name, [getStart(node), getEnd(node)]);
     } else if (ts.isVariableStatement(node)) {
       const { declarations } = node.declarationList;
       if (declarations.length == 1) {
         const decl = declarations[0];
         if (ts.isIdentifier(decl.name)) {
-          pushNamedNode(decl.name.getText(), node);
+          pushNamedNode(decl.name.getText(), [getStart(node), getEnd(node)]);
         }
       } else {
-        //console.log("TODO: move split VariableStatements around");
-        //console.log(node);
-        // for (const decl of declarations) {
-        // }
+        // we do reordering after splitting
+        const decls = declarations.slice();
+        const first = decls.shift()!;
+        pushNamedNode(first.name.getText(), [getStart(node), first.getEnd()]);
+        for (const decl of decls) {
+          if (ts.isIdentifier(decl.name)) {
+            pushNamedNode(decl.name.getText(), [decl.getFullStart(), decl.getEnd()]);
+          }
+        }
       }
     }
   }
 
-  function pushNamedNode(name: string, node: ts.Node) {
+  function pushNamedNode(name: string, range: Range) {
     let nodes = namedNodes.get(name);
     if (!nodes) {
       nodes = [];
       namedNodes.set(name, nodes);
     }
-    nodes.push(node);
+    nodes.push(range);
   }
 
   // TODO: magic-string needs an affinity for moves…
   for (const nodes of namedNodes.values()) {
     const last = nodes.pop()!;
-    const start = last.getFullStart();
+    const start = last[0];
     for (const node of nodes) {
-      code.move(node.getFullStart(), node.getEnd(), start);
+      code.move(node[0], node[1], start);
     }
   }
 }
@@ -167,19 +174,19 @@ function splitVariableStatements({ code, sourceFile }: State) {
     if (ts.isVariableStatement(stmt)) {
       const { flags } = stmt.declarationList;
       const type = flags & ts.NodeFlags.Let ? "let" : flags & ts.NodeFlags.Const ? "const" : "var";
-      const prefix = `;\ndeclare ${type} `;
+      const prefix = `declare ${type} `;
 
       const list = stmt.declarationList
         .getChildren()
         .find((c) => c.kind === ts.SyntaxKind.SyntaxList)!
         .getChildren();
-      let wasComma = false;
+      let commaPos = 0;
       for (const node of list) {
         if (node.kind === ts.SyntaxKind.CommaToken) {
-          code.remove(node.getStart(), node.getEnd());
-          wasComma = true;
-        } else if (wasComma) {
-          wasComma = false;
+          commaPos = node.getStart();
+          code.remove(commaPos, node.getEnd());
+        } else if (commaPos) {
+          code.appendLeft(commaPos, ";\n");
           const start = node.getFullStart();
           const slice = code.slice(start, node.getStart());
           let whitespace = slice.length - slice.trimStart().length;
@@ -334,4 +341,17 @@ function recordAndRemoveTypeReferences({ code, sourceFile }: State): Set<string>
   }
 
   return typeReferences;
+}
+
+function getStart(node: ts.Node): number {
+  const start = node.getFullStart();
+  return start + (newlineAt(node, start) ? 1 : 0);
+}
+function getEnd(node: ts.Node): number {
+  const end = node.getEnd();
+  return end + (newlineAt(node, end) ? 1 : 0);
+}
+
+function newlineAt(node: ts.Node, idx: number): boolean {
+  return node.getSourceFile().getFullText()[idx] == "\n";
 }

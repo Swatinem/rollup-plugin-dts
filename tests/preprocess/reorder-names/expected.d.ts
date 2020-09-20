@@ -1,5 +1,5 @@
-
-declare const uniqueId: (prefix?: string) => string;declare interface Cache {
+declare const uniqueId: (prefix?: string) => string;
+declare interface Cache {
   destroy: () => void;
 }
 declare const Cache: () => Cache;
