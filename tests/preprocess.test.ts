@@ -17,7 +17,7 @@ async function assertTestcase(dir: string) {
 }
 
 async function assertExpectedResult(file: string, code: string) {
-  const hasExpected = false; //await fsExtra.pathExists(file);
+  const hasExpected = await fsExtra.pathExists(file);
   if (!hasExpected) {
     await fsExtra.writeFile(file, code);
   }

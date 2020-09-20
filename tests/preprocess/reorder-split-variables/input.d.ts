@@ -1,7 +1,7 @@
-declare interface Foo {}
+interface Foo {}
 
-declare interface Bar {}
+interface Bar {}
 
-declare interface Baz {}
+interface Baz {}
 
 export declare const Bar: Bar, Foo: Foo, Baz: Baz;

@@ -1,13 +1,13 @@
 declare const uniqueId: (prefix?: string) => string;
-declare interface Cache {
+interface Cache {
   destroy: () => void;
 }
 declare const Cache: () => Cache;
-declare interface CacheInfo {
+interface CacheInfo {
   id: number;
 }
 
-declare interface Cache2 {
+interface Cache2 {
   add: (info: CacheInfo) => boolean;
   destroy: () => void;
 }

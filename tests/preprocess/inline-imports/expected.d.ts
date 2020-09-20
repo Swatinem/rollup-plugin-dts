@@ -5,20 +5,20 @@ import * as _foo from "foo";
 // conflicting name:
 declare const foo: number;
 
-declare interface Direct {
+interface Direct {
   ns1: _foo;
   ns2: typeof _foo;
 }
-declare interface Member {
+interface Member {
   bar: __bar./* will be kept */ Bar;
   baz: typeof __bar.Baz;
 }
-declare interface Generic {
+interface Generic {
   bar: __bar.Bar<number>;
   baz: _foo</* will be kept */ __bar.Bar>;
 }
-declare type TypeScript = typeof typescript;
-declare interface Test {
+type TypeScript = typeof typescript;
+interface Test {
   rollup: rollup.RollupOptions;
 }
 

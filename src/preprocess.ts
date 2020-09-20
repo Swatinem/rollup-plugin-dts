@@ -209,9 +209,15 @@ function fixModifiersAndCollectExports({ code, sourceFile, nameMap, exportedName
       ts.isInterfaceDeclaration(node) ||
       ts.isClassDeclaration(node) ||
       ts.isTypeAliasDeclaration(node) ||
-      ts.isVariableStatement(node)
+      ts.isVariableStatement(node) ||
+      ts.isModuleDeclaration(node)
     ) {
       let hasDeclare = false;
+      const needsDeclare =
+        ts.isClassDeclaration(node) ||
+        ts.isFunctionDeclaration(node) ||
+        ts.isVariableStatement(node) ||
+        ts.isModuleDeclaration(node);
       for (const mod of node.modifiers ?? []) {
         switch (mod.kind) {
           case ts.SyntaxKind.ExportKeyword:
@@ -226,7 +232,7 @@ function fixModifiersAndCollectExports({ code, sourceFile, nameMap, exportedName
             hasDeclare = true;
         }
       }
-      if (!hasDeclare) {
+      if (needsDeclare && !hasDeclare) {
         code.appendRight(node.getStart(), "declare ");
       }
     }
