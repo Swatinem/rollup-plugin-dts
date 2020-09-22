@@ -89,7 +89,8 @@ function collectNames(sourceFile: ts.SourceFile): Map<ts.Node, Set<string>> {
       ts.isFunctionDeclaration(stmt) ||
       ts.isInterfaceDeclaration(stmt) ||
       ts.isClassDeclaration(stmt) ||
-      ts.isTypeAliasDeclaration(stmt)
+      ts.isTypeAliasDeclaration(stmt) ||
+      ts.isModuleDeclaration(stmt)
     ) {
       if (stmt.name) {
         names.add(stmt.name.getText());
@@ -122,7 +123,8 @@ function reorderNames({ code, sourceFile }: State) {
       ts.isFunctionDeclaration(node) ||
       ts.isInterfaceDeclaration(node) ||
       ts.isClassDeclaration(node) ||
-      ts.isTypeAliasDeclaration(node)
+      ts.isTypeAliasDeclaration(node) ||
+      (ts.isModuleDeclaration(node) && !(node.flags & ts.NodeFlags.GlobalAugmentation))
     ) {
       if (!node.name) {
         continue;
@@ -153,10 +155,16 @@ function reorderNames({ code, sourceFile }: State) {
   function pushNamedNode(name: string, range: Range) {
     let nodes = namedNodes.get(name);
     if (!nodes) {
-      nodes = [];
+      nodes = [range];
       namedNodes.set(name, nodes);
+    } else {
+      const last = nodes[nodes.length - 1]!;
+      if (last[1] === range[0]) {
+        last[1] = range[1];
+      } else {
+        nodes.push(range);
+      }
     }
-    nodes.push(range);
   }
 
   // TODO: magic-string needs an affinity for moves…
@@ -243,14 +251,22 @@ function fixNamelessExportDefault(state: State) {
   const { sourceFile, code } = state;
   let name: string = "";
   for (const node of sourceFile.statements) {
-    if (ts.isFunctionDeclaration(node) || ts.isClassDeclaration(node)) {
-      if (!matchesModifier(node, ts.ModifierFlags.ExportDefault)) {
-        continue;
-      }
-      if (!node.name) {
+    if (!matchesModifier(node, ts.ModifierFlags.ExportDefault)) {
+      continue;
+    }
+    if (
+      ts.isEnumDeclaration(node) ||
+      ts.isFunctionDeclaration(node) ||
+      ts.isInterfaceDeclaration(node) ||
+      ts.isClassDeclaration(node) ||
+      ts.isTypeAliasDeclaration(node) ||
+      ts.isModuleDeclaration(node)
+    ) {
+      if (node.name) {
+        name = node.name.getText();
+      } else {
         if (!name) {
           name = uniqName(state, "export_default");
-          code.append(`\nexport default ${name};`);
         }
 
         const children = node.getChildren();
@@ -269,6 +285,9 @@ function fixNamelessExportDefault(state: State) {
         }
       }
     }
+  }
+  if (name) {
+    code.append(`\nexport default ${name};\n`);
   }
 }
 

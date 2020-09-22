@@ -6,4 +6,5 @@ declare function _export_default(name: string, descriptor: PropertyDescriptor): 
 declare const export_default: number;
 
 export default _export_default;
+
 export { export_default };

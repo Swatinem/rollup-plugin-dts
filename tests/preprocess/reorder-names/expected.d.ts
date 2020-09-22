@@ -22,4 +22,6 @@ declare function unused(): ClassDecorator | MethodDecorator;
 declare function unused(constructor: Function): void;
 declare function unused(prototype: Object, name: string, descriptor: PropertyDescriptor): PropertyDescriptor;
 
+export default autobind;
+
 export { Cache, uniqueId, Cache2, CacheInfo, unused };
