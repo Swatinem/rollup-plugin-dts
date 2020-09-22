@@ -1,5 +1,5 @@
 import { codeFrameColumns, SourceLocation } from "@babel/code-frame";
-import * as ts from "typescript";
+import ts from "typescript";
 
 function getCodeFrame(): typeof codeFrameColumns | undefined {
   try {

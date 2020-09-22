@@ -1,58 +1,24 @@
 import * as ESTree from "estree";
-import * as ts from "typescript";
-import {
-  convertExpression,
-  createDefaultExport,
-  createExport,
-  createIdentifier,
-  createProgram,
-  matchesModifier,
-  Ranged,
-  withStartEnd,
-} from "./astHelpers";
+import ts from "typescript";
+import { convertExpression, createIdentifier, createProgram, Ranged, withStartEnd } from "./astHelpers";
 import { DeclarationScope } from "./DeclarationScope";
 import { UnsupportedSyntaxError } from "./errors";
 
 type ESTreeImports = ESTree.ImportDeclaration["specifiers"];
 
-interface Fixup {
-  range: {
-    start: number;
-    end: number;
-  };
-  replaceWith: string;
-}
-
 export interface TransformOutput {
   ast: ESTree.Program;
-  fixups: Array<Fixup>;
   typeReferences: Set<string>;
 }
 
 export class Transformer {
   ast: ESTree.Program;
-  fixups: Array<Fixup> = [];
   typeReferences = new Set<string>();
 
   declarations = new Map<string, DeclarationScope>();
   exports = new Set<string>();
 
   constructor(public sourceFile: ts.SourceFile) {
-    // collect all the type references and create fixups to remove them from the code,
-    // we will add all of these later on to the whole chunk…
-    const lineStarts = sourceFile.getLineStarts();
-    for (const ref of sourceFile.typeReferenceDirectives) {
-      this.typeReferences.add(ref.fileName);
-
-      const { line } = sourceFile.getLineAndCharacterOfPosition(ref.pos);
-      const start = lineStarts[line];
-      const end = sourceFile.getLineEndOfPosition(ref.pos);
-      this.fixups.push({
-        range: { start, end },
-        replaceWith: "",
-      });
-    }
-
     this.ast = createProgram(sourceFile);
     for (const stmt of sourceFile.statements) {
       this.convertStatement(stmt);
@@ -62,53 +28,17 @@ export class Transformer {
   transform(): TransformOutput {
     return {
       ast: this.ast,
-      fixups: this.fixups,
       typeReferences: this.typeReferences,
     };
-  }
-
-  addFixupLocation(range: { start: number; end: number }) {
-    const original = this.sourceFile.text.slice(range.start, range.end);
-    let identifier = `_mp_rt${this.fixups.length}`;
-    identifier += original.slice(identifier.length).replace(/[^a-zA-Z0-9_$]/g, () => "_");
-
-    this.fixups.push({
-      range,
-      replaceWith: identifier,
-    });
-    return identifier;
-  }
-
-  unshiftStatement(node: ESTree.Statement | ESTree.ModuleDeclaration) {
-    this.ast.body.unshift(withStartEnd(node, { start: 0, end: 0 }));
   }
 
   pushStatement(node: ESTree.Statement | ESTree.ModuleDeclaration) {
     this.ast.body.push(node);
   }
 
-  maybeMarkAsExported(node: ts.Node, id: ts.Identifier) {
-    if (!matchesModifier(node, ts.ModifierFlags.Export) || !node.modifiers) {
-      return false;
-    }
-
-    const isExportDefault = matchesModifier(node, ts.ModifierFlags.ExportDefault);
-    const name = isExportDefault ? "default" : id.getText();
-
-    if (this.exports.has(name)) {
-      return true;
-    }
-
-    const loc = { start: node.pos, end: node.pos };
-    this.pushStatement((isExportDefault ? createDefaultExport : createExport)(id, loc));
-
-    this.exports.add(name);
-    return true;
-  }
-
   createDeclaration(range: Ranged, id?: ts.Identifier) {
     if (!id) {
-      const scope = new DeclarationScope({ range, transformer: this });
+      const scope = new DeclarationScope({ range });
       this.pushStatement(scope.iife!);
       return scope;
     }
@@ -117,7 +47,7 @@ export class Transformer {
     // We have re-ordered and grouped declarations in `reorderStatements`,
     // so we can assume same-name statements are next to each other, so we just
     // bump the `end` range.
-    const scope = new DeclarationScope({ id, range, transformer: this });
+    const scope = new DeclarationScope({ id, range });
     const existingScope = this.declarations.get(name);
     if (existingScope) {
       existingScope.pushIdentifierReference(id);
@@ -163,9 +93,6 @@ export class Transformer {
       // just ignore `export as namespace FOO` statements…
       return this.removeStatement(node);
     }
-    if (ts.isEmptyStatement(node)) {
-      return this.removeStatement(node);
-    }
     // istanbul ignore else
     if (ts.isImportDeclaration(node) || ts.isImportEqualsDeclaration(node)) {
       return this.convertImportDeclaration(node);
@@ -199,22 +126,13 @@ export class Transformer {
       return;
     }
 
-    this.maybeMarkAsExported(node, node.name);
-
     const scope = this.createDeclaration(node, node.name);
-    scope.fixModifiers(node);
-
     scope.pushIdentifierReference(node.name);
-
     scope.convertNamespace(node);
   }
 
   convertEnumDeclaration(node: ts.EnumDeclaration) {
-    this.maybeMarkAsExported(node, node.name);
-
     const scope = this.createDeclaration(node, node.name);
-    scope.fixModifiers(node);
-
     scope.pushIdentifierReference(node.name);
   }
 
@@ -224,13 +142,8 @@ export class Transformer {
       throw new UnsupportedSyntaxError(node, `FunctionDeclaration should have a name`);
     }
 
-    this.maybeMarkAsExported(node, node.name);
-
     const scope = this.createDeclaration(node, node.name);
-    scope.fixModifiers(node);
-
     scope.pushIdentifierReference(node.name);
-
     scope.convertParametersAndType(node);
   }
 
@@ -240,10 +153,7 @@ export class Transformer {
       throw new UnsupportedSyntaxError(node, `ClassDeclaration / InterfaceDeclaration should have a name`);
     }
 
-    this.maybeMarkAsExported(node, node.name);
-
     const scope = this.createDeclaration(node, node.name);
-    scope.fixModifiers(node);
 
     const typeVariables = scope.convertTypeParameters(node.typeParameters);
     scope.convertHeritageClauses(node);
@@ -252,10 +162,7 @@ export class Transformer {
   }
 
   convertTypeAliasDeclaration(node: ts.TypeAliasDeclaration) {
-    this.maybeMarkAsExported(node, node.name);
-
     const scope = this.createDeclaration(node, node.name);
-    scope.fixModifiers(node);
 
     const typeVariables = scope.convertTypeParameters(node.typeParameters);
     scope.convertTypeNode(node.type);
@@ -274,11 +181,7 @@ export class Transformer {
         throw new UnsupportedSyntaxError(node, `VariableDeclaration must have a name`);
       }
 
-      this.maybeMarkAsExported(node, decl.name);
-
       const scope = this.createDeclaration(node, decl.name);
-      scope.fixModifiers(node);
-
       scope.convertTypeNode(decl.type);
     }
   }
