@@ -1,8 +1,3 @@
-// TODO:
-// - when working with complete statements, make sure that we wrap start/end,
-//   so that start does *not* include a leading \n, but end *does* include the
-//   trailing \n!
-
 import MagicString from "magic-string";
 import ts from "typescript";
 import { matchesModifier } from "./astHelpers";
