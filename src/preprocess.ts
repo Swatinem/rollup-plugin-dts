@@ -14,20 +14,6 @@ interface PreProcessOutput {
   typeReferences: Set<string>;
 }
 
-interface State {
-  code: MagicString;
-  sourceFile: ts.SourceFile;
-
-  /** All the names that were declared, for collision detection. */
-  declaredNames: Set<string>;
-  /** All the names that are defined by one Node. */
-  nameMap: Map<ts.Node, Set<string>>;
-  /** Inlined exports from `fileId` -> <synthetic name>. */
-  inlineImports: Map<string, string>;
-  /** All the exported names that we need to render in the end. */
-  exportedNames: Set<string>;
-}
-
 /**
  * The pre-process step has the following goals:
  * - [x] Fixes the "modifiers", removing any `export` modifier and adding any
@@ -42,92 +28,76 @@ interface State {
  *   modifiers rewritten.
  */
 export function preProcess({ sourceFile }: PreProcessInput): PreProcessOutput {
-  const nameMap = collectNames(sourceFile);
-  const declaredNames = new Set<string>();
-  for (const names of nameMap.values()) {
-    names.forEach((name) => declaredNames.add(name));
-  }
-
   const code = new MagicString(sourceFile.getFullText());
-  const state: State = {
-    code,
-    sourceFile,
-    declaredNames,
-    nameMap,
-    inlineImports: new Map(),
-    exportedNames: new Set(),
-  };
 
-  removeEmptyStatements(state);
-  splitVariableStatements(state);
-  reorderNames(state);
-  fixModifiersAndCollectExports(state);
-  fixNamelessExportDefault(state);
-  resolveInlineImports(state);
-  renderExports(state);
+  /** All the names that are declared in the `SourceFile`. */
+  const declaredNames = new Set<string>();
+  /** All the names that are exported. */
+  const exportedNames = new Set<string>();
+  /** The name of the default export. */
+  let defaultExport = "";
+  /** Inlined exports from `fileId` -> <synthetic name>. */
+  const inlineImports = new Map<string, string>();
+  /** The ranges that each name covers, for re-ordering. */
+  const nameRanges = new Map<string, Array<Range>>();
 
-  const typeReferences = recordAndRemoveTypeReferences(state);
-
-  return {
-    code,
-    typeReferences,
-  };
-}
-
-function collectNames(sourceFile: ts.SourceFile): Map<ts.Node, Set<string>> {
-  let nameMap = new Map<ts.Node, Set<string>>();
-  for (const stmt of sourceFile.statements) {
-    const names = new Set<string>();
-    nameMap.set(stmt, names);
-    if (
-      ts.isEnumDeclaration(stmt) ||
-      ts.isFunctionDeclaration(stmt) ||
-      ts.isInterfaceDeclaration(stmt) ||
-      ts.isClassDeclaration(stmt) ||
-      ts.isTypeAliasDeclaration(stmt) ||
-      ts.isModuleDeclaration(stmt)
-    ) {
-      if (stmt.name) {
-        names.add(stmt.name.getText());
-      }
-    }
-    if (ts.isVariableStatement(stmt)) {
-      for (const decl of stmt.declarationList.declarations) {
-        if (ts.isIdentifier(decl.name)) {
-          names.add(decl.name.getText());
-        }
-      }
-    }
-  }
-  return nameMap;
-}
-
-function removeEmptyStatements({ code, sourceFile }: State) {
+  /**
+   * Pass 1:
+   *
+   * - Remove statements that we can’t handle.
+   * - Collect a `Set` of all the declared names.
+   * - Collect a `Set` of all the exported names.
+   * - Maybe collect the name of the default export if present.
+   * - Fix the modifiers of all the items.
+   * - Collect the ranges of each named statement.
+   */
   for (const node of sourceFile.statements) {
     if (ts.isEmptyStatement(node)) {
       code.remove(node.getStart(), node.getEnd());
+      continue;
     }
-  }
-}
-
-function reorderNames({ code, sourceFile }: State) {
-  let namedNodes = new Map<string, Array<Range>>();
-  for (const node of sourceFile.statements) {
     if (
       ts.isEnumDeclaration(node) ||
       ts.isFunctionDeclaration(node) ||
       ts.isInterfaceDeclaration(node) ||
       ts.isClassDeclaration(node) ||
       ts.isTypeAliasDeclaration(node) ||
-      (ts.isModuleDeclaration(node) && !(node.flags & ts.NodeFlags.GlobalAugmentation))
+      ts.isModuleDeclaration(node)
     ) {
-      if (!node.name) {
-        continue;
+      // collect the declared name
+      if (node.name) {
+        const name = node.name.getText();
+        declaredNames.add(name);
+
+        // collect the exported name, maybe as `default`.
+        if (matchesModifier(node, ts.ModifierFlags.ExportDefault)) {
+          defaultExport = name;
+        } else if (matchesModifier(node, ts.ModifierFlags.Export)) {
+          exportedNames.add(name);
+        }
+        if (!(node.flags & ts.NodeFlags.GlobalAugmentation)) {
+          pushNamedNode(name, [getStart(node), getEnd(node)]);
+        }
       }
-      const name = node.name.getText();
-      pushNamedNode(name, [getStart(node), getEnd(node)]);
+
+      fixModifiers(code, node);
     } else if (ts.isVariableStatement(node)) {
       const { declarations } = node.declarationList;
+      // collect all the names, also check if they are exported
+      const isExport = matchesModifier(node, ts.ModifierFlags.Export);
+      for (const decl of node.declarationList.declarations) {
+        if (ts.isIdentifier(decl.name)) {
+          const name = decl.name.getText();
+          declaredNames.add(name);
+          if (isExport) {
+            exportedNames.add(name);
+          }
+        }
+      }
+
+      fixModifiers(code, node);
+
+      // collect the ranges for re-ordering
       if (declarations.length == 1) {
         const decl = declarations[0];
         if (ts.isIdentifier(decl.name)) {
@@ -144,42 +114,13 @@ function reorderNames({ code, sourceFile }: State) {
           }
         }
       }
-    }
-  }
 
-  function pushNamedNode(name: string, range: Range) {
-    let nodes = namedNodes.get(name);
-    if (!nodes) {
-      nodes = [range];
-      namedNodes.set(name, nodes);
-    } else {
-      const last = nodes[nodes.length - 1]!;
-      if (last[1] === range[0]) {
-        last[1] = range[1];
-      } else {
-        nodes.push(range);
-      }
-    }
-  }
-
-  // TODO: magic-string needs an affinity for moves…
-  for (const nodes of namedNodes.values()) {
-    const last = nodes.pop()!;
-    const start = last[0];
-    for (const node of nodes) {
-      code.move(node[0], node[1], start);
-    }
-  }
-}
-
-function splitVariableStatements({ code, sourceFile }: State) {
-  for (const stmt of sourceFile.statements) {
-    if (ts.isVariableStatement(stmt)) {
-      const { flags } = stmt.declarationList;
+      // split the variable declaration into different statements
+      const { flags } = node.declarationList;
       const type = flags & ts.NodeFlags.Let ? "let" : flags & ts.NodeFlags.Const ? "const" : "var";
       const prefix = `declare ${type} `;
 
-      const list = stmt.declarationList
+      const list = node.declarationList
         .getChildren()
         .find((c) => c.kind === ts.SyntaxKind.SyntaxList)!
         .getChildren();
@@ -202,93 +143,92 @@ function splitVariableStatements({ code, sourceFile }: State) {
       }
     }
   }
-}
 
-function fixModifiersAndCollectExports({ code, sourceFile, nameMap, exportedNames }: State) {
+  /**
+   * Pass 2:
+   *
+   * Now that we have a Set of all the declared names, we can use that to
+   * generate and de-conflict names for the following steps:
+   *
+   * - Resolve all the inline imports.
+   * - Give any name-less `default export` a name.
+   */
   for (const node of sourceFile.statements) {
-    if (
-      ts.isEnumDeclaration(node) ||
-      ts.isFunctionDeclaration(node) ||
-      ts.isInterfaceDeclaration(node) ||
-      ts.isClassDeclaration(node) ||
-      ts.isTypeAliasDeclaration(node) ||
-      ts.isVariableStatement(node) ||
-      ts.isModuleDeclaration(node)
-    ) {
-      let hasDeclare = false;
-      const needsDeclare =
-        ts.isClassDeclaration(node) ||
-        ts.isFunctionDeclaration(node) ||
-        ts.isVariableStatement(node) ||
-        ts.isModuleDeclaration(node);
-      for (const mod of node.modifiers ?? []) {
-        switch (mod.kind) {
-          case ts.SyntaxKind.ExportKeyword:
-            if (!matchesModifier(node, ts.ModifierFlags.ExportDefault)) {
-              nameMap.get(node)?.forEach((name) => exportedNames.add(name));
-            }
-          // fall through
-          case ts.SyntaxKind.DefaultKeyword:
-            code.remove(mod.getStart(), mod.getEnd() + 1);
-            break;
-          case ts.SyntaxKind.DeclareKeyword:
-            hasDeclare = true;
-        }
-      }
-      if (needsDeclare && !hasDeclare) {
-        code.appendRight(node.getStart(), "declare ");
-      }
-    }
-  }
-}
+    // recursively check inline imports
+    checkInlineImport(node);
 
-function fixNamelessExportDefault(state: State) {
-  const { sourceFile, code } = state;
-  let name: string = "";
-  for (const node of sourceFile.statements) {
     if (!matchesModifier(node, ts.ModifierFlags.ExportDefault)) {
       continue;
     }
-    if (
-      ts.isEnumDeclaration(node) ||
-      ts.isFunctionDeclaration(node) ||
-      ts.isInterfaceDeclaration(node) ||
-      ts.isClassDeclaration(node) ||
-      ts.isTypeAliasDeclaration(node) ||
-      ts.isModuleDeclaration(node)
-    ) {
+    // only function and class can be default exported, and be missing a name
+    if (ts.isFunctionDeclaration(node) || ts.isClassDeclaration(node)) {
       if (node.name) {
-        name = node.name.getText();
+        continue;
+      }
+      if (!defaultExport) {
+        defaultExport = uniqName("export_default");
+      }
+
+      const children = node.getChildren();
+      const idx = children.findIndex(
+        (node) => node.kind === ts.SyntaxKind.ClassKeyword || node.kind === ts.SyntaxKind.FunctionKeyword,
+      );
+      const token = children[idx];
+      const nextToken = children[idx + 1];
+      const isPunctuation =
+        nextToken.kind >= ts.SyntaxKind.FirstPunctuation && nextToken.kind <= ts.SyntaxKind.LastPunctuation;
+
+      if (isPunctuation) {
+        code.appendLeft(nextToken.getStart(), defaultExport);
       } else {
-        if (!name) {
-          name = uniqName(state, "export_default");
-        }
-
-        const children = node.getChildren();
-        const idx = children.findIndex(
-          (node) => node.kind === ts.SyntaxKind.ClassKeyword || node.kind === ts.SyntaxKind.FunctionKeyword,
-        );
-        const token = children[idx];
-        const nextToken = children[idx + 1];
-        const isPunctuation =
-          nextToken.kind >= ts.SyntaxKind.FirstPunctuation && nextToken.kind <= ts.SyntaxKind.LastPunctuation;
-
-        if (isPunctuation) {
-          code.appendLeft(nextToken.getStart(), name);
-        } else {
-          code.appendRight(token!.getEnd(), ` ${name}`);
-        }
+        code.appendRight(token!.getEnd(), ` ${defaultExport}`);
       }
     }
   }
-  if (name) {
-    code.append(`\nexport default ${name};\n`);
-  }
-}
 
-function resolveInlineImports(state: State) {
-  const { code, sourceFile } = state;
-  ts.forEachChild(sourceFile, checkInlineImport);
+  // and re-order all the name ranges to be contiguous
+  for (const ranges of nameRanges.values()) {
+    // we have to move all the nodes in front of the *last* one, which is a bit
+    // unintuitive but is a workaround for:
+    // https://github.com/Rich-Harris/magic-string/issues/180
+    const last = ranges.pop()!;
+    const start = last[0];
+    for (const node of ranges) {
+      code.move(node[0], node[1], start);
+    }
+  }
+
+  // render all the inline imports, and all the exports
+  if (defaultExport) {
+    code.append(`\nexport default ${defaultExport};\n`);
+  }
+  if (exportedNames.size) {
+    code.append(`\nexport { ${[...exportedNames].join(", ")} };\n`);
+  }
+  for (const [fileId, importName] of inlineImports.entries()) {
+    code.prepend(`import * as ${importName} from "${fileId}";\n`);
+  }
+
+  // and collect/remove all the typeReferenceDirectives
+  const typeReferences = new Set<string>();
+  const lineStarts = sourceFile.getLineStarts();
+  for (const ref of sourceFile.typeReferenceDirectives) {
+    typeReferences.add(ref.fileName);
+
+    const { line } = sourceFile.getLineAndCharacterOfPosition(ref.pos);
+    const start = lineStarts[line];
+    let end = sourceFile.getLineEndOfPosition(ref.pos);
+    if (code.slice(end, end + 1) == "\n") {
+      end += 1;
+    }
+
+    code.remove(start, end);
+  }
+
+  return {
+    code,
+    typeReferences,
+  };
 
   function checkInlineImport(node: ts.Node) {
     ts.forEachChild(node, checkInlineImport);
@@ -308,59 +248,67 @@ function resolveInlineImports(state: State) {
         end = token.getStart();
       }
 
-      const importName = createNamespaceImport(state, fileId);
+      const importName = createNamespaceImport(fileId);
       code.overwrite(start, end, importName);
     }
   }
-}
 
-function createNamespaceImport(state: State, fileId: string) {
-  const { code, inlineImports } = state;
-  let importName = inlineImports.get(fileId);
-  if (!importName) {
-    importName = uniqName(
-      state,
-      fileId.replace(/[^a-zA-Z0-9_$]/g, () => "_"),
-    );
-    code.prepend(`import * as ${importName} from "${fileId}";\n`);
-    inlineImports.set(fileId, importName);
-  }
-  return importName;
-}
-
-function uniqName({ declaredNames }: State, hint: string): string {
-  let name = hint;
-  while (declaredNames.has(name)) {
-    name = `_${name}`;
-  }
-  declaredNames.add(name);
-  return name;
-}
-
-function renderExports({ code, exportedNames }: State) {
-  if (!exportedNames.size) {
-    return;
-  }
-  code.append(`\nexport { ${[...exportedNames].join(", ")} };\n`);
-}
-
-function recordAndRemoveTypeReferences({ code, sourceFile }: State): Set<string> {
-  const typeReferences = new Set<string>();
-  const lineStarts = sourceFile.getLineStarts();
-  for (const ref of sourceFile.typeReferenceDirectives) {
-    typeReferences.add(ref.fileName);
-
-    const { line } = sourceFile.getLineAndCharacterOfPosition(ref.pos);
-    const start = lineStarts[line];
-    let end = sourceFile.getLineEndOfPosition(ref.pos);
-    if (code.slice(end, end + 1) == "\n") {
-      end += 1;
+  function createNamespaceImport(fileId: string) {
+    let importName = inlineImports.get(fileId);
+    if (!importName) {
+      importName = uniqName(fileId.replace(/[^a-zA-Z0-9_$]/g, () => "_"));
+      inlineImports.set(fileId, importName);
     }
-
-    code.remove(start, end);
+    return importName;
   }
 
-  return typeReferences;
+  function uniqName(hint: string): string {
+    let name = hint;
+    while (declaredNames.has(name)) {
+      name = `_${name}`;
+    }
+    declaredNames.add(name);
+    return name;
+  }
+
+  function pushNamedNode(name: string, range: Range) {
+    let nodes = nameRanges.get(name);
+    if (!nodes) {
+      nodes = [range];
+      nameRanges.set(name, nodes);
+    } else {
+      const last = nodes[nodes.length - 1]!;
+      if (last[1] === range[0]) {
+        last[1] = range[1];
+      } else {
+        nodes.push(range);
+      }
+    }
+  }
+}
+
+function fixModifiers(code: MagicString, node: ts.Node) {
+  // remove the `export` and `default` modifier, add a `declare` if its missing.
+  let hasDeclare = false;
+  const needsDeclare =
+    ts.isClassDeclaration(node) ||
+    ts.isFunctionDeclaration(node) ||
+    ts.isModuleDeclaration(node) ||
+    ts.isVariableStatement(node);
+  for (const mod of node.modifiers ?? []) {
+    switch (mod.kind) {
+      case ts.SyntaxKind.ExportKeyword: // fall through
+      case ts.SyntaxKind.DefaultKeyword:
+        // TODO: be careful about that `+ 1`
+        code.remove(mod.getStart(), mod.getEnd() + 1);
+        break;
+      case ts.SyntaxKind.DeclareKeyword:
+        hasDeclare = true;
+    }
+  }
+  if (needsDeclare && !hasDeclare) {
+    code.appendRight(node.getStart(), "declare ");
+  }
 }
 
 function getStart(node: ts.Node): number {
