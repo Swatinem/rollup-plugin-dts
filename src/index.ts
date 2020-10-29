@@ -3,7 +3,7 @@ import { PluginImpl, SourceDescription } from "rollup";
 import * as ts from "typescript";
 
 import { NamespaceFixer } from "./NamespaceFixer";
-import { createPrograms, dts, formatHost } from "./program";
+import { createProgram, createPrograms, dts, formatHost } from "./program";
 import { reorderStatements } from "./reorder";
 import { Transformer } from "./Transformer";
 
@@ -34,17 +34,9 @@ const plugin: PluginImpl<Options> = (options = {}) => {
   function getModule(fileName: string) {
     let source: ts.SourceFile | undefined;
     let program: ts.Program | undefined;
-    if (programs.length) {
-      // Rollup doesn't tell you the entry point of each module in the bundle,
-      // so we need to ask every TypeScript program for the given filename.
-      for (program of programs) {
-        source = program.getSourceFile(fileName);
-        if (source) break;
-      }
-    }
     // Create any `ts.SourceFile` objects on-demand for ".d.ts" modules,
     // but only when there are zero ".ts" entry points.
-    else if (fileName.endsWith(dts)) {
+    if (!programs.length && fileName.endsWith(dts)) {
       const code = ts.sys.readFile(fileName, "utf8");
       if (code)
         source = ts.createSourceFile(
@@ -53,6 +45,14 @@ const plugin: PluginImpl<Options> = (options = {}) => {
           ts.ScriptTarget.Latest,
           true, // setParentNodes
         );
+    } else {
+      // Rollup doesn't tell you the entry point of each module in the bundle,
+      // so we need to ask every TypeScript program for the given filename.
+      program = programs.find((p) => (source = p.getSourceFile(fileName)));
+      if (!program && ts.sys.fileExists(fileName)) {
+        programs.push((program = createProgram(fileName, compilerOptions)));
+        source = program.getSourceFile(fileName);
+      }
     }
     return { source, program };
   }
