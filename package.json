@@ -1,6 +1,6 @@
 {
   "name": "rollup-plugin-dts",
-  "version": "1.4.13",
+  "version": "1.4.14",
   "description": "An experiment to generate .d.ts rollup files",
   "keywords": [
     "rollup-plugin",
@@ -17,7 +17,9 @@
   "bugs": {
     "url": "https://github.com/Swatinem/rollup-plugin-dts/issues"
   },
-  "funding": "https://github.com/sponsors/Swatinem",
+  "funding": {
+    "url": "https://github.com/sponsors/Swatinem"
+  },
   "homepage": "https://github.com/Swatinem/rollup-plugin-dts#readme",
   "main": "dist/rollup-plugin-dts.js",
   "module": "dist/rollup-plugin-dts.mjs",
@@ -59,30 +61,31 @@
     "trailingComma": "all"
   },
   "devDependencies": {
-    "@types/babel__code-frame": "^7.0.1",
-    "@types/d3-drag": "^1.2.3",
+    "@types/babel__code-frame": "^7.0.2",
+    "@types/d3-drag": "^2.0.0",
     "@types/estree": "0.0.45",
-    "@types/fs-extra": "^9.0.1",
-    "@types/jest": "^26.0.13",
-    "@types/node": "^14.10.1",
-    "@types/react": "^16.9.49",
+    "@types/fs-extra": "^9.0.4",
+    "@types/jest": "^26.0.15",
+    "@types/node": "^14.14.7",
+    "@types/react": "^16.9.56",
     "esm": "^3.2.25",
     "fs-extra": "^9.0.1",
-    "jest": "^26.4.2",
-    "prettier": "^2.1.1",
-    "react": "^16.13.1",
-    "rollup": "2.26.11",
-    "ts-jest": "^26.3.0",
-    "typescript": "4.0.2"
+    "jest": "^26.6.3",
+    "prettier": "^2.1.2",
+    "react": "^17.0.1",
+    "rollup": "2.33.2",
+    "ts-jest": "^26.4.4",
+    "typescript": "4.0.5"
   },
   "peerDependencies": {
-    "rollup": "^2.26.11",
-    "typescript": "^4.0.2"
+    "rollup": "^2.33.2",
+    "typescript": "^4.0.5"
   },
   "optionalDependencies": {
     "@babel/code-frame": "^7.10.4"
   },
   "dependencies": {
+    "@babel/code-frame": "^7.10.4",
     "magic-string": "^0.25.7"
   }
 }

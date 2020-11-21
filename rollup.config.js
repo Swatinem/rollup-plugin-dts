@@ -4,7 +4,7 @@ import pkg from "./package.json";
 require = require("esm")(module);
 const { default: dts } = require("./.build");
 
-const external = ["path", "typescript", "rollup", "@babel/code-frame"];
+const external = ["path", "typescript", "rollup", "@babel/code-frame", "magic-string"];
 
 /** @type {Array<import("rollup").RollupWatchOptions>} */
 const config = [

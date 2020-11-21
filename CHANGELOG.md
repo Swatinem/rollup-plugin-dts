@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.4.14
+
+Released on **2020-11-14**
+
+- Better support for monorepos.
+
+Features, fixes and improvements in this release have been contributed by:
+
+- [@aleclarson](https://github.com/aleclarson)
+
 ## 1.4.13
 
 Released on **2020-09-05**

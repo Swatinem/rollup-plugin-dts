@@ -62,6 +62,15 @@ function getCompilerOptions(
   };
 }
 
+export function createProgram(fileName: string, overrideOptions: ts.CompilerOptions) {
+  const { dtsFiles, compilerOptions } = getCompilerOptions(fileName, overrideOptions)
+  return ts.createProgram(
+    [fileName].concat(Array.from(dtsFiles)),
+    compilerOptions,
+    ts.createCompilerHost(compilerOptions, true)
+  );
+}
+
 export function createPrograms(input: Array<string>, overrideOptions: ts.CompilerOptions) {
   const programs = [];
   let inputs: Array<string> = [];
