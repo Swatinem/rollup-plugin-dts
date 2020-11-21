@@ -1,7 +1,7 @@
 import ts from "typescript";
 import * as ESTree from "estree";
 import {
-  Ranged,
+  Range,
   createDeclaration,
   createReference,
   createIdentifier,
@@ -31,7 +31,7 @@ const IGNORE_TYPENODES = new Set([
 
 interface DeclarationScopeOptions {
   id?: ts.Identifier;
-  range: Ranged;
+  range: Range;
 }
 
 export class DeclarationScope {
@@ -108,8 +108,7 @@ export class DeclarationScope {
         object: this.convertEntityName(node.left),
         property: createIdentifier(node.right),
       },
-      // TODO: clean up all the `start` handling!
-      { start: node.getStart(), end: node.end },
+      node,
     );
   }
 
@@ -135,8 +134,7 @@ export class DeclarationScope {
         object,
         property: createIdentifier(node.name),
       },
-      // TODO: clean up all the `start` handling!
-      { start: node.getStart(), end: node.end },
+      node,
     );
   }
 

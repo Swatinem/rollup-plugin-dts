@@ -14,7 +14,7 @@ export function createProgram(node: ts.SourceFile): ESTree.Program {
       sourceType: "module",
       body: [],
     },
-    node,
+    { start: node.getFullStart(), end: node.getEnd() },
   );
 }
 
@@ -33,16 +33,13 @@ export function createReference(id: ESTree.Expression): ESTree.AssignmentPattern
   };
 }
 
-export function createIdentifier(node: ts.Identifier) {
-  return withStartEnd<ESTree.Identifier>(
+export function createIdentifier(node: ts.Identifier): ESTree.Identifier {
+  return withStartEnd(
     {
       type: "Identifier",
       name: node.getText(),
     },
-    {
-      start: node.getStart(),
-      end: node.getEnd(),
-    },
+    node,
   );
 }
 
@@ -50,7 +47,7 @@ export function createIdentifier(node: ts.Identifier) {
  * Create a new Scope which is always included
  * `(function (_ = MARKER) {})()`
  */
-export function createIIFE(range: Ranged) {
+export function createIIFE(range: Range) {
   const fn = withStartEnd<ESTree.FunctionExpression>(
     {
       type: "FunctionExpression",
@@ -79,8 +76,8 @@ export function createIIFE(range: Ranged) {
  * Create a new Declaration and Scope for `id`:
  * `function ${id}(_ = MARKER) {}`
  */
-export function createDeclaration(id: ts.Identifier, range: Ranged) {
-  return withStartEnd<ESTree.FunctionDeclaration>(
+export function createDeclaration(id: ts.Identifier, range: Range): ESTree.FunctionDeclaration {
+  return withStartEnd(
     {
       type: "FunctionDeclaration",
       id: withStartEnd(
@@ -88,7 +85,7 @@ export function createDeclaration(id: ts.Identifier, range: Ranged) {
           type: "Identifier",
           name: ts.idText(id),
         },
-        { start: id.getStart(), end: id.getEnd() },
+        id,
       ),
       params: [],
       body: { type: "BlockStatement", body: [] },
@@ -127,26 +124,15 @@ export function convertExpression(node: ts.Expression): ESTree.Expression {
   }
 }
 
-export interface Ranged {
-  start?: number;
-  pos?: number;
-  end: number;
-}
-
-interface WithRange {
+export interface Range {
   start: number;
   end: number;
 }
 
-function getStart({ start, pos }: Ranged) {
-  return typeof start === "number" ? start : pos || 0;
-}
-
-export function withStartEnd<T extends ESTree.Node>(node: T, range: Ranged): T & WithRange {
-  return Object.assign(node, {
-    start: getStart(range),
-    end: range.end,
-  });
+export function withStartEnd<T extends ESTree.Node>(esNode: T, nodeOrRange: ts.Node | Range): T {
+  let range: Range =
+    "start" in nodeOrRange ? nodeOrRange : { start: nodeOrRange.getStart(), end: nodeOrRange.getEnd() };
+  return Object.assign(esNode, range);
 }
 
 export function matchesModifier(node: ts.Node, flags: ts.ModifierFlags) {

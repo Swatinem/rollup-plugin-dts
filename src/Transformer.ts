@@ -1,6 +1,6 @@
 import * as ESTree from "estree";
 import ts from "typescript";
-import { convertExpression, createIdentifier, createProgram, Ranged, withStartEnd } from "./astHelpers";
+import { convertExpression, createIdentifier, createProgram, withStartEnd } from "./astHelpers";
 import { DeclarationScope } from "./DeclarationScope";
 import { UnsupportedSyntaxError } from "./errors";
 
@@ -36,7 +36,8 @@ export class Transformer {
     this.ast.body.push(node);
   }
 
-  createDeclaration(range: Ranged, id?: ts.Identifier) {
+  createDeclaration(node: ts.Node, id?: ts.Identifier) {
+    const range = { start: node.getFullStart(), end: node.getEnd() };
     if (!id) {
       const scope = new DeclarationScope({ range });
       this.pushStatement(scope.iife!);

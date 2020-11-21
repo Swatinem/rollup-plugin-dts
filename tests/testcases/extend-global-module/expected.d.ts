@@ -18,6 +18,7 @@ interface Second$2 {}
 declare module "foobar" {
   const second3: Second$2;
 }
+// all these have at least one `export`, which silences TS error `2669`
 interface First {}
 declare global {
   namespace NodeJS {
