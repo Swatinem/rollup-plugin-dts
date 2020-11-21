@@ -1,4 +1,4 @@
-import * as ts from "typescript";
+import ts from "typescript";
 import * as ESTree from "estree";
 import { UnsupportedSyntaxError } from "./errors";
 
@@ -15,42 +15,6 @@ export function createProgram(node: ts.SourceFile): ESTree.Program {
       body: [],
     },
     node,
-  );
-}
-
-/**
- * Create a default export for `id`:
- * `export default id`
- */
-export function createDefaultExport(node: ts.Identifier, range: Ranged) {
-  return withStartEnd<ESTree.ExportDefaultDeclaration>(
-    {
-      type: "ExportDefaultDeclaration",
-      declaration: createIdentifier(node),
-    },
-    range,
-  );
-}
-
-/**
- * Create an export for `id`:
- * `export { id }`
- */
-export function createExport(node: ts.Identifier, range: Ranged) {
-  const id = createIdentifier(node);
-  return withStartEnd<ESTree.ExportNamedDeclaration>(
-    {
-      type: "ExportNamedDeclaration",
-      declaration: null,
-      specifiers: [
-        {
-          type: "ExportSpecifier",
-          exported: id,
-          local: id,
-        },
-      ],
-    },
-    range,
   );
 }
 

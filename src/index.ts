@@ -1,10 +1,10 @@
 import path from "path";
 import { PluginImpl, SourceDescription } from "rollup";
-import * as ts from "typescript";
+import ts from "typescript";
 
 import { NamespaceFixer } from "./NamespaceFixer";
+import { preProcess } from "./preprocess";
 import { createProgram, createPrograms, dts, formatHost } from "./program";
-import { reorderStatements } from "./reorder";
 import { Transformer } from "./Transformer";
 
 const tsx = /\.(t|j)sx?$/;
@@ -60,30 +60,16 @@ const plugin: PluginImpl<Options> = (options = {}) => {
   // Parse a TypeScript module into an ESTree program.
   const typeReferences = new Set<string>();
 
-  // All the fixups we have applied, which we need to fix in the final render step
-  const fixups: Array<string> = [];
-
   function transformFile(input: ts.SourceFile): SourceDescription {
-    input = reorderStatements(input);
-    let code = input.getFullText();
+    const preprocessed = preProcess({ sourceFile: input });
+    const code = preprocessed.code.toString();
+    input = ts.createSourceFile(input.fileName, code, ts.ScriptTarget.Latest, true);
 
     const transformer = new Transformer(input);
     const output = transformer.transform();
 
-    for (const ref of output.typeReferences) {
+    for (const ref of preprocessed.typeReferences) {
       typeReferences.add(ref);
-    }
-
-    // apply fixups, which means replacing certain text ranges before we hand off the code to rollup
-    for (const fixup of output.fixups) {
-      let placeholder = `✂${fixups.length}`;
-      const len = fixup.range.end - fixup.range.start;
-      if (placeholder.length + 1 > len) {
-        throw new Error("Unable to apply fixup.");
-      }
-      placeholder = placeholder.padEnd(len - 1) + "✂";
-      code = code.slice(0, fixup.range.start) + placeholder + code.slice(fixup.range.end);
-      fixups.push(fixup.replaceWith);
     }
 
     if (process.env.DTS_DUMP_AST) {
@@ -207,7 +193,6 @@ const plugin: PluginImpl<Options> = (options = {}) => {
     },
 
     renderChunk(code, chunk) {
-      code = code.replace(/✂(\d+)\s*✂/g, (_, num) => fixups[num]);
       const source = ts.createSourceFile(chunk.fileName, code, ts.ScriptTarget.Latest, true);
       const fixer = new NamespaceFixer(source);
 

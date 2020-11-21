@@ -1,4 +1,4 @@
-import * as ts from "typescript";
+import ts from "typescript";
 import * as ESTree from "estree";
 import {
   Ranged,
@@ -9,7 +9,6 @@ import {
   convertExpression,
   createIIFE,
 } from "./astHelpers";
-import { Transformer } from "./Transformer";
 import { UnsupportedSyntaxError } from "./errors";
 
 const IGNORE_TYPENODES = new Set([
@@ -33,19 +32,13 @@ const IGNORE_TYPENODES = new Set([
 interface DeclarationScopeOptions {
   id?: ts.Identifier;
   range: Ranged;
-  transformer: Transformer;
 }
 
 export class DeclarationScope {
-  // TODO: having this circular dependency is very unclean… figure out a way
-  // to avoid it for the usecase of inline imports
-  transformer: Transformer;
-
   declaration: ESTree.FunctionDeclaration;
   iife?: ESTree.ExpressionStatement;
 
-  constructor({ id, range, transformer }: DeclarationScopeOptions) {
-    this.transformer = transformer;
+  constructor({ id, range }: DeclarationScopeOptions) {
     if (id) {
       this.declaration = createDeclaration(id, range);
     } else {
@@ -101,48 +94,6 @@ export class DeclarationScope {
   }
   pushIdentifierReference(id: ts.Identifier) {
     this.pushReference(createIdentifier(id));
-  }
-
-  /**
-   * This will fix up the modifiers of a declaration.
-   * We want to remove `export (default)?` modifiers, and in that case add a
-   * missing `declare`. All the others should be untouched.
-   */
-  fixModifiers(node: ts.Node) {
-    if (!node.modifiers) {
-      return;
-    }
-    const modifiers: Array<string> = [];
-    let hasDeclare = false;
-    let start = Infinity;
-    let end = 0;
-    for (const mod of node.modifiers) {
-      if (mod.kind !== ts.SyntaxKind.ExportKeyword && mod.kind !== ts.SyntaxKind.DefaultKeyword) {
-        modifiers.push(mod.getText());
-      }
-      if (mod.kind === ts.SyntaxKind.DeclareKeyword) {
-        hasDeclare = true;
-      }
-      start = Math.min(start, mod.getStart());
-      end = Math.max(end, mod.getEnd());
-    }
-
-    // function, class and variables *must* have a `declare` modifier
-    if (
-      !hasDeclare &&
-      (ts.isClassDeclaration(node) || ts.isFunctionDeclaration(node) || ts.isVariableStatement(node))
-    ) {
-      modifiers.unshift("declare");
-    }
-
-    const newModifiers = modifiers.join(" ");
-    if (!newModifiers && end) {
-      end += 1;
-    }
-    this.transformer.fixups.push({
-      range: { start, end },
-      replaceWith: newModifiers,
-    });
   }
 
   convertEntityName(node: ts.EntityName): ESTree.Expression {
@@ -292,12 +243,17 @@ export class DeclarationScope {
     }
     if (ts.isTupleTypeNode(node)) {
       // ts@v4 renamed `elementTypes` to `elements`
-      for (const type of (node.elements || (node as any).elementTypes)) {
+      for (const type of node.elements || (node as any).elementTypes) {
         this.convertTypeNode(type);
       }
       return;
     }
-    if (ts.isNamedTupleMember(node) || ts.isParenthesizedTypeNode(node) || ts.isTypeOperatorNode(node) || ts.isTypePredicateNode(node)) {
+    if (
+      ts.isNamedTupleMember(node) ||
+      ts.isParenthesizedTypeNode(node) ||
+      ts.isTypeOperatorNode(node) ||
+      ts.isTypePredicateNode(node)
+    ) {
       return this.convertTypeNode(node.type);
     }
     if (ts.isUnionTypeNode(node) || ts.isIntersectionTypeNode(node)) {
@@ -333,10 +289,6 @@ export class DeclarationScope {
       this.convertParametersAndType(node);
       return;
     }
-    if (ts.isImportTypeNode(node)) {
-      this.convertImportTypeNode(node);
-      return;
-    }
     if (ts.isTypeQueryNode(node)) {
       this.pushReference(this.convertEntityName(node.exprName));
       return;
@@ -357,63 +309,6 @@ export class DeclarationScope {
     } else {
       throw new UnsupportedSyntaxError(node);
     }
-  }
-
-  // For import type nodes of the form
-  // `import("./foo").Bar`
-  // we create the following ESTree equivalent:
-  // 1. `import * as _ from "./foo";` on the toplevel
-  // 2. `_.Bar` in our declaration scope
-  convertImportTypeNode(node: ts.ImportTypeNode) {
-    // istanbul ignore if
-    if (!ts.isLiteralTypeNode(node.argument) || !ts.isStringLiteral(node.argument.literal)) {
-      throw new UnsupportedSyntaxError(node, "inline imports should have a literal argument");
-    }
-    const fileId = node.argument.literal.text;
-    const start = node.getStart() + (node.isTypeOf ? "typeof ".length : 0);
-    const range = {
-      start,
-      end: (node.qualifier ? node.qualifier : node).getEnd(),
-    };
-    const importId = this.transformer.addFixupLocation(range);
-    const importIdRef = withStartEnd(
-      {
-        type: "Identifier",
-        name: importId,
-      },
-      range,
-    );
-    this.transformer.unshiftStatement({
-      type: "ImportDeclaration",
-      specifiers: [
-        {
-          type: "ImportNamespaceSpecifier",
-          local: { type: "Identifier", name: importId },
-        },
-      ],
-      source: { type: "Literal", value: fileId },
-    });
-    if (node.qualifier && ts.isIdentifier(node.qualifier)) {
-      this.pushReference(
-        withStartEnd(
-          {
-            type: "MemberExpression",
-            computed: false,
-            optional: false,
-            object: importIdRef,
-            property: createIdentifier(node.qualifier),
-          },
-          range,
-        ),
-      );
-    } else {
-      // we definitely need to do some string manipulation on the source code,
-      // since rollup will not touch the `import("...")` bit at all.
-      // also, for *internal* namespace references, we have the same problem
-      // as with re-exporting references… -_-
-      this.pushReference(importIdRef);
-    }
-    this.convertTypeArguments(node);
   }
 
   convertNamespace(node: ts.ModuleDeclaration) {
