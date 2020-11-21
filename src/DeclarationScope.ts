@@ -242,8 +242,7 @@ export class DeclarationScope {
       return this.convertTypeNode(node.elementType);
     }
     if (ts.isTupleTypeNode(node)) {
-      // ts@v4 renamed `elementTypes` to `elements`
-      for (const type of node.elements || (node as any).elementTypes) {
+      for (const type of node.elements) {
         this.convertTypeNode(type);
       }
       return;
@@ -293,12 +292,12 @@ export class DeclarationScope {
       this.pushReference(this.convertEntityName(node.exprName));
       return;
     }
-    if (ts.isTypeNode(node) && node.kind === ts.SyntaxKind.RestType) {
-      this.convertTypeNode((node as ts.RestTypeNode).type);
+    if (ts.isRestTypeNode(node)) {
+      this.convertTypeNode(node.type);
       return;
     }
-    if (ts.isTypeNode(node) && node.kind === ts.SyntaxKind.OptionalType) {
-      this.convertTypeNode((node as ts.OptionalTypeNode).type);
+    if (ts.isOptionalTypeNode(node)) {
+      this.convertTypeNode(node.type);
       return;
     }
 

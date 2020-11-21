@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.0.0
+
+**Compatibility Notice**:
+
+This release targets **TypeScript 4.1** and support for previous versions was dropped.
+
+**Features**:
+
+- The plugin gained a new pre-processing step that added support for unnamed `export default` declarations and splitting up variable declarations that were previously rejected.
+
 ## 1.4.14
 
 Released on **2020-11-14**
