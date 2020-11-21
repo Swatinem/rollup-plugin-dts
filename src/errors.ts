@@ -20,40 +20,27 @@ function getLocation(node: ts.Node): SourceLocation {
   };
 }
 
-function frameNodes(nodes: Array<ts.Node>, messages: Array<string> = []) {
+function frameNode(node: ts.Node) {
   const codeFrame = getCodeFrame();
-  const sourceFile = nodes[0].getSourceFile();
+  const sourceFile = node.getSourceFile();
   const code = sourceFile.getFullText();
 
-  let output = "";
-  let lastLine: number | undefined;
-  // oh jesus, why does @babel/code-frame not support this out of the box?
-  for (const [i, node] of nodes.entries()) {
-    const message = messages[i];
-    // istanbul ignore else
-    const location = getLocation(node);
-    if (codeFrame) {
-      const nextLocation = nodes[i + 1] && getLocation(nodes[i + 1]);
-      const linesAbove = typeof lastLine === "number" ? location.start.line - lastLine - 1 : 2;
-      const linesBelow = nextLocation ? nextLocation.start.line - location.end!.line - 1 : 3;
-      output +=
-        "\n" +
-        codeFrame(code, location, {
-          highlightCode: true,
-          message,
-          linesAbove,
-          linesBelow,
-        });
-      lastLine = location.end!.line + linesBelow;
-    } else {
-      output += `\n${location.start.line}:${location.start.column}: \`${node.getFullText().trim()}\` <- ${message}`;
-    }
+  // istanbul ignore else
+  const location = getLocation(node);
+  if (codeFrame) {
+    return (
+      "\n" +
+      codeFrame(code, location, {
+        highlightCode: true,
+      })
+    );
+  } else {
+    return `\n${location.start.line}:${location.start.column}: \`${node.getFullText().trim()}\``;
   }
-  return output;
 }
 
 export class UnsupportedSyntaxError extends Error {
   constructor(node: ts.Node, message: string = "Syntax not yet supported") {
-    super(`${message}\n${frameNodes([node])}`);
+    super(`${message}\n${frameNode(node)}`);
   }
 }

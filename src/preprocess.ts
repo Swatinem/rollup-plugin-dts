@@ -99,7 +99,7 @@ export function preProcess({ sourceFile }: PreProcessInput): PreProcessOutput {
 
       // collect the ranges for re-ordering
       if (declarations.length == 1) {
-        const decl = declarations[0];
+        const decl = declarations[0]!;
         if (ts.isIdentifier(decl.name)) {
           pushNamedNode(decl.name.getText(), [getStart(node), getEnd(node)]);
         }
@@ -173,15 +173,15 @@ export function preProcess({ sourceFile }: PreProcessInput): PreProcessOutput {
       const idx = children.findIndex(
         (node) => node.kind === ts.SyntaxKind.ClassKeyword || node.kind === ts.SyntaxKind.FunctionKeyword,
       );
-      const token = children[idx];
-      const nextToken = children[idx + 1];
+      const token = children[idx]!;
+      const nextToken = children[idx + 1]!;
       const isPunctuation =
         nextToken.kind >= ts.SyntaxKind.FirstPunctuation && nextToken.kind <= ts.SyntaxKind.LastPunctuation;
 
       if (isPunctuation) {
         code.appendLeft(nextToken.getStart(), defaultExport);
       } else {
-        code.appendRight(token!.getEnd(), ` ${defaultExport}`);
+        code.appendRight(token.getEnd(), ` ${defaultExport}`);
       }
     }
   }
@@ -216,7 +216,7 @@ export function preProcess({ sourceFile }: PreProcessInput): PreProcessOutput {
     typeReferences.add(ref.fileName);
 
     const { line } = sourceFile.getLineAndCharacterOfPosition(ref.pos);
-    const start = lineStarts[line];
+    const start = lineStarts[line]!;
     let end = sourceFile.getLineEndOfPosition(ref.pos);
     if (code.slice(end, end + 1) == "\n") {
       end += 1;

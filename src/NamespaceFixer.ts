@@ -105,13 +105,13 @@ export class NamespaceFixer {
       if (declarations.length !== 1) {
         continue;
       }
-      const decl = declarations[0];
+      const decl = declarations[0]!;
       const name = decl.name.getText();
       if (!decl.initializer || !ts.isCallExpression(decl.initializer)) {
         items[name] = { type: "var" };
         continue;
       }
-      const obj = decl.initializer.arguments[0];
+      const obj = decl.initializer.arguments[0]!;
       if (
         !decl.initializer.expression.getFullText().includes("/*#__PURE__*/Object.freeze") ||
         !ts.isObjectLiteralExpression(obj)
@@ -157,7 +157,7 @@ export class NamespaceFixer {
 
       for (const { exportedName, localName } of ns.exports) {
         if (exportedName === localName) {
-          const { type, generics } = itemTypes[localName];
+          const { type, generics } = itemTypes[localName]!;
           if (type === "interface" || type === "type") {
             // an interface is just a type
             const typeParams = renderTypeParams(generics);

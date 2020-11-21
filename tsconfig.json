@@ -21,7 +21,8 @@
     "skipLibCheck": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "noImplicitReturns": true
+    "noImplicitReturns": true,
+    "noUncheckedIndexedAccess": true,
   },
   "exclude": ["coverage", "dist", "tests/testcases", "tests/preprocess"]
 }

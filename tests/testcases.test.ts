@@ -35,7 +35,7 @@ function withInput(dir: string, { input }: InputOptions): InputOption {
   }
   const mapped: { [alias: string]: string } = {};
   for (const alias of Object.keys(input!)) {
-    mapped[alias] = path.join(dir, input![alias]);
+    mapped[alias] = path.join(dir, input![alias]!);
   }
   return mapped;
 }

@@ -64,7 +64,7 @@ export class DeclarationScope {
   }
   pushTypeVariable(id: ts.Identifier) {
     const name = id.getText();
-    this.scopes[this.scopes.length - 1].add(name);
+    this.scopes[this.scopes.length - 1]?.add(name);
   }
 
   pushRaw(expr: ESTree.AssignmentPattern) {
@@ -262,11 +262,14 @@ export class DeclarationScope {
       return;
     }
     if (ts.isMappedTypeNode(node)) {
-      const { typeParameter, type } = node;
+      const { typeParameter, type, nameType } = node;
       this.convertTypeNode(typeParameter.constraint);
       this.pushScope();
-      this.pushTypeVariable(node.typeParameter.name);
+      this.pushTypeVariable(typeParameter.name);
       this.convertTypeNode(type);
+      if (nameType) {
+        this.convertTypeNode(nameType);
+      }
       this.popScope();
       return;
     }
@@ -298,6 +301,12 @@ export class DeclarationScope {
     }
     if (ts.isOptionalTypeNode(node)) {
       this.convertTypeNode(node.type);
+      return;
+    }
+    if (ts.isTemplateLiteralTypeNode(node)) {
+      for (const span of node.templateSpans) {
+        this.convertTypeNode(span.type);
+      }
       return;
     }
 
