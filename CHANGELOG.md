@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.0.1
+
+** Fixes**:
+
+- When using code-splitting with multiple input files, type references directives will be correctly attached only to the output files that reference them.
+
 ## 2.0.0
 
 **Compatibility Notice**:
