@@ -58,7 +58,7 @@ const plugin: PluginImpl<Options> = (options = {}) => {
   }
 
   // Parse a TypeScript module into an ESTree program.
-  const typeReferences = new Set<string>();
+  const allTypeReferences = new Map<string, Set<string>>();
 
   function transformFile(input: ts.SourceFile): SourceDescription {
     const preprocessed = preProcess({ sourceFile: input });
@@ -68,9 +68,7 @@ const plugin: PluginImpl<Options> = (options = {}) => {
     const transformer = new Transformer(input);
     const output = transformer.transform();
 
-    for (const ref of preprocessed.typeReferences) {
-      typeReferences.add(ref);
-    }
+    allTypeReferences.set(input.fileName, preprocessed.typeReferences);
 
     if (process.env.DTS_DUMP_AST) {
       console.log(input.fileName);
@@ -195,6 +193,13 @@ const plugin: PluginImpl<Options> = (options = {}) => {
     renderChunk(code, chunk) {
       const source = ts.createSourceFile(chunk.fileName, code, ts.ScriptTarget.Latest, true);
       const fixer = new NamespaceFixer(source);
+
+      const typeReferences = new Set<string>();
+      for (const fileName of Object.keys(chunk.modules)) {
+        for (const ref of allTypeReferences.get(fileName.split("\\").join("/")) || []) {
+          typeReferences.add(ref);
+        }
+      }
 
       code = writeBlock(Array.from(typeReferences, (ref) => `/// <reference types="${ref}" />`));
       code += fixer.fix();
