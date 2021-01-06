@@ -4,13 +4,12 @@
     "diagnostics": true,
     "lib": ["esnext"],
 
-    // NOTE: node 10 is 2017, node 12 is 2019, node 14 is 2020
-    "target": "es2017",
+    "target": "es2020",
 
+    "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
     "moduleResolution": "node",
     "module": "esnext",
-    "esModuleInterop": true,
 
     "jsx": "react",
 
@@ -30,6 +29,6 @@
 
     "outDir": ".build"
   },
-  "include": ["src", "tests"],
+  "include": ["src", "tests", "rollup.config.ts"],
   "exclude": ["tests/testcases", "tests/preprocess"]
 }

@@ -1,8 +1,0 @@
-{
-  "options": {
-    "respectExternal": true
-  },
-  "rollupOptions": {
-    "external": []
-  }
-}

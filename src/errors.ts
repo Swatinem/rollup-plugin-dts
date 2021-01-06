@@ -6,7 +6,6 @@ function getCodeFrame(): typeof codeFrameColumns | undefined {
     const { codeFrameColumns } = require("@babel/code-frame");
     return codeFrameColumns;
   } catch {}
-  // istanbul ignore next
   return undefined;
 }
 
@@ -25,7 +24,6 @@ function frameNode(node: ts.Node) {
   const sourceFile = node.getSourceFile();
   const code = sourceFile.getFullText();
 
-  // istanbul ignore else
   const location = getLocation(node);
   if (codeFrame) {
     return (

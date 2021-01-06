@@ -1,9 +1,17 @@
-import path from "path";
+import * as assert from "assert";
 import fsExtra from "fs-extra";
-import { preProcess } from "../src/preprocess";
-import * as ts from "typescript";
+import * as path from "path";
+import ts from "typescript";
+import { preProcess } from "../src/preprocess.js";
+import { forEachFixture, Harness } from "./utils.js";
 
-const TESTCASES = path.join(__dirname, "preprocess");
+export default (t: Harness) => {
+  forEachFixture("preprocess", (name, dir) => {
+    t.test(`preprocess/${name}`, () => {
+      return assertTestcase(dir);
+    });
+  });
+};
 
 async function assertTestcase(dir: string) {
   const fileName = path.join(dir, "input.d.ts");
@@ -23,15 +31,5 @@ async function assertExpectedResult(file: string, code: string) {
   }
 
   const expectedCode = await fsExtra.readFile(file, "utf-8");
-  expect(code).toEqual(expectedCode);
+  assert.strictEqual(code, expectedCode);
 }
-
-describe("preprocess", () => {
-  const dirs = fsExtra.readdirSync(TESTCASES);
-  for (const name of dirs) {
-    const dir = path.join(TESTCASES, name);
-    if (fsExtra.statSync(dir).isDirectory()) {
-      it(`works for testcase "${name}"`, () => assertTestcase(dir));
-    }
-  }
-});

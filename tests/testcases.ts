@@ -1,9 +1,32 @@
-import { rollup, InputOption, RollupOptions, InputOptions } from "rollup";
-import dts, { Options } from "../src";
+import * as assert from "assert";
 import fsExtra from "fs-extra";
-import path from "path";
+import * as path from "path";
+import { InputOption, InputOptions, rollup, RollupOptions, RollupOutput } from "rollup";
+import dts, { Options } from "../src/index.js";
+import { forEachFixture, Harness } from "./utils.js";
 
-const TESTCASES = path.join(__dirname, "testcases");
+export default (t: Harness) => {
+  forEachFixture("testcases", (name, dir) => {
+    t.test(`testcases/${name}`, async () => {
+      const rollupOptions: InputOptions = {
+        input: (await fsExtra.pathExists(path.join(dir, "index.d.ts"))) ? "index.d.ts" : "index.ts",
+      };
+      const meta: Meta = {
+        options: {},
+        skip: false,
+        rollupOptions,
+      };
+      try {
+        Object.assign(meta, (await import("file://" + path.join(dir, "meta.js"))).default);
+        meta.rollupOptions = Object.assign(rollupOptions, meta.rollupOptions);
+      } catch {}
+
+      if (!meta.skip) {
+        return assertTestcase(dir, meta);
+      }
+    });
+  });
+};
 
 interface Meta {
   options: Options;
@@ -40,7 +63,7 @@ function withInput(dir: string, { input }: InputOptions): InputOption {
   return mapped;
 }
 
-export function clean(code: string = "") {
+function clean(code: string = "") {
   return (
     code
       .trim()
@@ -52,12 +75,23 @@ export function clean(code: string = "") {
 async function assertTestcase(dir: string, meta: Meta) {
   const { expectedError, options, rollupOptions } = meta;
 
-  const creator = createBundle(options, { ...rollupOptions, input: withInput(dir, rollupOptions) });
+  const input = withInput(dir, rollupOptions);
+  const creator = createBundle(options, { ...rollupOptions, input });
+  let output!: RollupOutput["output"];
+  let error!: Error;
+
+  try {
+    ({ output } = await creator);
+  } catch (e) {
+    error = e;
+    if (!expectedError) {
+      throw e;
+    }
+  }
   if (expectedError) {
-    await expect(creator).rejects.toThrow(expectedError);
+    assert.strictEqual(error.message, expectedError);
     return;
   }
-  const { output } = await creator;
 
   const hasMultipleOutputs = output.length > 1;
   let code = clean(output[0].code);
@@ -79,7 +113,7 @@ async function assertTestcase(dir: string, meta: Meta) {
   }
 
   const expectedCode = await fsExtra.readFile(expectedDts, "utf-8");
-  expect(code).toEqual(expectedCode);
+  assert.strictEqual(code, expectedCode);
   // expect(String(map)).toEqual(await fsExtra.readFile(expectedMap, "utf-8"));
 
   if (hasExpected && !hasMultipleOutputs) {
@@ -87,32 +121,7 @@ async function assertTestcase(dir: string, meta: Meta) {
       output: [sanityCheck],
     } = await createBundle(options, { ...rollupOptions, input: expectedDts });
     // typescript `.d.ts` output compresses whitespace, so make sure we ignore that
-    expect(clean(sanityCheck.code)).toEqual(expectedCode);
+
+    assert.strictEqual(clean(sanityCheck.code), expectedCode);
   }
 }
-
-describe("rollup-plugin-dts", () => {
-  const dirs = fsExtra.readdirSync(TESTCASES);
-  for (const name of dirs) {
-    const dir = path.join(TESTCASES, name);
-    if (fsExtra.statSync(dir).isDirectory()) {
-      const rollupOptions: InputOptions = {
-        input: fsExtra.pathExistsSync(path.join(dir, "index.d.ts")) ? "index.d.ts" : "index.ts",
-      };
-      const meta: Meta = {
-        options: {},
-        skip: false,
-        rollupOptions,
-      };
-      try {
-        Object.assign(meta, require(path.join(dir, "meta")));
-        meta.rollupOptions = Object.assign(rollupOptions, meta.rollupOptions);
-      } catch {}
-
-      let testfn = meta.skip ? it.skip : it;
-      testfn(`works for testcase "${name}"`, () => {
-        return assertTestcase(dir, meta);
-      });
-    }
-  }
-});

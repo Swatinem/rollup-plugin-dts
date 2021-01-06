@@ -35,7 +35,7 @@ function getCompilerOptions(
 
   let dirName = path.dirname(input);
   let dtsFiles: Array<string> = [];
-  const configPath = ts.findConfigFile(path.dirname(input), ts.sys.fileExists);
+  const configPath = ts.findConfigFile(dirName, ts.sys.fileExists);
   if (!configPath) {
     return { dtsFiles, dirName, compilerOptions };
   }
@@ -63,11 +63,11 @@ function getCompilerOptions(
 }
 
 export function createProgram(fileName: string, overrideOptions: ts.CompilerOptions) {
-  const { dtsFiles, compilerOptions } = getCompilerOptions(fileName, overrideOptions)
+  const { dtsFiles, compilerOptions } = getCompilerOptions(fileName, overrideOptions);
   return ts.createProgram(
     [fileName].concat(Array.from(dtsFiles)),
     compilerOptions,
-    ts.createCompilerHost(compilerOptions, true)
+    ts.createCompilerHost(compilerOptions, true),
   );
 }
 

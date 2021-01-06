@@ -1,8 +1,8 @@
 import * as ESTree from "estree";
 import ts from "typescript";
-import { convertExpression, createIdentifier, createProgram, withStartEnd } from "./astHelpers";
-import { DeclarationScope } from "./DeclarationScope";
-import { UnsupportedSyntaxError } from "./errors";
+import { convertExpression, createIdentifier, createProgram, withStartEnd } from "./astHelpers.js";
+import { DeclarationScope } from "./DeclarationScope.js";
+import { UnsupportedSyntaxError } from "./errors.js";
 
 type ESTreeImports = ESTree.ImportDeclaration["specifiers"];
 
@@ -94,7 +94,6 @@ export class Transformer {
       // just ignore `export as namespace FOO` statements…
       return this.removeStatement(node);
     }
-    // istanbul ignore else
     if (ts.isImportDeclaration(node) || ts.isImportEqualsDeclaration(node)) {
       return this.convertImportDeclaration(node);
     } else {
@@ -138,7 +137,6 @@ export class Transformer {
   }
 
   convertFunctionDeclaration(node: ts.FunctionDeclaration) {
-    // istanbul ignore if
     if (!node.name) {
       throw new UnsupportedSyntaxError(node, `FunctionDeclaration should have a name`);
     }
@@ -149,7 +147,6 @@ export class Transformer {
   }
 
   convertClassOrInterfaceDeclaration(node: ts.ClassDeclaration | ts.InterfaceDeclaration) {
-    // istanbul ignore if
     if (!node.name) {
       throw new UnsupportedSyntaxError(node, `ClassDeclaration / InterfaceDeclaration should have a name`);
     }
@@ -172,12 +169,10 @@ export class Transformer {
 
   convertVariableStatement(node: ts.VariableStatement) {
     const { declarations } = node.declarationList;
-    // istanbul ignore if
     if (declarations.length !== 1) {
       throw new UnsupportedSyntaxError(node, `VariableStatement with more than one declaration not yet supported`);
     }
     for (const decl of declarations) {
-      // istanbul ignore if
       if (!ts.isIdentifier(decl.name)) {
         throw new UnsupportedSyntaxError(node, `VariableDeclaration must have a name`);
       }
