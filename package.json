@@ -31,7 +31,7 @@
   "scripts": {
     "clean": "rimraf dist",
     "prebuild": "npm run clean",
-    "build": "tsc --project tsconfig.build.json && rollup -c",
+    "build": "tsc && rollup -c",
     "prepublishOnly": "npm run test && npm run build",
     "pretest": "npm run build",
     "test": "jest --runInBand"
@@ -68,7 +68,6 @@
     "@types/jest": "^26.0.19",
     "@types/node": "^14.14.19",
     "@types/react": "^17.0.0",
-    "esm": "^3.2.25",
     "fs-extra": "^9.0.1",
     "jest": "^26.6.3",
     "prettier": "^2.2.1",

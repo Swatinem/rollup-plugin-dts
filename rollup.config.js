@@ -1,15 +1,13 @@
 import pkg from "./package.json";
-
 // @ts-ignore
-require = require("esm")(module);
-const { default: dts } = require("./.build");
+import dts from "./.build/src/index.js";
 
 const external = ["path", "typescript", "rollup", "@babel/code-frame", "magic-string"];
 
 /** @type {Array<import("rollup").RollupWatchOptions>} */
 const config = [
   {
-    input: "./.build/index.js",
+    input: "./.build/src/index.js",
     output: [
       { exports: "named", file: pkg.main, format: "cjs" },
       { file: pkg.module, format: "es" },
@@ -18,7 +16,7 @@ const config = [
     external,
   },
   {
-    input: "./.build/index.d.ts",
+    input: "./.build/src/index.d.ts",
     output: [{ file: pkg.types, format: "es" }],
     plugins: [dts()],
   },

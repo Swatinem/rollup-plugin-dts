@@ -1,7 +1,7 @@
 import path from "path";
 import fsExtra from "fs-extra";
 import { preProcess } from "../src/preprocess";
-import ts from "typescript";
+import * as ts from "typescript";
 
 const TESTCASES = path.join(__dirname, "preprocess");
 
