@@ -8,6 +8,5 @@
     ":automergeRequireAllStatusChecks"
   ],
   "rangeStrategy": "bump",
-  "supportPolicy": ["active"],
-  "travis": { "enabled": true }
+  "supportPolicy": ["active"]
 }
