@@ -83,7 +83,7 @@ const plugin: PluginImpl<Options> = (options = {}) => {
     name: "dts",
 
     options(options) {
-      let { input = [] } = options;
+      let { input = [], onwarn } = options;
       if (!Array.isArray(input)) {
         input = typeof input === "string" ? [input] : Object.values(input);
       } else if (input.length > 1) {
@@ -100,6 +100,12 @@ const plugin: PluginImpl<Options> = (options = {}) => {
 
       return {
         ...options,
+        onwarn(warning, warn) {
+          if (warning.code != "CIRCULAR_DEPENDENCY") {
+            if (onwarn) onwarn(warning, warn)
+            else warn(warning)
+          }
+        },
         treeshake: {
           moduleSideEffects: "no-external",
           propertyReadSideEffects: true,
