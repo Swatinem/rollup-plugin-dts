@@ -31,20 +31,18 @@ const plugin: PluginImpl<Options> = (options = {}) => {
   // except when all entry points are ".d.ts" modules.
   let programs: Array<ts.Program> = [];
 
-  function getModule(fileName: string) {
+  function getModule(fileName: string, code: string) {
     let source: ts.SourceFile | undefined;
     let program: ts.Program | undefined;
     // Create any `ts.SourceFile` objects on-demand for ".d.ts" modules,
     // but only when there are zero ".ts" entry points.
     if (!programs.length && fileName.endsWith(dts)) {
-      const code = ts.sys.readFile(fileName, "utf8");
-      if (code)
-        source = ts.createSourceFile(
-          fileName,
-          code,
-          ts.ScriptTarget.Latest,
-          true, // setParentNodes
-        );
+      source = ts.createSourceFile(
+        fileName,
+        code,
+        ts.ScriptTarget.Latest,
+        true, // setParentNodes
+      );
     } else {
       // Rollup doesn't tell you the entry point of each module in the bundle,
       // so we need to ask every TypeScript program for the given filename.
@@ -123,22 +121,23 @@ const plugin: PluginImpl<Options> = (options = {}) => {
       };
     },
 
-    load(id) {
+    transform(code, id) {
       if (!tsx.test(id)) {
         return null;
       }
       if (id.endsWith(dts)) {
-        const { source } = getModule(id);
+        const { source } = getModule(id, code);
         return source ? transformFile(source) : null;
       }
+
       // Always try ".d.ts" before ".tsx?"
       const declarationId = id.replace(tsx, dts);
-      let module = getModule(declarationId);
+      let module = getModule(declarationId, code);
       if (module.source) {
         return transformFile(module.source);
       }
       // Generate in-memory ".d.ts" modules from ".tsx?" modules!
-      module = getModule(id);
+      module = getModule(id, code);
       if (!module.source || !module.program) {
         return null;
       }
