@@ -1,15 +1,15 @@
-import ts from "typescript";
 import * as ESTree from "estree";
+import ts from "typescript";
 import {
-  Range,
-  createDeclaration,
-  createReference,
-  createIdentifier,
-  withStartEnd,
   convertExpression,
+  createDeclaration,
+  createIdentifier,
   createIIFE,
-} from "./astHelpers";
-import { UnsupportedSyntaxError } from "./errors";
+  createReference,
+  Range,
+  withStartEnd,
+} from "./astHelpers.js";
+import { UnsupportedSyntaxError } from "./errors.js";
 
 const IGNORE_TYPENODES = new Set([
   ts.SyntaxKind.LiteralType,
@@ -190,7 +190,6 @@ export class DeclarationScope {
         this.convertTypeNode(node.type);
         continue;
       }
-      // istanbul ignore else
       if (
         ts.isMethodDeclaration(node) ||
         ts.isMethodSignature(node) ||
@@ -308,7 +307,6 @@ export class DeclarationScope {
       return;
     }
 
-    // istanbul ignore else
     if (ts.isInferTypeNode(node)) {
       this.pushTypeVariable(node.typeParameter.name);
       return;
@@ -320,7 +318,6 @@ export class DeclarationScope {
   convertNamespace(node: ts.ModuleDeclaration) {
     this.pushScope();
 
-    // istanbul ignore if
     if (!node.body || !ts.isModuleBlock(node.body)) {
       throw new UnsupportedSyntaxError(node, `namespace must have a "ModuleBlock" body.`);
     }
@@ -337,7 +334,6 @@ export class DeclarationScope {
         ts.isTypeAliasDeclaration(stmt) ||
         ts.isModuleDeclaration(stmt)
       ) {
-        // istanbul ignore else
         if (stmt.name && ts.isIdentifier(stmt.name)) {
           this.pushTypeVariable(stmt.name);
         } else {
@@ -347,7 +343,6 @@ export class DeclarationScope {
       }
       if (ts.isVariableStatement(stmt)) {
         for (const decl of stmt.declarationList.declarations) {
-          // istanbul ignore else
           if (ts.isIdentifier(decl.name)) {
             this.pushTypeVariable(decl.name);
           } else {
@@ -356,7 +351,6 @@ export class DeclarationScope {
         }
         continue;
       }
-      // istanbul ignore else
       if (ts.isExportDeclaration(stmt)) {
         // noop
       } else {
@@ -399,7 +393,6 @@ export class DeclarationScope {
         // noop
         continue;
       }
-      // istanbul ignore else
       if (ts.isExportDeclaration(stmt)) {
         if (stmt.exportClause) {
           if (ts.isNamespaceExport(stmt.exportClause)) {

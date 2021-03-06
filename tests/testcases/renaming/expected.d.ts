@@ -1,20 +1,3 @@
-interface A {}
-interface B {}
-interface C {}
-interface D {}
-interface E {}
-interface F {}
-declare class Parent {}
-declare class Klass extends Parent {
-  a: A;
-}
-interface Interface extends B {
-  c: C;
-}
-declare function Func(d: D): E;
-declare type Type = {
-  f: F;
-};
 interface A$1 {}
 interface B$1 {}
 interface C$1 {}
@@ -32,4 +15,21 @@ declare function Func$1(d: D$1): E$1;
 declare type Type$1 = {
   f: F$1;
 };
-export { Func as AFunc, Interface as AInterface, Klass as AKlass, Type as AType, Func$1 as BFunc, Interface$1 as BInterface, Klass$1 as BKlass, Type$1 as BType };
+interface A {}
+interface B {}
+interface C {}
+interface D {}
+interface E {}
+interface F {}
+declare class Parent {}
+declare class Klass extends Parent {
+  a: A;
+}
+interface Interface extends B {
+  c: C;
+}
+declare function Func(d: D): E;
+declare type Type = {
+  f: F;
+};
+export { Func$1 as AFunc, Interface$1 as AInterface, Klass$1 as AKlass, Type$1 as AType, Func as BFunc, Interface as BInterface, Klass as BKlass, Type as BType };

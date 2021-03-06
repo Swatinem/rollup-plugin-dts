@@ -5,7 +5,7 @@ jobs:
   build:
     strategy:
       matrix:
-        node: [10, 14]
+        node: [12, 15]
         os: [ubuntu-latest, windows-latest]
 
     name: Node ${{ matrix.node }} on ${{ matrix.os }}
@@ -19,13 +19,11 @@ jobs:
           node-version: ${{ matrix.node }}
       - run: npm ci
       - run: npm test
-        env:
-          CI: true
       # the codecov uploader only runs on unix,
       # frequently hangs for whatever reason,
       # and we have no platform-specific code anyway…
       - name: upload coverage
-        if: matrix.os == 'ubuntu-latest' && matrix.node == 14
+        if: matrix.os == 'ubuntu-latest' && matrix.node == 15
         timeout-minutes: 1
         continue-on-error: true
         run: bash <(curl -s https://codecov.io/bash) -t ${{secrets.CODECOV_TOKEN}} -B ${{ github.ref }} -f coverage/coverage-final.json

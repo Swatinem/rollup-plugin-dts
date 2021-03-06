@@ -1,11 +1,10 @@
-import path from "path";
+import * as path from "path";
 import { PluginImpl, SourceDescription } from "rollup";
 import ts from "typescript";
-
-import { NamespaceFixer } from "./NamespaceFixer";
-import { preProcess } from "./preprocess";
-import { createProgram, createPrograms, dts, formatHost } from "./program";
-import { Transformer } from "./Transformer";
+import { NamespaceFixer } from "./NamespaceFixer.js";
+import { preProcess } from "./preprocess.js";
+import { createProgram, createPrograms, dts, formatHost } from "./program.js";
+import { Transformer } from "./Transformer.js";
 
 const tsx = /\.(t|j)sx?$/;
 

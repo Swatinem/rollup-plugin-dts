@@ -1,7 +1,7 @@
 import MagicString from "magic-string";
 import ts from "typescript";
-import { matchesModifier } from "./astHelpers";
-import { UnsupportedSyntaxError } from "./errors";
+import { matchesModifier } from "./astHelpers.js";
+import { UnsupportedSyntaxError } from "./errors.js";
 
 type Range = [start: number, end: number];
 

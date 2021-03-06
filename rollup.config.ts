@@ -1,17 +1,13 @@
+import { RollupWatchOptions } from "rollup";
 import pkg from "./package.json";
-// @ts-ignore
-import dts from "./.build/src/index.js";
+import dts from "./src/index.js";
 
 const external = ["path", "typescript", "rollup", "@babel/code-frame", "magic-string"];
 
-/** @type {Array<import("rollup").RollupWatchOptions>} */
-const config = [
+const config: Array<RollupWatchOptions> = [
   {
     input: "./.build/src/index.js",
-    output: [
-      { exports: "named", file: pkg.main, format: "cjs" },
-      { file: pkg.module, format: "es" },
-    ],
+    output: [{ file: pkg.main, format: "es" }],
 
     external,
   },

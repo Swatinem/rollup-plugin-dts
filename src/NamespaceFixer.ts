@@ -1,5 +1,5 @@
 import ts from "typescript";
-import { UnsupportedSyntaxError } from "./errors";
+import { UnsupportedSyntaxError } from "./errors.js";
 
 /**
  * The reason we need this here as a post-processing step is that rollup will

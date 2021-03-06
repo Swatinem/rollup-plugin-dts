@@ -1,6 +1,6 @@
-import ts from "typescript";
 import * as ESTree from "estree";
-import { UnsupportedSyntaxError } from "./errors";
+import ts from "typescript";
+import { UnsupportedSyntaxError } from "./errors.js";
 
 let IDs = 1;
 
@@ -116,7 +116,6 @@ export function convertExpression(node: ts.Expression): ESTree.Expression {
       },
     );
   }
-  // istanbul ignore else
   if (ts.isIdentifier(node)) {
     return createIdentifier(node);
   } else {

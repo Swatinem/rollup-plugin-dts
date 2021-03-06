@@ -1,8 +1,8 @@
-interface Second {}
+interface Second$2 {}
 declare global {
   namespace NodeJS {
     interface Global {
-      second: Second;
+      second: Second$2;
     }
   }
 }
@@ -14,9 +14,9 @@ declare global {
     }
   }
 }
-interface Second$2 {}
+interface Second {}
 declare module "foobar" {
-  const second3: Second$2;
+  const second3: Second;
 }
 // all these have at least one `export`, which silences TS error `2669`
 interface First {}
