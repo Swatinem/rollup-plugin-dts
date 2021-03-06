@@ -1,6 +1,6 @@
 {
   "name": "rollup-plugin-dts",
-  "version": "2.0.1",
+  "version": "3.0.0",
   "description": "A rollup plugin that will bundle up your .d.ts definition files.",
   "keywords": [
     "rollup-plugin",
@@ -65,7 +65,6 @@
     "@babel/code-frame": "^7.12.13"
   },
   "dependencies": {
-    "@babel/code-frame": "^7.12.13",
     "magic-string": "^0.25.7"
   }
 }

@@ -1,8 +1,27 @@
 # Changelog
 
+## 3.0.0
+
+**Compatibility Notice**:
+
+This release targets **TypeScript 4.2**, **Rollup 2.40** and requires **Node 12**.
+
+**Internal**:
+
+- Switch Package to native ES modules, requiring Node 12.
+- Modernize internal tooling.
+- Circular import warnings are suppressed.
+- Use `transform` instead of `load` hook.
+
+**Thank you**:
+
+Features, fixes and improvements in this release have been contributed by:
+
+- [@marijnh](https://github.com/marijnh)
+
 ## 2.0.1
 
-** Fixes**:
+**Fixes**:
 
 - When using code-splitting with multiple input files, type references directives will be correctly attached only to the output files that reference them.
 
