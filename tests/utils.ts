@@ -13,15 +13,26 @@ export function forEachFixture(fixtures: string, cb: (name: string, dir: string)
 }
 
 export class Harness {
-  tests = new Map<string, () => any>();
+  tests = new Map<string, (bless: boolean) => any>();
 
   constructor() {}
 
-  test(name: string, fn: () => any) {
+  test(name: string, fn: (bless: boolean) => any) {
     this.tests.set(name, fn);
   }
 
-  async run(filter: string) {
+  async run(argv: Array<string>) {
+    argv = argv.slice(2);
+    let filter = "";
+    let bless = false;
+    for (const arg of argv) {
+      if (arg === "--bless") {
+        bless = true;
+      } else {
+        filter = arg;
+      }
+    }
+
     let failures: Array<{ name: string; error: Error }> = [];
     for (const [name, fn] of this.tests.entries()) {
       try {
@@ -29,11 +40,14 @@ export class Harness {
           continue;
         }
         process.stdout.write(`${name}... `);
-        await fn();
+        await fn(bless);
         console.log(" ok");
       } catch (error) {
         failures.push({ name, error });
         console.log(" failed");
+        console.log();
+        console.log(error.stack);
+        console.log();
       }
     }
 
@@ -41,12 +55,9 @@ export class Harness {
       console.log();
       console.error("Failures:");
       console.error();
-      for (const { name, error } of failures) {
-        console.error(`- ${name}:`);
-        console.error(error.stack);
-        console.log();
+      for (const { name } of failures) {
+        console.error(`- ${name}`);
       }
-      console.log();
     }
 
     return failures.length;

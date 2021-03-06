@@ -7,7 +7,7 @@ import { forEachFixture, Harness } from "./utils.js";
 
 export default (t: Harness) => {
   forEachFixture("testcases", (name, dir) => {
-    t.test(`testcases/${name}`, async () => {
+    t.test(`testcases/${name}`, async (bless) => {
       const rollupOptions: InputOptions = {
         input: (await fsExtra.pathExists(path.join(dir, "index.d.ts"))) ? "index.d.ts" : "index.ts",
       };
@@ -22,7 +22,7 @@ export default (t: Harness) => {
       } catch {}
 
       if (!meta.skip) {
-        return assertTestcase(dir, meta);
+        return assertTestcase(dir, meta, bless);
       }
     });
   });
@@ -72,7 +72,7 @@ function clean(code: string = "") {
   );
 }
 
-async function assertTestcase(dir: string, meta: Meta) {
+async function assertTestcase(dir: string, meta: Meta, bless: boolean) {
   const { expectedError, options, rollupOptions } = meta;
 
   const input = withInput(dir, rollupOptions);
@@ -107,7 +107,7 @@ async function assertTestcase(dir: string, meta: Meta) {
   const expectedDts = path.join(dir, "expected.d.ts");
   const hasExpected = await fsExtra.pathExists(expectedDts);
   // const expectedMap = path.join(dir, "expected.d.ts.map");
-  if (!hasExpected) {
+  if (!hasExpected || bless) {
     await fsExtra.writeFile(expectedDts, code);
     // await fsExtra.writeFile(expectedMap, map);
   }

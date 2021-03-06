@@ -7,13 +7,13 @@ import { forEachFixture, Harness } from "./utils.js";
 
 export default (t: Harness) => {
   forEachFixture("preprocess", (name, dir) => {
-    t.test(`preprocess/${name}`, () => {
-      return assertTestcase(dir);
+    t.test(`preprocess/${name}`, (bless) => {
+      return assertTestcase(dir, bless);
     });
   });
 };
 
-async function assertTestcase(dir: string) {
+async function assertTestcase(dir: string, bless: boolean) {
   const fileName = path.join(dir, "input.d.ts");
   const contents = await fsExtra.readFile(fileName, "utf-8");
 
@@ -21,12 +21,12 @@ async function assertTestcase(dir: string) {
   const result = preProcess({ sourceFile });
   const code = result.code.toString();
 
-  await assertExpectedResult(path.join(dir, "expected.d.ts"), code);
+  await assertExpectedResult(path.join(dir, "expected.d.ts"), code, bless);
 }
 
-async function assertExpectedResult(file: string, code: string) {
+async function assertExpectedResult(file: string, code: string, bless: boolean) {
   const hasExpected = await fsExtra.pathExists(file);
-  if (!hasExpected) {
+  if (!hasExpected || bless) {
     await fsExtra.writeFile(file, code);
   }
 

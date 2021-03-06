@@ -10,8 +10,7 @@ async function main() {
   preprocess(harness);
   testcases(harness);
 
-  const filter = process.argv[2] ?? "";
-  const failures = await harness.run(filter);
+  const failures = await harness.run(process.argv);
   if (failures) {
     process.exit(1);
   }
