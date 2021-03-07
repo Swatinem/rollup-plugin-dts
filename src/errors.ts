@@ -1,15 +1,23 @@
-import { codeFrameColumns, SourceLocation } from "@babel/code-frame";
+import * as codeFrame from "@babel/code-frame";
 import ts from "typescript";
+import { createRequire } from "module";
 
-function getCodeFrame(): typeof codeFrameColumns | undefined {
+function getCodeFrame(): typeof codeFrame.codeFrameColumns | undefined {
+  let codeFrameColumns = undefined;
   try {
-    const { codeFrameColumns } = require("@babel/code-frame");
+    ({ codeFrameColumns } = require("@babel/code-frame"));
     return codeFrameColumns;
-  } catch {}
+  } catch {
+    try {
+      const esmRequire = createRequire(import.meta.url);
+      ({ codeFrameColumns } = esmRequire("@babel/code-frame"));
+      return codeFrameColumns;
+    } catch {}
+  }
   return undefined;
 }
 
-function getLocation(node: ts.Node): SourceLocation {
+function getLocation(node: ts.Node): codeFrame.SourceLocation {
   const sourceFile = node.getSourceFile();
   const start = sourceFile.getLineAndCharacterOfPosition(node.getStart());
   const end = sourceFile.getLineAndCharacterOfPosition(node.getEnd());

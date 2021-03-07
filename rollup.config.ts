@@ -2,13 +2,15 @@ import { RollupWatchOptions } from "rollup";
 import pkg from "./package.json";
 import dts from "./src/index.js";
 
-const external = ["path", "typescript", "rollup", "@babel/code-frame", "magic-string"];
+const external = ["module", "path", "typescript", "rollup", "@babel/code-frame", "magic-string"];
 
 const config: Array<RollupWatchOptions> = [
   {
     input: "./.build/src/index.js",
-    output: [{ file: pkg.main, format: "es" }],
-
+    output: [
+      { file: pkg.exports.import, format: "es" },
+      { file: pkg.exports.require, format: "commonjs", exports: "named" },
+    ],
     external,
   },
   {
