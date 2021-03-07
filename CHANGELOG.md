@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.0.1
+
+**Fixes**:
+
+- Make dual-use as ESM / CommonJS possible again.
+
 ## 3.0.0
 
 **Compatibility Notice**:
