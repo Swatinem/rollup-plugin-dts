@@ -44,7 +44,7 @@ async function createBundle(options: Options, rollupOptions: RollupOptions) {
   return bundle.generate({
     ...rollupOptions.output,
     format: "es",
-    // sourcemap: true,
+    sourcemap: true,
     sourcemapExcludeSources: true,
   });
 }
@@ -120,8 +120,8 @@ async function assertTestcase(dir: string, meta: Meta, bless: boolean) {
     const {
       output: [sanityCheck],
     } = await createBundle(options, { ...rollupOptions, input: expectedDts });
-    // typescript `.d.ts` output compresses whitespace, so make sure we ignore that
 
+    // typescript `.d.ts` output compresses whitespace, so make sure we ignore that
     assert.strictEqual(clean(sanityCheck.code), expectedCode);
   }
 }

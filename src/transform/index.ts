@@ -10,6 +10,24 @@ function parse(fileName: string, code: string): ts.SourceFile {
   return ts.createSourceFile(fileName, code, ts.ScriptTarget.Latest, true);
 }
 
+/**
+ * This is the *transform* part of `rollup-plugin-dts`.
+ *
+ * It sets a few input and output options, and otherwise is the core part of the
+ * plugin responsible for bundling `.d.ts` files.
+ *
+ * That itself is a multi-step process:
+ *
+ * 1. The plugin has a preprocessing step that moves code around and cleans it
+ *    up a bit, so that later steps can work with it easier. See `preprocess.ts`.
+ * 2. It then converts the TypeScript AST into a ESTree-like AST that rollup
+ *    understands. See `Transformer.ts`.
+ * 3. After rollup is finished, the plugin will postprocess the output in a
+ *    `renderChunk` hook. As rollup usually outputs javascript, it can output
+ *    some code that is invalid in the context of a `.d.ts` file. In particular,
+ *    the postprocess convert any javascript code that was created for namespace
+ *    exports into TypeScript namespaces. See `NamespaceFixer.ts`.
+ */
 export const transform: PluginImpl<TransformOptions> = () => {
   const allTypeReferences = new Map<string, Set<string>>();
 
