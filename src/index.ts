@@ -1,10 +1,8 @@
 import * as path from "path";
-import { PluginImpl, SourceDescription } from "rollup";
+import { PluginImpl } from "rollup";
 import ts from "typescript";
-import { NamespaceFixer } from "./NamespaceFixer.js";
-import { preProcess } from "./preprocess.js";
 import { createProgram, createPrograms, dts, formatHost } from "./program.js";
-import { Transformer } from "./Transformer.js";
+import { transform } from "./transform/index.js";
 
 const tsx = /\.(t|j)sx?$/;
 
@@ -25,23 +23,21 @@ export interface Options {
 }
 
 const plugin: PluginImpl<Options> = (options = {}) => {
+  const transformPlugin = transform(options);
+
   const { respectExternal = false, compilerOptions = {} } = options;
   // There exists one Program object per entry point,
   // except when all entry points are ".d.ts" modules.
   let programs: Array<ts.Program> = [];
 
-  function getModule(fileName: string, code: string) {
-    let source: ts.SourceFile | undefined;
+  type ResolvedSourceFile = ts.SourceFile | undefined | true;
+  function getModule(fileName: string) {
+    let source: ResolvedSourceFile;
     let program: ts.Program | undefined;
     // Create any `ts.SourceFile` objects on-demand for ".d.ts" modules,
     // but only when there are zero ".ts" entry points.
     if (!programs.length && fileName.endsWith(dts)) {
-      source = ts.createSourceFile(
-        fileName,
-        code,
-        ts.ScriptTarget.Latest,
-        true, // setParentNodes
-      );
+      source = true;
     } else {
       // Rollup doesn't tell you the entry point of each module in the bundle,
       // so we need to ask every TypeScript program for the given filename.
@@ -54,33 +50,11 @@ const plugin: PluginImpl<Options> = (options = {}) => {
     return { source, program };
   }
 
-  // Parse a TypeScript module into an ESTree program.
-  const allTypeReferences = new Map<string, Set<string>>();
-
-  function transformFile(input: ts.SourceFile): SourceDescription {
-    const preprocessed = preProcess({ sourceFile: input });
-    const code = preprocessed.code.toString();
-    input = ts.createSourceFile(input.fileName, code, ts.ScriptTarget.Latest, true);
-
-    const transformer = new Transformer(input);
-    const output = transformer.transform();
-
-    allTypeReferences.set(input.fileName, preprocessed.typeReferences);
-
-    if (process.env.DTS_DUMP_AST) {
-      console.log(input.fileName);
-      console.log(code);
-      console.log(JSON.stringify(output.ast.body, undefined, 2));
-    }
-
-    return { code, ast: output.ast as any };
-  }
-
   return {
     name: "dts",
 
     options(options) {
-      let { input = [], onwarn } = options;
+      let { input = [] } = options;
       if (!Array.isArray(input)) {
         input = typeof input === "string" ? [input] : Object.values(input);
       } else if (input.length > 1) {
@@ -95,68 +69,43 @@ const plugin: PluginImpl<Options> = (options = {}) => {
 
       programs = createPrograms(Object.values(input), compilerOptions);
 
-      return {
-        ...options,
-        onwarn(warning, warn) {
-          if (warning.code != "CIRCULAR_DEPENDENCY") {
-            if (onwarn) onwarn(warning, warn)
-            else warn(warning)
-          }
-        },
-        treeshake: {
-          moduleSideEffects: "no-external",
-          propertyReadSideEffects: true,
-          unknownGlobalSideEffects: false,
-        },
-      };
+      return transformPlugin.options!.call(this, options);
     },
 
-    outputOptions(options) {
-      return {
-        ...options,
-        chunkFileNames: options.chunkFileNames || "[name]-[hash]" + dts,
-        entryFileNames: options.entryFileNames || "[name]" + dts,
-        format: "es",
-        exports: "named",
-        compact: false,
-        freeze: true,
-        interop: false,
-        namespaceToStringTag: false,
-        strict: false,
-      };
-    },
+    outputOptions: transformPlugin.outputOptions,
 
     transform(code, id) {
+      const transformFile = (source: ResolvedSourceFile, id: string) => {
+        if (typeof source === "object") {
+          code = source.getFullText();
+        }
+        return transformPlugin.transform!.call(this, code, id);
+      };
       if (!tsx.test(id)) {
         return null;
       }
       if (id.endsWith(dts)) {
-        const { source } = getModule(id, code);
-        return source ? transformFile(source) : null;
+        const { source } = getModule(id);
+        return source ? transformFile(source, id) : null;
       }
 
       // Always try ".d.ts" before ".tsx?"
       const declarationId = id.replace(tsx, dts);
-      let module = getModule(declarationId, code);
+      let module = getModule(declarationId);
       if (module.source) {
-        return transformFile(module.source);
+        return transformFile(module.source, declarationId);
       }
       // Generate in-memory ".d.ts" modules from ".tsx?" modules!
-      module = getModule(id, code);
-      if (!module.source || !module.program) {
+      module = getModule(id);
+      if (typeof module.source != "object" || !module.program) {
         return null;
       }
-      let generated!: SourceDescription;
+      let generated!: ReturnType<typeof transformFile>;
       const { emitSkipped, diagnostics } = module.program.emit(
         module.source,
         (_, declarationText) => {
-          const source = ts.createSourceFile(
-            declarationId,
-            declarationText,
-            ts.ScriptTarget.Latest,
-            true, // setParentNodes
-          );
-          generated = transformFile(source);
+          code = declarationText;
+          generated = transformFile(true, declarationId);
         },
         undefined, // cancellationToken
         true, // emitOnlyDtsFiles
@@ -194,30 +143,8 @@ const plugin: PluginImpl<Options> = (options = {}) => {
       }
     },
 
-    renderChunk(code, chunk) {
-      const source = ts.createSourceFile(chunk.fileName, code, ts.ScriptTarget.Latest, true);
-      const fixer = new NamespaceFixer(source);
-
-      const typeReferences = new Set<string>();
-      for (const fileName of Object.keys(chunk.modules)) {
-        for (const ref of allTypeReferences.get(fileName.split("\\").join("/")) || []) {
-          typeReferences.add(ref);
-        }
-      }
-
-      code = writeBlock(Array.from(typeReferences, (ref) => `/// <reference types="${ref}" />`));
-      code += fixer.fix();
-
-      return { code, map: { mappings: "" } };
-    },
+    renderChunk: transformPlugin.renderChunk,
   };
 };
-
-function writeBlock(codes: Array<string>): string {
-  if (codes.length) {
-    return codes.join("\n") + "\n";
-  }
-  return "";
-}
 
 export default plugin;

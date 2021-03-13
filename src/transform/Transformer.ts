@@ -6,17 +6,23 @@ import { UnsupportedSyntaxError } from "./errors.js";
 
 type ESTreeImports = ESTree.ImportDeclaration["specifiers"];
 
-export interface TransformOutput {
-  ast: ESTree.Program;
-  typeReferences: Set<string>;
+interface ConvertInput {
+  sourceFile: ts.SourceFile;
 }
 
-export class Transformer {
+interface ConvertOutput {
   ast: ESTree.Program;
-  typeReferences = new Set<string>();
+}
+
+export function convert({ sourceFile }: ConvertInput): ConvertOutput {
+  const transformer = new Transformer(sourceFile);
+  return transformer.transform();
+}
+
+class Transformer {
+  ast: ESTree.Program;
 
   declarations = new Map<string, DeclarationScope>();
-  exports = new Set<string>();
 
   constructor(public sourceFile: ts.SourceFile) {
     this.ast = createProgram(sourceFile);
@@ -25,10 +31,9 @@ export class Transformer {
     }
   }
 
-  transform(): TransformOutput {
+  transform(): ConvertOutput {
     return {
       ast: this.ast,
-      typeReferences: this.typeReferences,
     };
   }
 

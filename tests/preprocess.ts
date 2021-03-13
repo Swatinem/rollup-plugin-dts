@@ -2,7 +2,7 @@ import * as assert from "assert";
 import fsExtra from "fs-extra";
 import * as path from "path";
 import ts from "typescript";
-import { preProcess } from "../src/preprocess.js";
+import { preProcess } from "../src/transform/preprocess.js";
 import { forEachFixture, Harness } from "./utils.js";
 
 export default (t: Harness) => {
