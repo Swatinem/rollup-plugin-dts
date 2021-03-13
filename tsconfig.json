@@ -30,5 +30,5 @@
     "outDir": ".build"
   },
   "include": ["src", "tests", "rollup.config.ts"],
-  "exclude": ["tests/testcases", "tests/preprocess"]
+  "exclude": ["tests/testcases", "tests/preprocess", "tests/postprocess"]
 }

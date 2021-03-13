@@ -2,6 +2,7 @@ import MagicString from "magic-string";
 import ts from "typescript";
 import { matchesModifier } from "./astHelpers.js";
 import { UnsupportedSyntaxError } from "./errors.js";
+import { getEnd, getStart } from "./utils.js";
 
 type Range = [start: number, end: number];
 
@@ -309,17 +310,4 @@ function fixModifiers(code: MagicString, node: ts.Node) {
   if (needsDeclare && !hasDeclare) {
     code.appendRight(node.getStart(), "declare ");
   }
-}
-
-function getStart(node: ts.Node): number {
-  const start = node.getFullStart();
-  return start + (newlineAt(node, start) ? 1 : 0);
-}
-function getEnd(node: ts.Node): number {
-  const end = node.getEnd();
-  return end + (newlineAt(node, end) ? 1 : 0);
-}
-
-function newlineAt(node: ts.Node, idx: number): boolean {
-  return node.getSourceFile().getFullText()[idx] == "\n";
 }

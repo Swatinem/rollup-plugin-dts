@@ -1,5 +1,7 @@
-import * as path from "path";
+import * as assert from "assert";
 import * as fs from "fs";
+import fsExtra from "fs-extra";
+import * as path from "path";
 
 export function forEachFixture(fixtures: string, cb: (name: string, dir: string) => void): void {
   const dir = path.resolve(process.cwd(), "tests", fixtures);
@@ -62,4 +64,25 @@ export class Harness {
 
     return failures.length;
   }
+}
+
+type Processor = (fileName: string, code: string) => string;
+
+export async function assertProcessedTestcase(processor: Processor, dir: string, bless: boolean) {
+  const fileName = path.join(dir, "input.d.ts");
+  const contents = await fs.promises.readFile(fileName, "utf-8");
+
+  const processed = processor(fileName, contents);
+
+  await assertExpectedResult(path.join(dir, "expected.d.ts"), processed, bless);
+}
+
+async function assertExpectedResult(file: string, code: string, bless: boolean) {
+  const hasExpected = await fsExtra.pathExists(file);
+  if (!hasExpected || bless) {
+    await fs.promises.writeFile(file, code);
+  }
+
+  const expectedCode = await fs.promises.readFile(file, "utf-8");
+  assert.strictEqual(code, expectedCode);
 }

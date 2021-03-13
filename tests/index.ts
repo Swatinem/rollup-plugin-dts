@@ -1,3 +1,4 @@
+import postprocess from "./postprocess.js";
 import preprocess from "./preprocess.js";
 import testcases from "./testcases.js";
 import { Harness } from "./utils.js";
@@ -8,6 +9,7 @@ async function main() {
   const harness = new Harness();
 
   preprocess(harness);
+  postprocess(harness);
   testcases(harness);
 
   const failures = await harness.run(process.argv);
