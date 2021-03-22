@@ -1,7 +1,7 @@
-import { RollupOptions } from 'rollup';
+import * as rollup from 'rollup';
 import * as typescript from 'typescript';
 type TypeScript = typeof typescript;
 interface Test {
-  rollup: RollupOptions;
+  rollup: rollup.RollupOptions;
 }
 export { Test, TypeScript };

@@ -7,6 +7,5 @@
     ":automergeBranchPush",
     ":automergeRequireAllStatusChecks"
   ],
-  "rangeStrategy": "bump",
-  "supportPolicy": ["active"]
+  "rangeStrategy": "bump"
 }
