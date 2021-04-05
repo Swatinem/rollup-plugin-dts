@@ -157,7 +157,7 @@ export class NamespaceFixer {
 
       for (const { exportedName, localName } of ns.exports) {
         if (exportedName === localName) {
-          const { type, generics } = itemTypes[localName]!;
+          const { type, generics } = itemTypes[localName] || {};
           if (type === "interface" || type === "type") {
             // an interface is just a type
             const typeParams = renderTypeParams(generics);
