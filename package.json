@@ -52,16 +52,16 @@
     "@types/d3-drag": "^2.0.0",
     "@types/estree": "0.0.47",
     "@types/fs-extra": "^9.0.11",
-    "@types/node": "^14.14.41",
-    "@types/react": "^17.0.3",
-    "c8": "^7.7.1",
+    "@types/node": "^14.14.43",
+    "@types/react": "^17.0.4",
+    "c8": "^7.7.2",
     "fs-extra": "^9.1.0",
     "rimraf": "^3.0.2",
-    "rollup": "2.45.2",
+    "rollup": "2.46.0",
     "typescript": "4.2.4"
   },
   "peerDependencies": {
-    "rollup": "^2.45.2",
+    "rollup": "^2.46.0",
     "typescript": "^4.2.4"
   },
   "optionalDependencies": {
