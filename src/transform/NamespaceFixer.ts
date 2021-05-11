@@ -120,14 +120,10 @@ export class NamespaceFixer {
       }
       const exports: Array<Export> = [];
       for (const prop of obj.properties) {
-        if (
-          !ts.isPropertyAssignment(prop) ||
-          !ts.isIdentifier(prop.name) ||
-          (prop.name.text !== "__proto__" && !ts.isIdentifier(prop.initializer))
-        ) {
+        if (!ts.isPropertyAssignment(prop) || !ts.isIdentifier(prop.name) || !ts.isToken(prop.name)) {
           throw new UnsupportedSyntaxError(prop, "Expected a property assignment");
         }
-        if (prop.name.text === "__proto__") {
+        if (ts.isIdentifier(prop.name) && prop.name.text === "__proto__") {
           continue;
         }
         exports.push({
