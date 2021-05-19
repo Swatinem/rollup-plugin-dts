@@ -1,5 +1,23 @@
 # Changelog
 
+## 3.0.2
+
+**Fixes**:
+
+- Fix undefined Error in post-processing.
+- Support using keywords as exports.
+
+**Internal**:
+
+- Restructure internals, splitting transformer from the Rest of the Plugin.
+
+**Thank you**:
+
+Features, fixes and improvements in this release have been contributed by:
+
+- [@AriaMinaei](https://github.com/AriaMinaei)
+- [@angeloashmore](https://github.com/angeloashmore)
+
 ## 3.0.1
 
 **Fixes**:
