@@ -13,11 +13,12 @@
 
     "jsx": "react",
 
-    "strict": true,
     "skipLibCheck": true,
+    "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noImplicitReturns": true,
+    "noImplicitOverride": true,
     "noUncheckedIndexedAccess": true,
 
     "incremental": true,
