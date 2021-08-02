@@ -353,6 +353,8 @@ export class DeclarationScope {
       }
       if (ts.isExportDeclaration(stmt)) {
         // noop
+      } else if (ts.isImportEqualsDeclaration(stmt)) {
+        // noop for now, otherwise figure out what to do here
       } else {
         throw new UnsupportedSyntaxError(stmt, `namespace child (hoisting) not supported yet`);
       }
@@ -403,6 +405,14 @@ export class DeclarationScope {
             this.pushIdentifierReference(id);
           }
         }
+      } else if (ts.isImportEqualsDeclaration(stmt)) {
+        const modRef = stmt.moduleReference;
+        if (ts.isEntityName(modRef)) {
+          this.pushReference(this.convertEntityName(modRef));
+        } else {
+          throw new UnsupportedSyntaxError(stmt, `namespace child (walking) not supported yet`);
+        }
+        //this.pushIdentifierReference(stmt.name);
       } else {
         throw new UnsupportedSyntaxError(stmt, `namespace child (walking) not supported yet`);
       }
