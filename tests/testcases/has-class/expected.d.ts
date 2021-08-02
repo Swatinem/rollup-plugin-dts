@@ -8,4 +8,4 @@ declare class Foo extends A {
   constructor(c: C);
   method(d: D): E;
 }
-export default Foo;
+export { Foo as default };

@@ -1,2 +1,2 @@
 interface Foo {}
-export default Foo;
+export { Foo as default };

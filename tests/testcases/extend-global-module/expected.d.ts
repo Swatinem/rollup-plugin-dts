@@ -28,4 +28,4 @@ declare global {
   }
 }
 declare const e: any;
-export default e;
+export { e as default };

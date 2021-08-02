@@ -5,4 +5,4 @@ declare abstract class MemberInfo {
   abstract readonly declaringType: TypeInfo;
   abstract readonly memberType: MemberTypes;
 }
-export default MemberInfo;
+export { MemberInfo as default };

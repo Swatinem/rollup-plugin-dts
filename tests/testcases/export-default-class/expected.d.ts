@@ -1,2 +1,2 @@
 declare class Foo {}
-export default Foo;
+export { Foo as default };

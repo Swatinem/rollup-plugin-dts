@@ -10,4 +10,4 @@ declare class Foo {
   method(c: C): D;
   method(e: E): F;
 }
-export default Foo;
+export { Foo as default };

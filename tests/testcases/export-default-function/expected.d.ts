@@ -1,2 +1,2 @@
 declare function foo(): void;
-export default foo;
+export { foo as default };

@@ -1,4 +1,3 @@
 declare class Foo$1 {}
 declare class Foo {}
-export default Foo$1;
-export { Foo as default2 };
+export { Foo$1 as default, Foo as default2 };

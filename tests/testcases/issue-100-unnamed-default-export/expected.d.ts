@@ -7,4 +7,4 @@ declare function export_default<T extends object>(
     [x in keyof T]: () => Promise<T[x]>;
   },
 ): Promise<void>;
-export default export_default;
+export { export_default as default };

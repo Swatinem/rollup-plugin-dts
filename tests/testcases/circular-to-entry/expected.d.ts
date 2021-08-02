@@ -6,4 +6,4 @@ declare class FooManager {
   foos: Array<Foo>;
   constructor();
 }
-export default FooManager;
+export { FooManager as default };
