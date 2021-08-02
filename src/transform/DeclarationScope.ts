@@ -315,9 +315,13 @@ export class DeclarationScope {
     }
   }
 
-  convertNamespace(node: ts.ModuleDeclaration) {
+  convertNamespace(node: ts.ModuleDeclaration, relaxedModuleBlock = false) {
     this.pushScope();
 
+    if (relaxedModuleBlock && node.body && ts.isModuleDeclaration(node.body)) {
+      this.convertNamespace(node.body, true);
+      return;
+    }
     if (!node.body || !ts.isModuleBlock(node.body)) {
       throw new UnsupportedSyntaxError(node, `namespace must have a "ModuleBlock" body.`);
     }
@@ -386,7 +390,7 @@ export class DeclarationScope {
         continue;
       }
       if (ts.isModuleDeclaration(stmt)) {
-        this.convertNamespace(stmt);
+        this.convertNamespace(stmt, relaxedModuleBlock);
         continue;
       }
       if (ts.isEnumDeclaration(stmt)) {

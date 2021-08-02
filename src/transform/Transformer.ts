@@ -127,7 +127,7 @@ class Transformer {
 
     if (isGlobalAugmentation || !ts.isIdentifier(node.name)) {
       const scope = this.createDeclaration(node);
-      scope.convertNamespace(node);
+      scope.convertNamespace(node, true);
       return;
     }
 
