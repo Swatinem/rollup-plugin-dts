@@ -26,6 +26,8 @@ interface PreProcessOutput {
  *   them.
  * - [x] Generate a separate `export {}` statement for any item which had its
  *   modifiers rewritten.
+ * - [ ] Duplicate the identifiers of a namespace `export`, so that renaming does
+ *   not break it
  */
 export function preProcess({ sourceFile }: PreProcessInput): PreProcessOutput {
   const code = new MagicString(sourceFile.getFullText());
@@ -50,6 +52,8 @@ export function preProcess({ sourceFile }: PreProcessInput): PreProcessOutput {
    * - Maybe collect the name of the default export if present.
    * - Fix the modifiers of all the items.
    * - Collect the ranges of each named statement.
+   * - Duplicate the identifiers of a namespace `export`, so that renaming does
+   *   not break it
    */
   for (const node of sourceFile.statements) {
     if (ts.isEmptyStatement(node)) {
@@ -78,6 +82,11 @@ export function preProcess({ sourceFile }: PreProcessInput): PreProcessOutput {
         if (!(node.flags & ts.NodeFlags.GlobalAugmentation)) {
           pushNamedNode(name, [getStart(node), getEnd(node)]);
         }
+      }
+
+      // duplicate exports of namespaces
+      if (ts.isModuleDeclaration(node)) {
+        duplicateExports(code, node);
       }
 
       fixModifiers(code, node);
@@ -308,6 +317,24 @@ function fixModifiers(code: MagicString, node: ts.Node) {
   }
   if (needsDeclare && !hasDeclare) {
     code.appendRight(node.getStart(), "declare ");
+  }
+}
+
+function duplicateExports(code: MagicString, module: ts.ModuleDeclaration) {
+  if (!module.body || !ts.isModuleBlock(module.body)) {
+    return;
+  }
+  for (const node of module.body.statements) {
+    if (ts.isExportDeclaration(node) && node.exportClause) {
+      if (ts.isNamespaceExport(node.exportClause)) {
+        continue;
+      }
+      for (const decl of node.exportClause.elements) {
+        if (!decl.propertyName) {
+          code.appendLeft(decl.name.getEnd(), ` as ${decl.name.getText()}`);
+        }
+      }
+    }
   }
 }
 
