@@ -1,5 +1,16 @@
 # Changelog
 
+## 4.0.0
+
+**Compatibility Notice**:
+
+This release targets **TypeScript 4.4** and **Rollup 2.56**.
+
+**Fixes**:
+
+- Add preliminary support for nested namespace declarations.
+- Fix renaming of exports from namespaces declarations.
+
 ## 3.0.2
 
 **Fixes**:
