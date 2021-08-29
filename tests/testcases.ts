@@ -83,7 +83,7 @@ async function assertTestcase(dir: string, meta: Meta, bless: boolean) {
   try {
     ({ output } = await creator);
   } catch (e) {
-    error = e;
+    error = e as any;
     if (!expectedError) {
       throw e;
     }

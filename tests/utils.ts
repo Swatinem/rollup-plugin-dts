@@ -43,10 +43,10 @@ export class Harness {
         await fn(bless);
         console.log(" ok");
       } catch (error) {
-        failures.push({ name, error });
+        failures.push({ name, error: error as any });
         console.log(" failed");
         console.log();
-        console.log(error.stack);
+        console.log((error as any).stack);
         console.log();
       }
     }
