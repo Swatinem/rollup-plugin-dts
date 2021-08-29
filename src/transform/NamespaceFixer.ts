@@ -80,6 +80,30 @@ export class NamespaceFixer {
         }
       }
 
+      // Remove redundant `{ Foo as Foo }` exports from a namespace which we
+      // added in pre-processing to fix up broken renaming
+      if (ts.isModuleDeclaration(node) && node.body && ts.isModuleBlock(node.body)) {
+        for (const stmt of node.body.statements) {
+          if (ts.isExportDeclaration(stmt) && stmt.exportClause) {
+            if (ts.isNamespaceExport(stmt.exportClause)) {
+              continue;
+            }
+            for (const decl of stmt.exportClause.elements) {
+              if (decl.propertyName && decl.propertyName.getText() == decl.name.getText()) {
+                namespaces.unshift({
+                  name: "",
+                  exports: [],
+                  location: {
+                    start: decl.propertyName.getEnd(),
+                    end: decl.name.getEnd(),
+                  },
+                });
+              }
+            }
+          }
+        }
+      }
+
       if (ts.isClassDeclaration(node)) {
         items[node.name!.getText()] = { type: "class", generics: node.typeParameters && node.typeParameters.length };
       } else if (ts.isFunctionDeclaration(node)) {
