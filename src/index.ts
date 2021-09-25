@@ -62,7 +62,12 @@ const plugin: PluginImpl<Options> = (options = {}) => {
         // an explicit object, which strips the file extension
         options.input = {};
         for (const filename of input) {
-          const name = path.basename(filename).replace(/((\.d)?\.(t|j)sx?)$/, "");
+          let name = filename.replace(/((\.d)?\.(t|j)sx?)$/, "");
+          if (path.isAbsolute(filename)) {
+            name = path.basename(name)
+          } else {
+            name = path.normalize(name)
+          }
           options.input[name] = filename;
         }
       }
