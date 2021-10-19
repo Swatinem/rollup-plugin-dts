@@ -9,7 +9,7 @@ export const formatHost: ts.FormatDiagnosticsHost = {
   getCanonicalFileName: ts.sys.useCaseSensitiveFileNames ? (f) => f : (f) => f.toLowerCase(),
 };
 
-const OPTIONS_OVERRIDE: ts.CompilerOptions = {
+const DEFAULT_OPTIONS: ts.CompilerOptions = {
   // Ensure ".d.ts" modules are generated
   declaration: true,
   // Skip ".js" generation
@@ -31,7 +31,7 @@ function getCompilerOptions(
   input: string,
   overrideOptions: ts.CompilerOptions,
 ): { dtsFiles: Array<string>; dirName: string; compilerOptions: ts.CompilerOptions } {
-  const compilerOptions = { ...overrideOptions, ...OPTIONS_OVERRIDE };
+  const compilerOptions = { ...DEFAULT_OPTIONS, ...overrideOptions };
 
   let dirName = path.dirname(input);
   let dtsFiles: Array<string> = [];
