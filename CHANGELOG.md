@@ -1,5 +1,19 @@
 # Changelog
 
+## 4.0.1
+
+**Fixes**:
+
+- Write output files to the correct directly corresponding to the input file.
+- Allow overriding default compiler options.
+
+**Thank you**:
+
+Features, fixes and improvements in this release have been contributed by:
+
+- [@lesyk-lesyk](https://github.com/lesyk-lesyk)
+- [@cy-98](https://github.com/cy-98)
+
 ## 4.0.0
 
 **Compatibility Notice**:
