@@ -2,6 +2,7 @@ import MagicString from "magic-string";
 import ts from "typescript";
 import { matchesModifier } from "./astHelpers.js";
 import { UnsupportedSyntaxError } from "./errors.js";
+import * as path from "path";
 
 type Range = [start: number, end: number];
 
@@ -12,6 +13,7 @@ interface PreProcessInput {
 interface PreProcessOutput {
   code: MagicString;
   typeReferences: Set<string>;
+  fileReferences: Set<string>;
 }
 
 /**
@@ -218,11 +220,27 @@ export function preProcess({ sourceFile }: PreProcessInput): PreProcessOutput {
     code.prepend(`import * as ${importName} from "${fileId}";\n`);
   }
 
+  const lineStarts = sourceFile.getLineStarts();
+
   // and collect/remove all the typeReferenceDirectives
   const typeReferences = new Set<string>();
-  const lineStarts = sourceFile.getLineStarts();
   for (const ref of sourceFile.typeReferenceDirectives) {
     typeReferences.add(ref.fileName);
+
+    const { line } = sourceFile.getLineAndCharacterOfPosition(ref.pos);
+    const start = lineStarts[line]!;
+    let end = sourceFile.getLineEndOfPosition(ref.pos);
+    if (code.slice(end, end + 1) == "\n") {
+      end += 1;
+    }
+
+    code.remove(start, end);
+  }
+
+  // and collect/remove all the fileReferenceDirectives
+  const fileReferences = new Set<string>();
+  for (const ref of sourceFile.referencedFiles) {
+    fileReferences.add(path.join(path.dirname(sourceFile.fileName), ref.fileName));
 
     const { line } = sourceFile.getLineAndCharacterOfPosition(ref.pos);
     const start = lineStarts[line]!;
@@ -237,6 +255,7 @@ export function preProcess({ sourceFile }: PreProcessInput): PreProcessOutput {
   return {
     code,
     typeReferences,
+    fileReferences,
   };
 
   function checkInlineImport(node: ts.Node) {
