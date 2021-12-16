@@ -3,6 +3,7 @@ import ts from "typescript";
 import { NamespaceFixer } from "./NamespaceFixer.js";
 import { preProcess } from "./preprocess.js";
 import { convert } from "./Transformer.js";
+import * as path from "path";
 
 export interface TransformOptions {}
 
@@ -30,6 +31,7 @@ function parse(fileName: string, code: string): ts.SourceFile {
  */
 export const transform: PluginImpl<TransformOptions> = () => {
   const allTypeReferences = new Map<string, Set<string>>();
+  const allFileReferences = new Map<string, Set<string>>();
 
   return {
     name: "dts-transform",
@@ -76,6 +78,7 @@ export const transform: PluginImpl<TransformOptions> = () => {
       const preprocessed = preProcess({ sourceFile });
       // `sourceFile.fileName` here uses forward slashes
       allTypeReferences.set(sourceFile.fileName, preprocessed.typeReferences);
+      allFileReferences.set(sourceFile.fileName, preprocessed.fileReferences);
 
       code = preprocessed.code.toString();
 
@@ -91,18 +94,29 @@ export const transform: PluginImpl<TransformOptions> = () => {
       return { code, ast: converted.ast as any, map: preprocessed.code.generateMap() };
     },
 
-    renderChunk(code, chunk) {
+    renderChunk(code, chunk, options) {
       const source = parse(chunk.fileName, code);
       const fixer = new NamespaceFixer(source);
 
       const typeReferences = new Set<string>();
+      const fileReferences = new Set<string>();
       for (const fileName of Object.keys(chunk.modules)) {
         for (const ref of allTypeReferences.get(fileName.split("\\").join("/")) || []) {
           typeReferences.add(ref);
         }
+        for (const ref of allFileReferences.get(fileName.split("\\").join("/")) || []) {
+          // Need absolute path of the target file here
+          const chunkFolder = (options.file && path.dirname(options.file)) || (chunk.facadeModuleId && path.dirname(chunk.facadeModuleId!)) || ".";
+          let targetRelPath = path.relative(chunkFolder, ref).split("\\").join("/");
+          if (targetRelPath[0] !== ".") {
+            targetRelPath = "./" + targetRelPath;
+          }
+          fileReferences.add(targetRelPath);
+        }
       }
 
-      code = writeBlock(Array.from(typeReferences, (ref) => `/// <reference types="${ref}" />`));
+      code = writeBlock(Array.from(fileReferences, (ref) => `/// <reference path="${ref}" />`));
+      code += writeBlock(Array.from(typeReferences, (ref) => `/// <reference types="${ref}" />`));
       code += fixer.fix();
 
       return { code, map: { mappings: "" } };
