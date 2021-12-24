@@ -19,11 +19,11 @@ type namespace_d_D = D;
 declare const namespace_d_D: typeof D;
 declare const namespace_d_E: typeof E;
 type namespace_d_F = F;
-type namespace_d_GenericI<_0, _1> = GenericI<_0, _1>;
-type namespace_d_GenericC<_0, _1> = GenericC<_0, _1>;
+type namespace_d_GenericI<T1, T2> = GenericI<T1, T2>;
+type namespace_d_GenericC<T1, T2> = GenericC<T1, T2>;
 declare const namespace_d_GenericC: typeof GenericC;
 declare const namespace_d_genericF: typeof genericF;
-type namespace_d_GenericT<_0, _1> = GenericT<_0, _1>;
+type namespace_d_GenericT<T1, T2> = GenericT<T1, T2>;
 declare namespace namespace_d {
   export {
     namespace_d_A as A,

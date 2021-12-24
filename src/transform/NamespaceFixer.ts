@@ -10,7 +10,7 @@ import { UnsupportedSyntaxError } from "./errors.js";
  * namespace right away, because of naming issues, `export { A as A }` is
  * trivially recursive inside the namespace. Therefore we create an alias
  * *outside* the namespace, and re-export that alias under the proper name,
- * somethink like `Alias_A = A; export { Alias_A as A }`.
+ * something like `Alias_A = A; export { Alias_A as A }`.
  * And now we also have to take care that in typescript there is a difference
  * between types and values, and some constructs like `class` are actually both.
  *
@@ -23,7 +23,7 @@ interface Export {
 }
 interface Item {
   type: string;
-  generics?: number;
+  generics?: ts.NodeArray<ts.TypeParameterDeclaration>;
 }
 interface Namespace {
   name: string;
@@ -105,18 +105,15 @@ export class NamespaceFixer {
       }
 
       if (ts.isClassDeclaration(node)) {
-        items[node.name!.getText()] = { type: "class", generics: node.typeParameters && node.typeParameters.length };
+        items[node.name!.getText()] = { type: "class", generics: node.typeParameters };
       } else if (ts.isFunctionDeclaration(node)) {
         // a function has generics, but these don’t need to be specified explicitly,
         // since functions are treated as values.
         items[node.name!.getText()] = { type: "function" };
       } else if (ts.isInterfaceDeclaration(node)) {
-        items[node.name.getText()] = {
-          type: "interface",
-          generics: node.typeParameters && node.typeParameters.length,
-        };
+        items[node.name.getText()] = { type: "interface", generics: node.typeParameters };
       } else if (ts.isTypeAliasDeclaration(node)) {
-        items[node.name.getText()] = { type: "type", generics: node.typeParameters && node.typeParameters.length };
+        items[node.name.getText()] = { type: "type", generics: node.typeParameters };
       } else if (ts.isModuleDeclaration(node) && ts.isIdentifier(node.name)) {
         items[node.name.getText()] = { type: "namespace" };
       } else if (ts.isEnumDeclaration(node)) {
@@ -185,11 +182,11 @@ export class NamespaceFixer {
           if (type === "interface" || type === "type") {
             // an interface is just a type
             const typeParams = renderTypeParams(generics);
-            code += `type ${ns.name}_${exportedName}${typeParams} = ${localName}${typeParams};\n`;
+            code += `type ${ns.name}_${exportedName}${typeParams.in} = ${localName}${typeParams.out};\n`;
           } else if (type === "enum" || type === "class") {
             // enums and classes are both types and values
             const typeParams = renderTypeParams(generics);
-            code += `type ${ns.name}_${exportedName}${typeParams} = ${localName}${typeParams};\n`;
+            code += `type ${ns.name}_${exportedName}${typeParams.in} = ${localName}${typeParams.out};\n`;
             code += `declare const ${ns.name}_${exportedName}: typeof ${localName};\n`;
           } else {
             // functions and vars are just values
@@ -219,9 +216,13 @@ export class NamespaceFixer {
   }
 }
 
-function renderTypeParams(num: number | undefined) {
-  if (!num) {
-    return "";
+function renderTypeParams(typeParameters?: ts.NodeArray<ts.TypeParameterDeclaration>) {
+  if (!typeParameters || !typeParameters.length) {
+    return { in: "", out: "" };
   }
-  return `<${Array.from({ length: num }, (_, i) => `_${i}`).join(", ")}>`;
+
+  return {
+    in: `<${typeParameters.map((param) => param.getText()).join(", ")}>`,
+    out: `<${typeParameters.map((param) => param.name.getText()).join(", ")}>`,
+  };
 }

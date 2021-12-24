@@ -1,10 +1,10 @@
 declare type Props = Record<string, number>;
 declare class System<T extends Props> {
-    _obj: T;
-    constructor(src: T);
+  _obj: T;
+  constructor(src: T);
 }
 type a_d_Props = Props;
-type a_d_System<_0 extends Props> = System<_0>;
+type a_d_System<T extends Props> = System<T>;
 declare const a_d_System: typeof System;
 declare namespace a_d {
   export {
