@@ -2,6 +2,7 @@ import * as assert from "assert";
 import fsExtra from "fs-extra";
 import * as path from "path";
 import { InputOption, InputOptions, rollup, RollupOptions, RollupOutput } from "rollup";
+import ts from "typescript";
 import dts, { Options } from "../src/index.js";
 import { forEachFixture, Harness } from "./utils.js";
 
@@ -21,6 +22,15 @@ export default (t: Harness) => {
         meta.rollupOptions = Object.assign(rollupOptions, meta.rollupOptions);
       } catch {}
 
+      if (meta.tsVersion) {
+        const [major, minor] = ts.versionMajorMinor.split(".").map(Number);
+        const [reqMajor, reqMinor] = meta.tsVersion.split(".").map(Number);
+        if (major! < reqMajor! || minor! < reqMinor!) {
+          // skip unsupported version
+          return;
+        }
+      }
+
       if (!meta.skip) {
         return assertTestcase(dir, meta, bless);
       }
@@ -33,6 +43,7 @@ interface Meta {
   rollupOptions: RollupOptions;
   skip: boolean;
   expectedError?: string;
+  tsVersion?: string;
 }
 
 async function createBundle(options: Options, rollupOptions: RollupOptions) {
