@@ -1,3 +1,3 @@
 export default {
-  tsVersion: "4.2",
+  tsVersion: "4.3",
 };
