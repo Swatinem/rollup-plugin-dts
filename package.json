@@ -68,7 +68,6 @@
     "@babel/code-frame": "^7.16.0"
   },
   "dependencies": {
-    "@babel/code-frame": "^7.16.0",
     "magic-string": "^0.25.7"
   }
 }
