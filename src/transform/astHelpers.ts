@@ -118,6 +118,8 @@ export function convertExpression(node: ts.Expression): ESTree.Expression {
   }
   if (ts.isIdentifier(node)) {
     return createIdentifier(node);
+  } else if (node.kind == ts.SyntaxKind.NullKeyword) {
+    return { type: "Literal", value: null };
   } else {
     throw new UnsupportedSyntaxError(node);
   }
