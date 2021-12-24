@@ -1,5 +1,27 @@
 # Changelog
 
+## 4.1.0
+
+**Compatibility Notice**:
+
+The peer dependency requirements were actually lowered to **TypeScript 4.1** and **Rollup 2.55**.
+
+**Features**:
+
+- Support reference path directives.
+
+**Fixes**:
+
+- Correctly forward generic type bounds.
+- Fix inheritance from `null`.
+
+**Thank you**:
+
+Features, fixes and improvements in this release have been contributed by:
+
+- [@lmartorella](https://github.com/lmartorella)
+- [@funnisimo](https://github.com/funnisimo)
+
 ## 4.0.1
 
 **Fixes**:
