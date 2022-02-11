@@ -1,7 +1,7 @@
 // a.d.ts
-export { A } from './common-4b55c64a';
+export { A } from './common-4b55c64a.js';
 // b.d.ts
-export { B } from './common-4b55c64a';
+export { B } from './common-4b55c64a.js';
 // common-4b55c64a.d.ts
 interface A {
 }
