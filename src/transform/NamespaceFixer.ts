@@ -29,6 +29,7 @@ interface Namespace {
   name: string;
   exports: Array<Export>;
   location: { start: number; end: number };
+  textBeforeCodeAfter?: string;
 }
 
 export class NamespaceFixer {
@@ -59,23 +60,31 @@ export class NamespaceFixer {
         continue;
       }
       // When generating multiple chunks, rollup links those via import
-      // statements, obviously. But rollup uses full filenames with extension,
-      // which typescript does not like. So make sure to remove those here.
+      // statements, obviously. But rollup uses full filenames with typescript extension,
+      // which typescript does not like. So make sure to change those to javascript extension here.
+      // `.d.ts` -> `.js`
+      // `.d.cts` -> `.cjs`
+      // `.d.mts` -> `.mjs`
       if (
         (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) &&
         node.moduleSpecifier &&
         ts.isStringLiteral(node.moduleSpecifier)
       ) {
         let { text } = node.moduleSpecifier;
-        if (text.startsWith(".") && text.endsWith(".d.ts")) {
+        if (text.startsWith(".") && (text.endsWith(".d.ts") || text.endsWith(".d.cts") || text.endsWith(".d.mts"))) {
+          let start = node.moduleSpecifier.getStart() + 1; // +1 to account for the quote
           let end = node.moduleSpecifier.getEnd() - 1; // -1 to account for the quote
           namespaces.unshift({
             name: "",
             exports: [],
             location: {
-              start: end - 5,
+              start,
               end,
             },
+            textBeforeCodeAfter: text
+              .replace(/\.d\.ts$/, ".js")
+              .replace(/\.d\.cts$/, ".cjs")
+              .replace(/\.d\.mts$/, ".mjs"),
           });
         }
       }
@@ -209,6 +218,7 @@ export class NamespaceFixer {
         code += `}`;
       }
 
+      code += ns.textBeforeCodeAfter ?? "";
       code += codeAfter;
     }
 
