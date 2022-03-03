@@ -1,5 +1,21 @@
 # Changelog
 
+## 4.2.0
+
+**Compatibility Notice**:
+
+Relaxed TypeScript version compatibility, to be forward compatible to newer releases.
+
+**Features**:
+
+- Add support for `.d.cts` / `.d.mts` files.
+
+**Thank you**:
+
+Features, fixes and improvements in this release have been contributed by:
+
+- [@xiaoxiangmoe](https://github.com/xiaoxiangmoe)
+
 ## 4.1.0
 
 **Compatibility Notice**:
