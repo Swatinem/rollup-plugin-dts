@@ -57,17 +57,17 @@
     "c8": "^7.11.0",
     "fs-extra": "^10.0.0",
     "rimraf": "^3.0.2",
-    "rollup": "2.67.2",
-    "typescript": "4.5.5"
+    "rollup": "2.69.0",
+    "typescript": "4.6.2"
   },
   "peerDependencies": {
-    "rollup": "^2.67",
-    "typescript": "~4.1 || ~4.2 || ~4.3 || ~4.4 || ~4.5"
+    "rollup": "^2.55",
+    "typescript": "^4.1"
   },
   "optionalDependencies": {
     "@babel/code-frame": "^7.16.7"
   },
   "dependencies": {
-    "magic-string": "^0.25.7"
+    "magic-string": "^0.26.1"
   }
 }
