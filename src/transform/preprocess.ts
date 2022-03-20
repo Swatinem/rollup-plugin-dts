@@ -2,7 +2,7 @@ import MagicString from "magic-string";
 import ts from "typescript";
 import { matchesModifier } from "./astHelpers.js";
 import { UnsupportedSyntaxError } from "./errors.js";
-import * as path from "path";
+
 
 type Range = [start: number, end: number];
 
@@ -240,7 +240,8 @@ export function preProcess({ sourceFile }: PreProcessInput): PreProcessOutput {
   // and collect/remove all the fileReferenceDirectives
   const fileReferences = new Set<string>();
   for (const ref of sourceFile.referencedFiles) {
-    fileReferences.add(path.join(path.dirname(sourceFile.fileName), ref.fileName));
+    fileReferences.add(ref.fileName);
+
 
     const { line } = sourceFile.getLineAndCharacterOfPosition(ref.pos);
     const start = lineStarts[line]!;

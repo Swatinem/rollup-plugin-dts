@@ -105,13 +105,18 @@ export const transform: PluginImpl<TransformOptions> = () => {
           typeReferences.add(ref);
         }
         for (const ref of allFileReferences.get(fileName.split("\\").join("/")) || []) {
-          // Need absolute path of the target file here
-          const chunkFolder = (options.file && path.dirname(options.file)) || (chunk.facadeModuleId && path.dirname(chunk.facadeModuleId!)) || ".";
-          let targetRelPath = path.relative(chunkFolder, ref).split("\\").join("/");
-          if (targetRelPath[0] !== ".") {
-            targetRelPath = "./" + targetRelPath;
+          if (ref.startsWith('.')) {
+            // Need absolute path of the target file here
+            const absolutePathToOriginal = path.join(path.dirname(fileName), ref);
+            const chunkFolder = (options.file && path.dirname(options.file)) || (chunk.facadeModuleId && path.dirname(chunk.facadeModuleId!)) || ".";
+            let targetRelPath = path.relative(chunkFolder, absolutePathToOriginal).split("\\").join("/");
+            if (targetRelPath[0] !== ".") {
+              targetRelPath = "./" + targetRelPath;
+            }
+            fileReferences.add(targetRelPath);
+          } else {
+            fileReferences.add(ref);
           }
-          fileReferences.add(targetRelPath);
         }
       }
 
