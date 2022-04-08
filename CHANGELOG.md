@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.2.1
+
+**Fixes**:
+
+- Add support for prefix unary expressions.
+
 ## 4.2.0
 
 **Compatibility Notice**:
