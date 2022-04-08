@@ -143,7 +143,7 @@ export class DeclarationScope {
       return;
     }
     const { expression } = node.name;
-    if (ts.isLiteralExpression(expression)) {
+    if (ts.isLiteralExpression(expression) || ts.isPrefixUnaryExpression(expression)) {
       return;
     }
     if (ts.isIdentifier(expression)) {
