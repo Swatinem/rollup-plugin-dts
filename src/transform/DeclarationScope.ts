@@ -308,7 +308,9 @@ export class DeclarationScope {
     }
 
     if (ts.isInferTypeNode(node)) {
-      this.pushTypeVariable(node.typeParameter.name);
+      const { typeParameter } = node;
+      this.convertTypeNode(typeParameter.constraint);
+      this.pushTypeVariable(typeParameter.name);
       return;
     } else {
       throw new UnsupportedSyntaxError(node);
