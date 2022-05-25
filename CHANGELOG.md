@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.2.2
+
+**Fixes**:
+
+- Add support for TS 4.7 infer type constraints.
+
 ## 4.2.1
 
 **Fixes**:
