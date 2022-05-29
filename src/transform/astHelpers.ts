@@ -22,14 +22,18 @@ export function createProgram(node: ts.SourceFile): ESTree.Program {
  * Creates a reference to `id`:
  * `_ = ${id}`
  */
-export function createReference(id: ESTree.Expression): ESTree.AssignmentPattern {
+export function createReference(id: ESTree.Expression): { ident: ESTree.Identifier; expr: ESTree.AssignmentPattern } {
+  const ident: ESTree.Identifier = {
+    type: "Identifier",
+    name: String(IDs++),
+  };
   return {
-    type: "AssignmentPattern",
-    left: {
-      type: "Identifier",
-      name: String(IDs++),
+    ident,
+    expr: {
+      type: "AssignmentPattern",
+      left: ident,
+      right: id,
     },
-    right: id,
   };
 }
 
@@ -47,7 +51,7 @@ export function createIdentifier(node: ts.Identifier): ESTree.Identifier {
  * Create a new Scope which is always included
  * `(function (_ = MARKER) {})()`
  */
-export function createIIFE(range: Range) {
+export function createIIFE(range: Range): { fn: ESTree.FunctionExpression; iife: ESTree.ExpressionStatement } {
   const fn = withStartEnd<ESTree.FunctionExpression>(
     {
       type: "FunctionExpression",
@@ -70,6 +74,24 @@ export function createIIFE(range: Range) {
     range,
   );
   return { fn, iife };
+}
+
+/**
+ * Create a dummy ReturnStatement with an ArrayExpression:
+ * `return [];`
+ */
+export function createReturn(): { stmt: ESTree.Statement; expr: ESTree.ArrayExpression } {
+  const expr: ESTree.ArrayExpression = {
+    type: "ArrayExpression",
+    elements: [],
+  };
+  return {
+    expr,
+    stmt: {
+      type: "ReturnStatement",
+      argument: expr,
+    },
+  };
 }
 
 /**

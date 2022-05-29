@@ -6,6 +6,7 @@ import {
   createIdentifier,
   createIIFE,
   createReference,
+  createReturn,
   Range,
   withStartEnd,
 } from "./astHelpers.js";
@@ -37,6 +38,7 @@ interface DeclarationScopeOptions {
 export class DeclarationScope {
   declaration: ESTree.FunctionDeclaration;
   iife?: ESTree.ExpressionStatement;
+  private returnExpr: ESTree.ArrayExpression;
 
   constructor({ id, range }: DeclarationScopeOptions) {
     if (id) {
@@ -46,6 +48,9 @@ export class DeclarationScope {
       this.iife = iife;
       this.declaration = fn as any;
     }
+    const ret = createReturn();
+    this.declaration.body.body.push(ret.stmt);
+    this.returnExpr = ret.expr;
   }
 
   /**
@@ -67,9 +72,6 @@ export class DeclarationScope {
     this.scopes[this.scopes.length - 1]?.add(name);
   }
 
-  pushRaw(expr: ESTree.AssignmentPattern) {
-    this.declaration.params.push(expr);
-  }
   pushReference(id: ESTree.Expression) {
     let name: string | undefined;
     // We convert references from TS AST to ESTree
@@ -90,7 +92,10 @@ export class DeclarationScope {
         }
       }
     }
-    this.pushRaw(createReference(id));
+    const { ident, expr } = createReference(id);
+
+    this.declaration.params.push(expr);
+    this.returnExpr.elements.push(ident);
   }
   pushIdentifierReference(id: ts.Identifier) {
     this.pushReference(createIdentifier(id));
