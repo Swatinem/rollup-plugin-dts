@@ -27,6 +27,7 @@
   "type": "module",
   "main": "./dist/rollup-plugin-dts.cjs",
   "exports": {
+    "types": "./dist/rollup-plugin-dts.d.ts",
     "import": "./dist/rollup-plugin-dts.mjs",
     "require": "./dist/rollup-plugin-dts.cjs"
   },
