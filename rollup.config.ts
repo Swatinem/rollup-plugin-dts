@@ -15,7 +15,10 @@ const config: Array<RollupWatchOptions> = [
   },
   {
     input: "./.build/src/index.d.ts",
-    output: [{ file: pkg.types, format: "es" }],
+    output: [
+      { file: pkg.exports.types.import, format: "es" },
+      { file: pkg.exports.types.require, format: "commonjs", exports: "named" },
+    ],
     plugins: [dts()],
   },
 ];

@@ -27,11 +27,14 @@
   "type": "module",
   "main": "./dist/rollup-plugin-dts.cjs",
   "exports": {
-    "types": "./dist/rollup-plugin-dts.d.ts",
+    "types": {
+      "import": "./dist/rollup-plugin-dts.d.mts",
+      "require": "./dist/rollup-plugin-dts.d.cts"
+    },
     "import": "./dist/rollup-plugin-dts.mjs",
     "require": "./dist/rollup-plugin-dts.cjs"
   },
-  "types": "./dist/rollup-plugin-dts.d.ts",
+  "types": "./dist/rollup-plugin-dts.d.cts",
   "sideEffects": false,
   "files": [
     "dist"
