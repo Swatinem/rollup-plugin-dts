@@ -64,9 +64,9 @@ const plugin: PluginImpl<Options> = (options = {}) => {
         for (const filename of input) {
           let name = filename.replace(/((\.d)?\.(t|j)sx?)$/, "");
           if (path.isAbsolute(filename)) {
-            name = path.basename(name)
+            name = path.basename(name);
           } else {
-            name = path.normalize(name)
+            name = path.normalize(name);
           }
           options.input[name] = filename;
         }
@@ -74,7 +74,7 @@ const plugin: PluginImpl<Options> = (options = {}) => {
 
       programs = createPrograms(Object.values(input), compilerOptions);
 
-      return transformPlugin.options!.call(this, options);
+      return (transformPlugin.options as any).call(this, options);
     },
 
     outputOptions: transformPlugin.outputOptions,
@@ -84,7 +84,7 @@ const plugin: PluginImpl<Options> = (options = {}) => {
         if (typeof source === "object") {
           code = source.getFullText();
         }
-        return transformPlugin.transform!.call(this, code, id);
+        return (transformPlugin.transform as any).call(this, code, id);
       };
       if (!tsx.test(id)) {
         return null;
