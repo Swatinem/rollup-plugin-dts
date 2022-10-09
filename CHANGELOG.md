@@ -1,5 +1,18 @@
 # Changelog
 
+## 4.2.3
+
+**Fixes**:
+
+- Add `types` to `exports`.
+- Fix handling of class property initializers.
+
+**Thank you**:
+
+Features, fixes and improvements in this release have been contributed by:
+
+- [@RebeccaStevens](https://github.com/RebeccaStevens)
+
 ## 4.2.2
 
 **Fixes**:
