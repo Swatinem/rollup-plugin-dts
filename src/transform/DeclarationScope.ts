@@ -191,6 +191,9 @@ export class DeclarationScope {
   convertMembers(members: ts.NodeArray<ts.TypeElement | ts.ClassElement>) {
     for (const node of members) {
       if (ts.isPropertyDeclaration(node) || ts.isPropertySignature(node) || ts.isIndexSignatureDeclaration(node)) {
+        if (ts.isPropertyDeclaration(node) && node.initializer && ts.isPropertyAccessExpression(node.initializer)) {
+          this.pushReference(this.convertPropertyAccess(node.initializer));
+        }
         this.convertComputedPropertyName(node);
         this.convertTypeNode(node.type);
         continue;
