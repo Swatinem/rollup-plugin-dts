@@ -67,8 +67,8 @@ export const transform: PluginImpl<TransformOptions> = () => {
         exports: "named",
         compact: false,
         freeze: true,
-        interop: false,
-        namespaceToStringTag: false,
+        interop: 'esModule',
+        generatedCode: Object.assign({ symbols: false }, options.generatedCode),
         strict: false,
       };
     },

@@ -1,5 +1,5 @@
 import { RollupWatchOptions } from "rollup";
-import pkg from "./package.json";
+import pkg from "./package.json" assert { type: "json" };
 import dts from "./src/index.js";
 
 const external = ["module", "path", "typescript", "rollup", "@babel/code-frame", "magic-string"];
