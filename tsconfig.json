@@ -4,7 +4,7 @@
     "diagnostics": true,
     "lib": ["esnext"],
 
-    "target": "es2019",
+    "target": "es2020",
 
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
