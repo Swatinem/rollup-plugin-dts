@@ -55,7 +55,7 @@ async function createBundle(options: Options, rollupOptions: RollupOptions) {
   return bundle.generate({
     ...rollupOptions.output,
     format: "es",
-    sourcemap: true,
+    sourcemap: false,
     sourcemapExcludeSources: true,
   });
 }
