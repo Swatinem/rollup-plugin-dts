@@ -1,5 +1,21 @@
 # Changelog
 
+## 5.0.0
+
+**Compatibility Notice**:
+
+This release targets **Rollup 3.0** and requires **Node 14**.
+
+**Features**:
+
+- Support reference path directives.
+
+**Thank you**:
+
+Features, fixes and improvements in this release have been contributed by:
+
+- [@pi0](https://github.com/pi0)
+
 ## 4.2.3
 
 **Fixes**:
