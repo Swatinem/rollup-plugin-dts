@@ -127,6 +127,10 @@ export const transform: PluginImpl<TransformOptions> = () => {
       code += writeBlock(Array.from(typeReferences, (ref) => `/// <reference types="${ref}" />`));
       code += fixer.fix();
 
+      if (!code) {
+        code += '\nexport { }';
+      }
+
       return { code, map: { mappings: "" } };
     },
   };
