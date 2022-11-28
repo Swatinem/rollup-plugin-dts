@@ -1,6 +1,6 @@
-// a.d.ts
+// mts.d.ts
 export { A } from './common-124c52f0.js';
-// b.d.ts
+// cts.d.ts
 export { B } from './common-124c52f0.js';
 // common-124c52f0.d.ts
 interface A {
