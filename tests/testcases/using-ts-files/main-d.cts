@@ -1,1 +1,0 @@
-export { D } from "./common";
