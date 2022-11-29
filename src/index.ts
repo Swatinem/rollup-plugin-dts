@@ -4,7 +4,7 @@ import ts from "typescript";
 import { createProgram, createPrograms, dts, formatHost } from "./program.js";
 import { transform } from "./transform/index.js";
 
-const tsx = /\.(t|j)sx?$/;
+const tsExtensions = /\.([cm]ts|[tj]sx?)$/;
 
 export interface Options {
   /**
@@ -86,7 +86,7 @@ const plugin: PluginImpl<Options> = (options = {}) => {
         }
         return (transformPlugin.transform as any).call(this, code, id);
       };
-      if (!tsx.test(id)) {
+      if (!tsExtensions.test(id)) {
         return null;
       }
       if (id.endsWith(dts)) {
@@ -95,7 +95,7 @@ const plugin: PluginImpl<Options> = (options = {}) => {
       }
 
       // Always try ".d.ts" before ".tsx?"
-      const declarationId = id.replace(tsx, dts);
+      const declarationId = id.replace(tsExtensions, dts);
       let module = getModule(declarationId);
       if (module.source) {
         return transformFile(module.source, declarationId);
