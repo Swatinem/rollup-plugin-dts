@@ -30,5 +30,4 @@ jobs:
         run: bash <(curl -s https://codecov.io/bash) -t ${{secrets.CODECOV_TOKEN}} -B ${{ github.ref }} -f coverage/coverage-final.json
       # test the minimum supported peer dependency version
       - run: npm install typescript@4.1 rollup@3.0
-      # aka `npm test` without the `pretest/build`
-      - run: node .build/tests/index.js
+      - run: npm test
