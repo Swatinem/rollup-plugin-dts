@@ -1,7 +1,7 @@
 import * as path from "path";
 import { PluginImpl } from "rollup";
 import ts from "typescript";
-import { createProgram, createPrograms, dts, formatHost } from "./program.js";
+import { createProgram, createPrograms, dts, formatHost, getCompilerOptions } from "./program.js";
 import { transform } from "./transform/index.js";
 
 const tsExtensions = /\.([cm]ts|[tj]sx?)$/;
@@ -20,12 +20,16 @@ export interface Options {
    * `baseUrl` and `paths` properties, you can pass in `compilerOptions`.
    */
   compilerOptions?: ts.CompilerOptions;
+  /**
+   * Path to tsconfig.json, by default, will try to load 'tsconfig.json'
+   */
+  tsconfig?: string;
 }
 
 const plugin: PluginImpl<Options> = (options = {}) => {
   const transformPlugin = transform(options);
 
-  const { respectExternal = false, compilerOptions = {} } = options;
+  const { respectExternal = false, compilerOptions = {}, tsconfig } = options;
   // There exists one Program object per entry point,
   // except when all entry points are ".d.ts" modules.
   let programs: Array<ts.Program> = [];
@@ -43,7 +47,7 @@ const plugin: PluginImpl<Options> = (options = {}) => {
       // so we need to ask every TypeScript program for the given filename.
       program = programs.find((p) => (source = p.getSourceFile(fileName)));
       if (!program && ts.sys.fileExists(fileName)) {
-        programs.push((program = createProgram(fileName, compilerOptions)));
+        programs.push((program = createProgram(fileName, compilerOptions, tsconfig)));
         source = program.getSourceFile(fileName);
       }
     }
@@ -72,7 +76,7 @@ const plugin: PluginImpl<Options> = (options = {}) => {
         }
       }
 
-      programs = createPrograms(Object.values(input), compilerOptions);
+      programs = createPrograms(Object.values(input), compilerOptions, tsconfig);
 
       return (transformPlugin.options as any).call(this, options);
     },
@@ -133,8 +137,10 @@ const plugin: PluginImpl<Options> = (options = {}) => {
       // normalize directory separators to forward slashes, as apparently typescript expects that?
       importer = importer.split("\\").join("/");
 
+      const { compilerOptions: resolvedCompilerOptions} = getCompilerOptions(source, compilerOptions, tsconfig);
+
       // resolve this via typescript
-      const { resolvedModule } = ts.nodeModuleNameResolver(source, importer, compilerOptions, ts.sys);
+      const { resolvedModule } = ts.nodeModuleNameResolver(source, importer, resolvedCompilerOptions , ts.sys);
       if (!resolvedModule) {
         return;
       }

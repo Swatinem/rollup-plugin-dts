@@ -27,15 +27,16 @@ const DEFAULT_OPTIONS: ts.CompilerOptions = {
   target: ts.ScriptTarget.ESNext,
 };
 
-function getCompilerOptions(
+export function getCompilerOptions(
   input: string,
   overrideOptions: ts.CompilerOptions,
+  tsconfig?: string,
 ): { dtsFiles: Array<string>; dirName: string; compilerOptions: ts.CompilerOptions } {
   const compilerOptions = { ...DEFAULT_OPTIONS, ...overrideOptions };
 
   let dirName = path.dirname(input);
   let dtsFiles: Array<string> = [];
-  const configPath = ts.findConfigFile(dirName, ts.sys.fileExists);
+  const configPath = tsconfig ? path.resolve(process.cwd(), tsconfig) : ts.findConfigFile(dirName, ts.sys.fileExists);
   if (!configPath) {
     return { dtsFiles, dirName, compilerOptions };
   }
@@ -62,8 +63,8 @@ function getCompilerOptions(
   };
 }
 
-export function createProgram(fileName: string, overrideOptions: ts.CompilerOptions) {
-  const { dtsFiles, compilerOptions } = getCompilerOptions(fileName, overrideOptions);
+export function createProgram(fileName: string, overrideOptions: ts.CompilerOptions, tsconfig?: string) {
+  const { dtsFiles, compilerOptions } = getCompilerOptions(fileName, overrideOptions, tsconfig);
   return ts.createProgram(
     [fileName].concat(Array.from(dtsFiles)),
     compilerOptions,
@@ -71,7 +72,7 @@ export function createProgram(fileName: string, overrideOptions: ts.CompilerOpti
   );
 }
 
-export function createPrograms(input: Array<string>, overrideOptions: ts.CompilerOptions) {
+export function createPrograms(input: Array<string>, overrideOptions: ts.CompilerOptions, tsconfig?: string) {
   const programs = [];
   let inputs: Array<string> = [];
   let dtsFiles: Set<string> = new Set();
@@ -84,7 +85,7 @@ export function createPrograms(input: Array<string>, overrideOptions: ts.Compile
     }
 
     main = path.resolve(main);
-    const options = getCompilerOptions(main, overrideOptions);
+    const options = getCompilerOptions(main, overrideOptions, tsconfig);
     options.dtsFiles.forEach(dtsFiles.add, dtsFiles);
 
     if (!inputs.length) {
