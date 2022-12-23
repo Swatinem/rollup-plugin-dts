@@ -1,5 +1,23 @@
 # Changelog
 
+## 5.1.0
+
+**Features**:
+
+- Add support for `.mts` and `.cts` files.
+- Allow supplying a custom `tsconfig.json`.
+
+**Fixes**:
+
+- Add an `export {}` for empty files without exports.
+
+**Thank you**:
+
+Features, fixes and improvements in this release have been contributed by:
+
+- [@await-ovo](https://github.com/await-ovo)
+- [@privatenumber](https://github.com/privatenumber)
+
 ## 5.0.0
 
 **Compatibility Notice**:
