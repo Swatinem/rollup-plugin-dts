@@ -137,10 +137,16 @@ const plugin: PluginImpl<Options> = (options = {}) => {
       // normalize directory separators to forward slashes, as apparently typescript expects that?
       importer = importer.split("\\").join("/");
 
-      const { compilerOptions: resolvedCompilerOptions} = getCompilerOptions(source, compilerOptions, tsconfig);
+      const resolvedSource = source.startsWith(".") ? path.resolve(path.dirname(importer), source) : source;
+
+      const { compilerOptions: resolvedCompilerOptions } = getCompilerOptions(
+        resolvedSource,
+        compilerOptions,
+        tsconfig,
+      );
 
       // resolve this via typescript
-      const { resolvedModule } = ts.nodeModuleNameResolver(source, importer, resolvedCompilerOptions , ts.sys);
+      const { resolvedModule } = ts.nodeModuleNameResolver(source, importer, resolvedCompilerOptions, ts.sys);
       if (!resolvedModule) {
         return;
       }
