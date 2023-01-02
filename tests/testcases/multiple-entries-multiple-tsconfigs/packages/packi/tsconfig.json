@@ -1,0 +1,7 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "moduleResolution": "node" // the test should fail without this
+  },
+  "include": ["src", "index.ts"]
+}
