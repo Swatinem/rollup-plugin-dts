@@ -12,6 +12,16 @@ export function forEachFixture(fixtures: string, cb: (name: string, dir: string)
   }
 }
 
+function patchConsoleError() {
+  const originalConsoleError = console.error;
+  console.error = (message) => {
+    throw new Error(message);
+  };
+  return () => {
+    console.error = originalConsoleError;
+  };
+}
+
 export class Harness {
   tests = new Map<string, (bless: boolean) => any>();
 
@@ -35,6 +45,7 @@ export class Harness {
 
     let failures: Array<{ name: string; error: Error }> = [];
     for (const [name, fn] of this.tests.entries()) {
+      const restoreConsoleError = patchConsoleError();
       try {
         if (filter && !name.includes(filter)) {
           continue;
@@ -48,6 +59,8 @@ export class Harness {
         console.log();
         console.log((error as any).stack);
         console.log();
+      } finally {
+        restoreConsoleError();
       }
     }
 
