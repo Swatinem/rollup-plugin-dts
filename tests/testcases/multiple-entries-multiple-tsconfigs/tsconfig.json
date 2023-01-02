@@ -1,0 +1,6 @@
+{
+  "compilerOptions": {
+    "moduleResolution": "classic"
+  },
+  "include": ["does-not-exist"]
+}
