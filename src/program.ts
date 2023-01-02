@@ -27,26 +27,69 @@ const DEFAULT_OPTIONS: ts.CompilerOptions = {
   target: ts.ScriptTarget.ESNext,
 };
 
+const configByPath = new Map<string, ts.ParsedCommandLine>();
+
+const logCache = (...args: any[]) => (process.env.DTS_LOG_CACHE ? console.log("[cache]", ...args) : null);
+
+/**
+ * Caches the config for every path between two given paths.
+ *
+ * It starts from the first path and walks up the directory tree until it reaches the second path.
+ */
+function cacheConfig([fromPath, toPath]: [from: string, to: string], config: ts.ParsedCommandLine) {
+  logCache(fromPath);
+  configByPath.set(fromPath, config);
+  while (
+    fromPath !== toPath &&
+    // make sure we're not stuck in an infinite loop
+    fromPath !== path.dirname(fromPath)
+  ) {
+    fromPath = path.dirname(fromPath);
+    logCache("up", fromPath);
+    if (configByPath.has(fromPath)) return logCache("has", fromPath);
+    configByPath.set(fromPath, config);
+  }
+}
+
 export function getCompilerOptions(
   input: string,
   overrideOptions: ts.CompilerOptions,
-  tsconfig?: string,
+  overrideConfigPath?: string,
 ): { dtsFiles: Array<string>; dirName: string; compilerOptions: ts.CompilerOptions } {
   const compilerOptions = { ...DEFAULT_OPTIONS, ...overrideOptions };
-
   let dirName = path.dirname(input);
   let dtsFiles: Array<string> = [];
-  const configPath = tsconfig ? path.resolve(process.cwd(), tsconfig) : ts.findConfigFile(dirName, ts.sys.fileExists);
-  if (!configPath) {
-    return { dtsFiles, dirName, compilerOptions };
+
+  // if a custom config is provided we'll use that as the cache key since it will always be used
+  const cacheKey = overrideConfigPath || dirName;
+  if (!configByPath.has(cacheKey)) {
+    logCache("miss", cacheKey);
+    const configPath = overrideConfigPath
+      ? path.resolve(process.cwd(), overrideConfigPath)
+      : ts.findConfigFile(dirName, ts.sys.fileExists);
+    if (!configPath) {
+      return { dtsFiles, dirName, compilerOptions };
+    }
+    let inputDirName = dirName;
+    dirName = path.dirname(configPath);
+    const { config, error } = ts.readConfigFile(configPath, ts.sys.readFile);
+    if (error) {
+      console.error(ts.formatDiagnostic(error, formatHost));
+      return { dtsFiles, dirName, compilerOptions };
+    }
+    logCache('tsconfig', config);
+    const configContents = ts.parseJsonConfigFileContent(config, ts.sys, dirName);
+    if (overrideConfigPath) {
+      // if a custom config is provided, we always only use that one
+      cacheConfig([overrideConfigPath, overrideConfigPath], configContents);
+    } else {
+      // cache the config for all directories between input and resolved config path
+      cacheConfig([inputDirName, dirName], configContents);
+    }
+  } else {
+    logCache("HIT", cacheKey);
   }
-  dirName = path.dirname(configPath);
-  const { config, error } = ts.readConfigFile(configPath, ts.sys.readFile);
-  if (error) {
-    console.error(ts.formatDiagnostic(error, formatHost));
-    return { dtsFiles, dirName, compilerOptions };
-  }
-  const { fileNames, options, errors } = ts.parseJsonConfigFileContent(config, ts.sys, dirName);
+  const { fileNames, options, errors } = configByPath.get(cacheKey)!;
 
   dtsFiles = fileNames.filter((name) => name.endsWith(dts));
   if (errors.length) {

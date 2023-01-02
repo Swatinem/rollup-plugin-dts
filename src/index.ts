@@ -137,13 +137,17 @@ const plugin: PluginImpl<Options> = (options = {}) => {
       // normalize directory separators to forward slashes, as apparently typescript expects that?
       importer = importer.split("\\").join("/");
 
-      const resolvedSource = source.startsWith(".") ? path.resolve(path.dirname(importer), source) : source;
-
-      const { compilerOptions: resolvedCompilerOptions } = getCompilerOptions(
-        resolvedSource,
-        compilerOptions,
-        tsconfig,
-      );
+      let resolvedCompilerOptions = compilerOptions;
+      if (tsconfig) {
+        // Here we have a chicken and egg problem.
+        // `source` would be resolved by `ts.nodeModuleNameResolver` a few lines below, but
+        // `ts.nodeModuleNameResolver` requires `compilerOptions` which we have to resolve here,
+        // since we have a custom `tsconfig.json`.
+        // So, we use Node's resolver algorithm so we can see where the request is coming from so we
+        // can load the custom `tsconfig.json` from the correct path.
+        const resolvedSource = source.startsWith(".") ? path.resolve(path.dirname(importer), source) : source;
+        resolvedCompilerOptions = getCompilerOptions(resolvedSource, compilerOptions, tsconfig).compilerOptions;
+      }
 
       // resolve this via typescript
       const { resolvedModule } = ts.nodeModuleNameResolver(source, importer, resolvedCompilerOptions, ts.sys);
