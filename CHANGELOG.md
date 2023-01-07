@@ -1,5 +1,18 @@
 # Changelog
 
+## 5.1.1
+
+**Fixes**:
+
+- Resolve `tsconfig.json` correctly for relative imports.
+
+**Thank you**:
+
+Features, fixes and improvements in this release have been contributed by:
+
+- [@mrm007](https://github.com/mrm007)
+- [@Mister-Hope](https://github.com/Mister-Hope)
+
 ## 5.1.0
 
 **Features**:
