@@ -1,5 +1,5 @@
 export interface A {}
-export declare function b(): void;
+export declare function B(): void;
 export declare class C {}
 export declare enum D {
   A = 0,

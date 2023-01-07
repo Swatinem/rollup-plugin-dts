@@ -1,12 +1,12 @@
-interface IBar {}
 declare class Bar {}
-type __bar_IBar = IBar;
+interface IBar {}
 type __bar_Bar = Bar;
 declare const __bar_Bar: typeof Bar;
+type __bar_IBar = IBar;
 declare namespace __bar {
   export {
-    __bar_IBar as IBar,
     __bar_Bar as Bar,
+    __bar_IBar as IBar,
   };
 }
 interface Foo {

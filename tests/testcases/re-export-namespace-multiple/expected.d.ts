@@ -1,5 +1,5 @@
 interface A {}
-declare function b(): void;
+declare function B(): void;
 declare class C {}
 declare enum D {
   A = 0,
@@ -8,7 +8,7 @@ declare enum D {
 declare const E: string;
 declare type F = string;
 type defs_d_A = A;
-declare const defs_d_b: typeof b;
+declare const defs_d_B: typeof B;
 type defs_d_C = C;
 declare const defs_d_C: typeof C;
 type defs_d_D = D;
@@ -18,7 +18,7 @@ type defs_d_F = F;
 declare namespace defs_d {
   export {
     defs_d_A as A,
-    defs_d_b as b,
+    defs_d_B as B,
     defs_d_C as C,
     defs_d_D as D,
     defs_d_E as E,
