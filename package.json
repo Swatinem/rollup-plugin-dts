@@ -37,7 +37,7 @@
     "dist"
   ],
   "scripts": {
-    "clean": "rimraf dist",
+    "clean": "node -e \"(async () => { try { await require('fs/promises').rm('dist', { recursive: true }); } catch {} })()\"",
     "prebuild": "npm run clean",
     "build": "tsc && rollup --bundleConfigAsCjs -c .build/rollup.config.js",
     "prepublishOnly": "npm run test",
@@ -53,13 +53,10 @@
     "@types/babel__code-frame": "^7.0.3",
     "@types/d3-drag": "^3.0.2",
     "@types/estree": "1.0.0",
-    "@types/fs-extra": "^9.0.13",
     "@types/node": "^18.11.18",
     "@types/react": "^18.0.26",
     "c8": "^7.12.0",
-    "fs-extra": "^11.1.0",
-    "rimraf": "^3.0.2",
-    "rollup": "3.9.1",
+    "rollup": "3.10.0",
     "typescript": "4.9.4"
   },
   "peerDependencies": {

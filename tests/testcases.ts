@@ -1,16 +1,16 @@
 import * as assert from "assert";
-import fsExtra from "fs-extra";
+import fs from "fs/promises";
 import * as path from "path";
 import { InputOption, InputOptions, rollup, RollupOptions, RollupOutput } from "rollup";
 import ts from "typescript";
 import dts, { Options } from "../src/index.js";
-import { forEachFixture, Harness } from "./utils.js";
+import { exists, forEachFixture, Harness } from "./utils.js";
 
 export default (t: Harness) => {
   forEachFixture("testcases", (name, dir) => {
     t.test(`testcases/${name}`, async (bless) => {
       const rollupOptions: InputOptions = {
-        input: (await fsExtra.pathExists(path.join(dir, "index.d.ts"))) ? "index.d.ts" : "index.ts",
+        input: (await exists(path.join(dir, "index.d.ts"))) ? "index.d.ts" : "index.ts",
       };
       const meta: Meta = {
         options: {},
@@ -116,14 +116,14 @@ async function assertTestcase(dir: string, meta: Meta, bless: boolean) {
   }
 
   const expectedDts = path.join(dir, "expected.d.ts");
-  const hasExpected = await fsExtra.pathExists(expectedDts);
+  const hasExpected = await exists(expectedDts);
   // const expectedMap = path.join(dir, "expected.d.ts.map");
   if (!hasExpected || bless) {
-    await fsExtra.writeFile(expectedDts, code);
+    await fs.writeFile(expectedDts, code);
     // await fsExtra.writeFile(expectedMap, map);
   }
 
-  const expectedCode = await fsExtra.readFile(expectedDts, "utf-8");
+  const expectedCode = await fs.readFile(expectedDts, "utf-8");
   assert.strictEqual(code, expectedCode);
   // expect(String(map)).toEqual(await fsExtra.readFile(expectedMap, "utf-8"));
 

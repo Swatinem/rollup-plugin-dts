@@ -1,6 +1,16 @@
 import * as path from "path";
 import * as fs from "fs";
 
+export async function exists(path: string): Promise<boolean> {
+  // do we really need a damn 6-liner for simple boolean fn?
+  try {
+    await fs.promises.access(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function forEachFixture(fixtures: string, cb: (name: string, dir: string) => void): void {
   const dir = path.resolve(process.cwd(), "tests", fixtures);
   const dirs = fs.readdirSync(dir);
