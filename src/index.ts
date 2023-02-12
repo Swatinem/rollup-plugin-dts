@@ -1,5 +1,5 @@
 import * as path from "path";
-import { Plugin } from "rollup";
+import { Plugin, TransformPluginContext } from "rollup";
 import ts from "typescript";
 import { createProgram, createPrograms, dts, formatHost, getCompilerOptions } from "./program.js";
 import { transform } from "./transform/index.js";
@@ -69,6 +69,15 @@ function getModule(
   }
 }
 
+function watchSourceFilesInProgram(transformCtx: TransformPluginContext, id: string, program: ts.Program) {
+  const sourceDirectory = path.dirname(id);
+  const sourceFilesInProgram = program
+    .getSourceFiles()
+    .map((sourceFile) => sourceFile.fileName)
+    .filter((fileName) => fileName.startsWith(sourceDirectory));
+  sourceFilesInProgram.forEach(transformCtx.addWatchFile);
+}
+
 export default (options: Options = {}) => {
   // There exists one Program object per entry point,
   // except when all entry points are ".d.ts" modules.
@@ -133,6 +142,8 @@ export default (options: Options = {}) => {
       if (typeof module.source != "object" || !module.program) {
         return null;
       }
+      // Watch all source files in the program for changes
+      watchSourceFilesInProgram(this, id, module.program);
       let generated!: ReturnType<typeof transformFile>;
       const { emitSkipped, diagnostics } = module.program.emit(
         module.source,
