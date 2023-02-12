@@ -1,20 +1,27 @@
 import * as path from "path";
 import { Plugin } from "rollup";
 import ts from "typescript";
-import { DtsPluginContext } from "./context.js";
-import { Options, resolveDefaultOptions } from "./options.js";
+import { Options, resolveDefaultOptions, ResolvedOptions } from "./options.js";
 import { createProgram, createPrograms, dts, formatHost, getCompilerOptions } from "./program.js";
 import { transform } from "./transform/index.js";
 
 export type { Options };
 
-const tsExtensions = /\.([cm]ts|[tj]sx?)$/;
+const TS_EXTENSIONS = /\.([cm]ts|[tj]sx?)$/;
+
+interface DtsPluginContext {
+  /**
+   * There exists one Program object per entry point, except when all entry points are ".d.ts" modules.
+   */
+  programs: ts.Program[];
+  resolvedOptions: ResolvedOptions;
+}
+
 interface ResolvedModule {
   code: string;
   source?: ts.SourceFile;
   program?: ts.Program;
 }
-
 function getModule(
   { programs, resolvedOptions: { compilerOptions, tsconfig } }: DtsPluginContext,
   fileName: string,
@@ -91,7 +98,7 @@ export default function rollupPluginDts(options: Options = {}) {
     outputOptions: transformPlugin.outputOptions,
 
     transform(code, id) {
-      if (!tsExtensions.test(id)) {
+      if (!TS_EXTENSIONS.test(id)) {
         return null;
       }
 
@@ -116,7 +123,7 @@ export default function rollupPluginDts(options: Options = {}) {
       };
 
       const treatTsAsDts = () => {
-        const declarationId = id.replace(tsExtensions, dts);
+        const declarationId = id.replace(TS_EXTENSIONS, dts);
         let module = getModule(ctx, declarationId, code);
         if (module) {
           watchFiles(module);
@@ -130,7 +137,7 @@ export default function rollupPluginDts(options: Options = {}) {
         if (!module || !module.source || !module.program) return null;
         watchFiles(module);
 
-        const declarationId = id.replace(tsExtensions, dts);
+        const declarationId = id.replace(TS_EXTENSIONS, dts);
 
         let generated!: ReturnType<typeof transformPlugin.transform>;
         const { emitSkipped, diagnostics } = module.program.emit(
