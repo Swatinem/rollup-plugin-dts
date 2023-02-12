@@ -1,11 +1,9 @@
-import { PluginImpl } from "rollup";
+import * as path from "path";
+import { Plugin } from "rollup";
 import ts from "typescript";
 import { NamespaceFixer } from "./NamespaceFixer.js";
 import { preProcess } from "./preprocess.js";
 import { convert } from "./Transformer.js";
-import * as path from "path";
-
-export interface TransformOptions {}
 
 function parse(fileName: string, code: string): ts.SourceFile {
   return ts.createSourceFile(fileName, code, ts.ScriptTarget.Latest, true);
@@ -29,7 +27,7 @@ function parse(fileName: string, code: string): ts.SourceFile {
  *    the postprocess convert any javascript code that was created for namespace
  *    exports into TypeScript namespaces. See `NamespaceFixer.ts`.
  */
-export const transform: PluginImpl<TransformOptions> = () => {
+export const transform = () => {
   const allTypeReferences = new Map<string, Set<string>>();
   const allFileReferences = new Map<string, Set<string>>();
 
@@ -128,12 +126,12 @@ export const transform: PluginImpl<TransformOptions> = () => {
       code += fixer.fix();
 
       if (!code) {
-        code += '\nexport { }';
+        code += "\nexport { }";
       }
 
       return { code, map: { mappings: "" } };
     },
-  };
+  } satisfies Plugin;
 };
 
 function writeBlock(codes: Array<string>): string {

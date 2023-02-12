@@ -26,9 +26,9 @@ export interface Options {
   tsconfig?: string;
 }
 
-const plugin: PluginImpl<Options> = (options = {}) => {
-  const transformPlugin = transform(options);
+const transformPlugin = transform();
 
+const plugin: PluginImpl<Options> = (options = {}) => {
   const { respectExternal = false, compilerOptions = {}, tsconfig } = options;
   // There exists one Program object per entry point,
   // except when all entry points are ".d.ts" modules.
@@ -78,7 +78,7 @@ const plugin: PluginImpl<Options> = (options = {}) => {
 
       programs = createPrograms(Object.values(input), compilerOptions, tsconfig);
 
-      return (transformPlugin.options as any).call(this, options);
+      return transformPlugin.options.call(this, options);
     },
 
     outputOptions: transformPlugin.outputOptions,
@@ -88,7 +88,7 @@ const plugin: PluginImpl<Options> = (options = {}) => {
         if (typeof source === "object") {
           code = source.getFullText();
         }
-        return (transformPlugin.transform as any).call(this, code, id);
+        return transformPlugin.transform.call(this, code, id);
       };
       if (!tsExtensions.test(id)) {
         return null;
