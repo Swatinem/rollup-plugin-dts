@@ -67,6 +67,10 @@ export default function rollupPluginDts(options: Options = {}) {
   return {
     name: "dts",
 
+    // pass outputOptions & renderChunk hooks to the inner transform plugin
+    outputOptions: transformPlugin.outputOptions,
+    renderChunk: transformPlugin.renderChunk,
+
     options(options) {
       let { input = [] } = options;
       if (!Array.isArray(input)) {
@@ -94,8 +98,6 @@ export default function rollupPluginDts(options: Options = {}) {
 
       return transformPlugin.options.call(this, options);
     },
-
-    outputOptions: transformPlugin.outputOptions,
 
     transform(code, id) {
       if (!TS_EXTENSIONS.test(id)) {
@@ -203,7 +205,5 @@ export default function rollupPluginDts(options: Options = {}) {
         return { id: path.resolve(resolvedModule.resolvedFileName) };
       }
     },
-
-    renderChunk: transformPlugin.renderChunk,
   } satisfies Plugin;
 }
