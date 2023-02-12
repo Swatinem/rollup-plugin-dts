@@ -39,6 +39,9 @@ type ResolvedOptions = ReturnType<typeof resolveDefaultOptions>;
 const transformPlugin = transform();
 
 interface PluginContext {
+  /**
+   * There exists one Program object per entry point, except when all entry points are ".d.ts" modules.
+   */
   programs: ts.Program[];
   resolvedOptions: ResolvedOptions;
 }
@@ -79,8 +82,6 @@ function watchSourceFilesInProgram(transformCtx: TransformPluginContext, id: str
 }
 
 export default (options: Options = {}) => {
-  // There exists one Program object per entry point,
-  // except when all entry points are ".d.ts" modules.
   const ctx: PluginContext = { programs: [], resolvedOptions: resolveDefaultOptions(options) };
 
   return {
