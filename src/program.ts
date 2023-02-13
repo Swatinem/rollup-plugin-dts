@@ -77,7 +77,7 @@ export function getCompilerOptions(
       console.error(ts.formatDiagnostic(error, formatHost));
       return { dtsFiles, dirName, compilerOptions };
     }
-    logCache('tsconfig', config);
+    logCache("tsconfig", config);
     const configContents = ts.parseJsonConfigFileContent(config, ts.sys, dirName);
     if (overrideConfigPath) {
       // if a custom config is provided, we always only use that one

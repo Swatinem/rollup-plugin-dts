@@ -1,61 +1,75 @@
 import * as path from "path";
-import { PluginImpl } from "rollup";
+import { Plugin } from "rollup";
 import ts from "typescript";
+import { Options, resolveDefaultOptions, ResolvedOptions } from "./options.js";
 import { createProgram, createPrograms, dts, formatHost, getCompilerOptions } from "./program.js";
 import { transform } from "./transform/index.js";
 
-const tsExtensions = /\.([cm]ts|[tj]sx?)$/;
+export type { Options };
 
-export interface Options {
+const TS_EXTENSIONS = /\.([cm]ts|[tj]sx?)$/;
+
+interface DtsPluginContext {
   /**
-   * The plugin will by default flag *all* external libraries as `external`,
-   * and thus prevent them from be bundled.
-   * If you set the `respectExternal` option to `true`, the plugin will not do
-   * any default classification, but rather use the `external` option as
-   * configured via rollup.
+   * There exists one Program object per entry point, except when all entry points are ".d.ts" modules.
    */
-  respectExternal?: boolean;
-  /**
-   * In case you want to use TypeScript path-mapping feature, using the
-   * `baseUrl` and `paths` properties, you can pass in `compilerOptions`.
-   */
-  compilerOptions?: ts.CompilerOptions;
-  /**
-   * Path to tsconfig.json, by default, will try to load 'tsconfig.json'
-   */
-  tsconfig?: string;
+  programs: ts.Program[];
+  resolvedOptions: ResolvedOptions;
 }
 
-const plugin: PluginImpl<Options> = (options = {}) => {
-  const transformPlugin = transform(options);
-
-  const { respectExternal = false, compilerOptions = {}, tsconfig } = options;
-  // There exists one Program object per entry point,
-  // except when all entry points are ".d.ts" modules.
-  let programs: Array<ts.Program> = [];
-
-  type ResolvedSourceFile = ts.SourceFile | undefined | true;
-  function getModule(fileName: string) {
-    let source: ResolvedSourceFile;
-    let program: ts.Program | undefined;
-    // Create any `ts.SourceFile` objects on-demand for ".d.ts" modules,
-    // but only when there are zero ".ts" entry points.
-    if (!programs.length && fileName.endsWith(dts)) {
-      source = true;
-    } else {
-      // Rollup doesn't tell you the entry point of each module in the bundle,
-      // so we need to ask every TypeScript program for the given filename.
-      program = programs.find((p) => (source = p.getSourceFile(fileName)));
-      if (!program && ts.sys.fileExists(fileName)) {
-        programs.push((program = createProgram(fileName, compilerOptions, tsconfig)));
-        source = program.getSourceFile(fileName);
-      }
-    }
-    return { source, program };
+interface ResolvedModule {
+  code: string;
+  source?: ts.SourceFile;
+  program?: ts.Program;
+}
+function getModule(
+  { programs, resolvedOptions: { compilerOptions, tsconfig } }: DtsPluginContext,
+  fileName: string,
+  code: string,
+): ResolvedModule | null {
+  // Create any `ts.SourceFile` objects on-demand for ".d.ts" modules,
+  // but only when there are zero ".ts" entry points.
+  if (!programs.length && fileName.endsWith(dts)) {
+    return { code };
   }
+
+  // Rollup doesn't tell you the entry point of each module in the bundle,
+  // so we need to ask every TypeScript program for the given filename.
+  const existingProgram = programs.find((p) => !!p.getSourceFile(fileName));
+  if (existingProgram) {
+    // we know this exists b/c of the .filter above, so this non-null assertion is safe
+    const source = existingProgram.getSourceFile(fileName)!;
+    return {
+      code: source.getFullText(),
+      source,
+      program: existingProgram,
+    };
+  } else if (ts.sys.fileExists(fileName)) {
+    const newProgram = createProgram(fileName, compilerOptions, tsconfig);
+    programs.push(newProgram);
+    // we created hte program from this fileName, so the source file must exist :P
+    const source = newProgram.getSourceFile(fileName)!;
+    return {
+      code: source.getFullText(),
+      source,
+      program: newProgram,
+    };
+  } else {
+    // the file isn't part of an existing program and doesn't exist on disk
+    return null;
+  }
+}
+
+export default function rollupPluginDts(options: Options = {}) {
+  const transformPlugin = transform();
+  const ctx: DtsPluginContext = { programs: [], resolvedOptions: resolveDefaultOptions(options) };
 
   return {
     name: "dts",
+
+    // pass outputOptions & renderChunk hooks to the inner transform plugin
+    outputOptions: transformPlugin.outputOptions,
+    renderChunk: transformPlugin.renderChunk,
 
     options(options) {
       let { input = [] } = options;
@@ -76,57 +90,81 @@ const plugin: PluginImpl<Options> = (options = {}) => {
         }
       }
 
-      programs = createPrograms(Object.values(input), compilerOptions, tsconfig);
+      ctx.programs = createPrograms(
+        Object.values(input),
+        ctx.resolvedOptions.compilerOptions,
+        ctx.resolvedOptions.tsconfig,
+      );
 
-      return (transformPlugin.options as any).call(this, options);
+      return transformPlugin.options.call(this, options);
     },
 
-    outputOptions: transformPlugin.outputOptions,
-
     transform(code, id) {
-      const transformFile = (source: ResolvedSourceFile, id: string) => {
-        if (typeof source === "object") {
-          code = source.getFullText();
-        }
-        return (transformPlugin.transform as any).call(this, code, id);
-      };
-      if (!tsExtensions.test(id)) {
+      if (!TS_EXTENSIONS.test(id)) {
         return null;
-      }
-      if (id.endsWith(dts)) {
-        const { source } = getModule(id);
-        return source ? transformFile(source, id) : null;
       }
 
-      // Always try ".d.ts" before ".tsx?"
-      const declarationId = id.replace(tsExtensions, dts);
-      let module = getModule(declarationId);
-      if (module.source) {
-        return transformFile(module.source, declarationId);
-      }
-      // Generate in-memory ".d.ts" modules from ".tsx?" modules!
-      module = getModule(id);
-      if (typeof module.source != "object" || !module.program) {
-        return null;
-      }
-      let generated!: ReturnType<typeof transformFile>;
-      const { emitSkipped, diagnostics } = module.program.emit(
-        module.source,
-        (_, declarationText) => {
-          code = declarationText;
-          generated = transformFile(true, declarationId);
-        },
-        undefined, // cancellationToken
-        true, // emitOnlyDtsFiles
-      );
-      if (emitSkipped) {
-        const errors = diagnostics.filter((diag) => diag.category === ts.DiagnosticCategory.Error);
-        if (errors.length) {
-          console.error(ts.formatDiagnostics(errors, formatHost));
-          this.error("Failed to compile. Check the logs above.");
+      const watchFiles = (module: ResolvedModule) => {
+        if (module.program) {
+          const sourceDirectory = path.dirname(id);
+          const sourceFilesInProgram = module.program
+            .getSourceFiles()
+            .map((sourceFile) => sourceFile.fileName)
+            .filter((fileName) => fileName.startsWith(sourceDirectory));
+          sourceFilesInProgram.forEach(this.addWatchFile);
         }
-      }
-      return generated;
+      };
+
+      const handleDtsFile = () => {
+        const module = getModule(ctx, id, code);
+        if (module) {
+          watchFiles(module);
+          return transformPlugin.transform.call(this, module.code, id);
+        }
+        return null;
+      };
+
+      const treatTsAsDts = () => {
+        const declarationId = id.replace(TS_EXTENSIONS, dts);
+        let module = getModule(ctx, declarationId, code);
+        if (module) {
+          watchFiles(module);
+          return transformPlugin.transform.call(this, module.code, declarationId);
+        }
+        return null;
+      };
+
+      const generateDtsFromTs = () => {
+        const module = getModule(ctx, id, code);
+        if (!module || !module.source || !module.program) return null;
+        watchFiles(module);
+
+        const declarationId = id.replace(TS_EXTENSIONS, dts);
+
+        let generated!: ReturnType<typeof transformPlugin.transform>;
+        const { emitSkipped, diagnostics } = module.program.emit(
+          module.source,
+          (_, declarationText) => {
+            generated = transformPlugin.transform.call(this, declarationText, declarationId);
+          },
+          undefined, // cancellationToken
+          true, // emitOnlyDtsFiles
+        );
+        if (emitSkipped) {
+          const errors = diagnostics.filter((diag) => diag.category === ts.DiagnosticCategory.Error);
+          if (errors.length) {
+            console.error(ts.formatDiagnostics(errors, formatHost));
+            this.error("Failed to compile. Check the logs above.");
+          }
+        }
+        return generated;
+      };
+
+      // if it's a .d.ts file, handle it as-is
+      if (id.endsWith(dts)) return handleDtsFile();
+
+      // first attempt to treat .ts files as .d.ts files, and otherwise use the typescript compiler to generate the declarations
+      return treatTsAsDts() ?? generateDtsFromTs();
     },
 
     resolveId(source, importer) {
@@ -137,8 +175,8 @@ const plugin: PluginImpl<Options> = (options = {}) => {
       // normalize directory separators to forward slashes, as apparently typescript expects that?
       importer = importer.split("\\").join("/");
 
-      let resolvedCompilerOptions = compilerOptions;
-      if (tsconfig) {
+      let resolvedCompilerOptions = ctx.resolvedOptions.compilerOptions;
+      if (ctx.resolvedOptions.tsconfig) {
         // Here we have a chicken and egg problem.
         // `source` would be resolved by `ts.nodeModuleNameResolver` a few lines below, but
         // `ts.nodeModuleNameResolver` requires `compilerOptions` which we have to resolve here,
@@ -146,7 +184,11 @@ const plugin: PluginImpl<Options> = (options = {}) => {
         // So, we use Node's resolver algorithm so we can see where the request is coming from so we
         // can load the custom `tsconfig.json` from the correct path.
         const resolvedSource = source.startsWith(".") ? path.resolve(path.dirname(importer), source) : source;
-        resolvedCompilerOptions = getCompilerOptions(resolvedSource, compilerOptions, tsconfig).compilerOptions;
+        resolvedCompilerOptions = getCompilerOptions(
+          resolvedSource,
+          ctx.resolvedOptions.compilerOptions,
+          ctx.resolvedOptions.tsconfig,
+        ).compilerOptions;
       }
 
       // resolve this via typescript
@@ -155,7 +197,7 @@ const plugin: PluginImpl<Options> = (options = {}) => {
         return;
       }
 
-      if (!respectExternal && resolvedModule.isExternalLibraryImport) {
+      if (!ctx.resolvedOptions.respectExternal && resolvedModule.isExternalLibraryImport) {
         // here, we define everything that comes from `node_modules` as `external`.
         return { id: source, external: true };
       } else {
@@ -163,9 +205,5 @@ const plugin: PluginImpl<Options> = (options = {}) => {
         return { id: path.resolve(resolvedModule.resolvedFileName) };
       }
     },
-
-    renderChunk: transformPlugin.renderChunk,
-  };
-};
-
-export default plugin;
+  } satisfies Plugin;
+}
