@@ -1,6 +1,6 @@
 {
   "name": "rollup-plugin-dts",
-  "version": "5.1.1",
+  "version": "5.2.0",
   "description": "A rollup plugin that will bundle up your .d.ts definition files.",
   "keywords": [
     "rollup-plugin",
