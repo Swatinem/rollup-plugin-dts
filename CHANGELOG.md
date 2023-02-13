@@ -1,5 +1,18 @@
 # Changelog
 
+## 5.2.0
+
+**Fixes**:
+
+- Properly support watch mode when transforming `.ts` files.
+
+**Thank you**:
+
+Features, fixes and improvements in this release have been contributed by:
+
+- [@rayzr522](https://github.com/rayzr522)
+- [@btea](https://github.com/btea)
+
 ## 5.1.1
 
 **Fixes**:

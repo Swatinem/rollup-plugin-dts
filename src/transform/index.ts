@@ -89,7 +89,7 @@ export const transform = () => {
         console.log(JSON.stringify(converted.ast.body, undefined, 2));
       }
 
-      return { code, ast: converted.ast as any, map: preprocessed.code.generateMap() };
+      return { code, ast: converted.ast as any, map: preprocessed.code.generateMap() as any };
     },
 
     renderChunk(code, chunk, options) {

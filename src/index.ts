@@ -22,6 +22,7 @@ interface ResolvedModule {
   source?: ts.SourceFile;
   program?: ts.Program;
 }
+
 function getModule(
   { programs, resolvedOptions: { compilerOptions, tsconfig } }: DtsPluginContext,
   fileName: string,
