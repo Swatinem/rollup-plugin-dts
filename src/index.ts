@@ -193,7 +193,7 @@ export default function rollupPluginDts(options: Options = {}) {
       }
 
       // resolve this via typescript
-      const { resolvedModule } = ts.nodeModuleNameResolver(source, importer, resolvedCompilerOptions, ts.sys);
+      const { resolvedModule } = ts.resolveModuleName(source, importer, resolvedCompilerOptions, ts.sys);
       if (!resolvedModule) {
         return;
       }
