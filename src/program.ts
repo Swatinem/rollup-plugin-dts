@@ -1,6 +1,7 @@
 import * as path from "path";
 import ts from "typescript";
 
+export const DTS_EXTENSIONS = /\.d\.(c|m)?tsx?$/;
 export const dts = ".d.ts";
 
 export const formatHost: ts.FormatDiagnosticsHost = {
@@ -91,7 +92,7 @@ export function getCompilerOptions(
   }
   const { fileNames, options, errors } = configByPath.get(cacheKey)!;
 
-  dtsFiles = fileNames.filter((name) => name.endsWith(dts));
+  dtsFiles = fileNames.filter((name) => DTS_EXTENSIONS.test(name));
   if (errors.length) {
     console.error(ts.formatDiagnostics(errors, formatHost));
     return { dtsFiles, dirName, compilerOptions };
@@ -123,7 +124,7 @@ export function createPrograms(input: Array<string>, overrideOptions: ts.Compile
   let compilerOptions: ts.CompilerOptions = {};
 
   for (let main of input) {
-    if (main.endsWith(dts)) {
+    if (DTS_EXTENSIONS.test(main)) {
       continue;
     }
 
