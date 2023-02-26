@@ -2,7 +2,7 @@ import * as path from "path";
 import { Plugin } from "rollup";
 import ts from "typescript";
 import { Options, resolveDefaultOptions, ResolvedOptions } from "./options.js";
-import { createProgram, createPrograms, dts, formatHost, getCompilerOptions } from "./program.js";
+import { createProgram, createPrograms, dts, DTS_EXTENSIONS, formatHost, getCompilerOptions } from "./program.js";
 import { transform } from "./transform/index.js";
 
 export type { Options };
@@ -30,7 +30,7 @@ function getModule(
 ): ResolvedModule | null {
   // Create any `ts.SourceFile` objects on-demand for ".d.ts" modules,
   // but only when there are zero ".ts" entry points.
-  if (!programs.length && fileName.endsWith(dts)) {
+  if (!programs.length && DTS_EXTENSIONS.test(fileName)) {
     return { code };
   }
 
@@ -162,7 +162,7 @@ export default function rollupPluginDts(options: Options = {}) {
       };
 
       // if it's a .d.ts file, handle it as-is
-      if (id.endsWith(dts)) return handleDtsFile();
+      if (DTS_EXTENSIONS.test(id)) return handleDtsFile();
 
       // first attempt to treat .ts files as .d.ts files, and otherwise use the typescript compiler to generate the declarations
       return treatTsAsDts() ?? generateDtsFromTs();
