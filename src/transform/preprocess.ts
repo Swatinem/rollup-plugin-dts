@@ -320,6 +320,7 @@ function fixModifiers(code: MagicString, node: ts.Node) {
   // remove the `export` and `default` modifier, add a `declare` if its missing.
   let hasDeclare = false;
   const needsDeclare =
+    ts.isEnumDeclaration(node) ||
     ts.isClassDeclaration(node) ||
     ts.isFunctionDeclaration(node) ||
     ts.isModuleDeclaration(node) ||
