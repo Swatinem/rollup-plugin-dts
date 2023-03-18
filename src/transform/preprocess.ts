@@ -3,7 +3,6 @@ import ts from "typescript";
 import { matchesModifier } from "./astHelpers.js";
 import { UnsupportedSyntaxError } from "./errors.js";
 
-
 type Range = [start: number, end: number];
 
 interface PreProcessInput {
@@ -242,7 +241,6 @@ export function preProcess({ sourceFile }: PreProcessInput): PreProcessOutput {
   for (const ref of sourceFile.referencedFiles) {
     fileReferences.add(ref.fileName);
 
-
     const { line } = sourceFile.getLineAndCharacterOfPosition(ref.pos);
     const start = lineStarts[line]!;
     let end = sourceFile.getLineEndOfPosition(ref.pos);
@@ -318,6 +316,9 @@ export function preProcess({ sourceFile }: PreProcessInput): PreProcessOutput {
 
 function fixModifiers(code: MagicString, node: ts.Node) {
   // remove the `export` and `default` modifier, add a `declare` if its missing.
+  if (!ts.canHaveModifiers(node)) {
+    return;
+  }
   let hasDeclare = false;
   const needsDeclare =
     ts.isEnumDeclaration(node) ||

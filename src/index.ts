@@ -1,5 +1,5 @@
 import * as path from "path";
-import { Plugin } from "rollup";
+import { PluginImpl, Plugin } from "rollup";
 import ts from "typescript";
 import { Options, resolveDefaultOptions, ResolvedOptions } from "./options.js";
 import { createProgram, createPrograms, dts, DTS_EXTENSIONS, formatHost, getCompilerOptions } from "./program.js";
@@ -61,7 +61,7 @@ function getModule(
   }
 }
 
-export default function rollupPluginDts(options: Options = {}) {
+const plugin: PluginImpl<Options> = (options = {}) => {
   const transformPlugin = transform();
   const ctx: DtsPluginContext = { programs: [], resolvedOptions: resolveDefaultOptions(options) };
 
@@ -207,4 +207,6 @@ export default function rollupPluginDts(options: Options = {}) {
       }
     },
   } satisfies Plugin;
-}
+};
+
+export default plugin;
