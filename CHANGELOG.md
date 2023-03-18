@@ -1,5 +1,25 @@
 # Changelog
 
+## 5.3.0
+
+**Compatibility Notice**:
+
+This release supports **TypeScript 5.0**.
+
+**Fixes**:
+
+- Allow to use same resolve method as defined in `tsconfig`.
+- Add support for `.d.cts` and `.d.mts` files.
+- Fix `declare` modifiers of enums.
+
+**Thank you**:
+
+Features, fixes and improvements in this release have been contributed by:
+
+- [@remcovaes](https://github.com/remcovaes)
+- [@Comandeer](https://github.com/Comandeer)
+- [@hyrious](https://github.com/hyrious)
+
 ## 5.2.0
 
 **Fixes**:
