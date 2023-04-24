@@ -248,8 +248,6 @@ class Transformer {
     }
   }
 
-  convertNamespaceAlias() {}
-
   convertImportDeclaration(node: ts.ImportDeclaration | ts.ImportEqualsDeclaration) {
     if (ts.isImportEqualsDeclaration(node)) {
       // assume its like `import default`
