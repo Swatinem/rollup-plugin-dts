@@ -346,7 +346,8 @@ export class DeclarationScope {
         ts.isClassDeclaration(stmt) ||
         ts.isInterfaceDeclaration(stmt) ||
         ts.isTypeAliasDeclaration(stmt) ||
-        ts.isModuleDeclaration(stmt)
+        ts.isModuleDeclaration(stmt) ||
+        ts.isImportEqualsDeclaration(stmt)
       ) {
         if (stmt.name && ts.isIdentifier(stmt.name)) {
           this.pushTypeVariable(stmt.name);
@@ -407,6 +408,10 @@ export class DeclarationScope {
         // noop
         continue;
       }
+      if (ts.isImportEqualsDeclaration(stmt)) {
+        // noop
+        continue;
+      }
       if (ts.isExportDeclaration(stmt)) {
         if (stmt.exportClause) {
           if (ts.isNamespaceExport(stmt.exportClause)) {
@@ -417,9 +422,9 @@ export class DeclarationScope {
             this.pushIdentifierReference(id);
           }
         }
-      } else {
-        throw new UnsupportedSyntaxError(stmt, `namespace child (walking) not supported yet`);
+        continue;
       }
+      throw new Error(`unsupported statement type ${ts.SyntaxKind[stmt.kind]}`);
     }
 
     this.popScope();

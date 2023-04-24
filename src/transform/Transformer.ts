@@ -248,28 +248,50 @@ class Transformer {
     }
   }
 
+  convertNamespaceAlias() {}
+
   convertImportDeclaration(node: ts.ImportDeclaration | ts.ImportEqualsDeclaration) {
     if (ts.isImportEqualsDeclaration(node)) {
       // assume its like `import default`
-      if (!ts.isExternalModuleReference(node.moduleReference)) {
-        throw new UnsupportedSyntaxError(node, "ImportEquals should have a literal source.");
+      if (ts.isExternalModuleReference(node.moduleReference)) {
+        this.pushStatement(
+          withStartEnd(
+            {
+              type: "ImportDeclaration",
+              specifiers: [
+                {
+                  type: "ImportDefaultSpecifier",
+                  local: createIdentifier(node.name),
+                },
+              ],
+              source: convertExpression(node.moduleReference.expression) as any,
+            },
+            node,
+          ),
+        );
+        return;
+      } else if (ts.isQualifiedName(node.moduleReference)) {
+        // TODO: I *think* this just ensures that the statement doesnt get tree-shaken out of existence, even though there's no real variable declaration here that makes it into the final build
+        this.createDeclaration(node, node.name);
+        this.pushStatement(
+          withStartEnd(
+            {
+              type: "VariableDeclaration",
+              kind: "const",
+              declarations: [
+                {
+                  type: "VariableDeclarator",
+                  id: createIdentifier(node.name),
+                },
+              ],
+            },
+            node,
+          ),
+        );
+        return;
+      } else {
+        throw new Error(`Unknown moduleReference type ${ts.SyntaxKind[node.moduleReference.kind]}}`);
       }
-      this.pushStatement(
-        withStartEnd(
-          {
-            type: "ImportDeclaration",
-            specifiers: [
-              {
-                type: "ImportDefaultSpecifier",
-                local: createIdentifier(node.name),
-              },
-            ],
-            source: convertExpression(node.moduleReference.expression) as any,
-          },
-          node,
-        ),
-      );
-      return;
     }
     const source = convertExpression(node.moduleSpecifier) as any;
 
