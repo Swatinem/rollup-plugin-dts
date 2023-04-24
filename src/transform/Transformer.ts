@@ -1,7 +1,7 @@
 import * as ESTree from "estree";
 import ts from "typescript";
-import { convertExpression, createIdentifier, createProgram, withStartEnd } from "./astHelpers.js";
 import { DeclarationScope } from "./DeclarationScope.js";
+import { convertExpression, createIdentifier, createProgram, withStartEnd } from "./astHelpers.js";
 import { UnsupportedSyntaxError } from "./errors.js";
 
 type ESTreeImports = ESTree.ImportDeclaration["specifiers"];
@@ -127,7 +127,7 @@ class Transformer {
 
     if (isGlobalAugmentation || !ts.isIdentifier(node.name)) {
       const scope = this.createDeclaration(node);
-      scope.convertNamespace(node, true);
+      scope.convertNamespace(node);
       return;
     }
 

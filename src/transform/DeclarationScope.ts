@@ -325,11 +325,11 @@ export class DeclarationScope {
     }
   }
 
-  convertNamespace(node: ts.ModuleDeclaration, relaxedModuleBlock = false) {
+  convertNamespace(node: ts.ModuleDeclaration) {
     this.pushScope();
 
-    if (relaxedModuleBlock && node.body && ts.isModuleDeclaration(node.body)) {
-      this.convertNamespace(node.body, true);
+    if (node.body && ts.isModuleDeclaration(node.body)) {
+      this.convertNamespace(node.body);
       return;
     }
     if (!node.body || !ts.isModuleBlock(node.body)) {
@@ -400,7 +400,7 @@ export class DeclarationScope {
         continue;
       }
       if (ts.isModuleDeclaration(stmt)) {
-        this.convertNamespace(stmt, relaxedModuleBlock);
+        this.convertNamespace(stmt);
         continue;
       }
       if (ts.isEnumDeclaration(stmt)) {
