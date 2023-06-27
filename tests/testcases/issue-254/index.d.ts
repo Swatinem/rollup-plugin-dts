@@ -1,1 +1,1 @@
-export { Foo, Bar } from './foo'
+export { Foo, Bar } from "./foo";

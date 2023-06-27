@@ -1,4 +1,7 @@
+// @ts-check
+/** @type {import('../../testcases').Meta} */
 export default {
+  options: {},
   rollupOptions: {
     input: [
       "packages/packi/index.ts",
@@ -9,4 +12,5 @@ export default {
       entryFileNames: "[name].d.ts",
     },
   },
+  rollupVersion: '3.25.0',
 };

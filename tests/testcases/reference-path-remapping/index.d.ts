@@ -3,5 +3,5 @@
 export * from "./sub/api2";
 
 export class C1 {
-    public X: x1.I1;
+  public X: x1.I1;
 }

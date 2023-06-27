@@ -9,7 +9,7 @@ interface Person {
 }
 type LazyPerson = Getters<Person>;
 type RemoveKindField<T> = {
-  [K in keyof T as MyExclude<K, "kind">]: T[K]
+  [K in keyof T as MyExclude<K, "kind">]: T[K];
 };
 interface Circle {
   kind: "circle";
