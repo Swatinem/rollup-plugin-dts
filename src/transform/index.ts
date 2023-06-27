@@ -34,18 +34,17 @@ export const transform = () => {
   return {
     name: "dts-transform",
 
-    options(options) {
-      const { onwarn } = options;
-
+    options({ onLog, ...options }) {
       return {
         ...options,
-        onwarn(warning, warn) {
-          if (warning.code != "CIRCULAR_DEPENDENCY") {
-            if (onwarn) {
-              onwarn(warning, warn);
-            } else {
-              warn(warning);
-            }
+        onLog(level, log, defaultHandler) {
+          if (level === "warn" && log.code == "CIRCULAR_DEPENDENCY") {
+            return;
+          }
+          if (onLog) {
+            onLog(level, log, defaultHandler);
+          } else {
+            defaultHandler(level, log);
           }
         },
         treeshake: {

@@ -1,3 +1,4 @@
+// @ts-check
 import * as url from "url";
 import * as path from "path";
 
@@ -9,6 +10,8 @@ const compilerOptions = {
   paths: { "components/*": ["foo/bar/*"] },
 };
 
+/** @type {import('../../testcases').Meta} */
 export default {
   options: { compilerOptions },
+  rollupOptions: {},
 };

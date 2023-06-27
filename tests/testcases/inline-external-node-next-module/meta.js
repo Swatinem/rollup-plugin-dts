@@ -1,5 +1,6 @@
-import ts from 'typescript';
-
+// @ts-check
+import ts from "typescript";
+/** @type {import('../../testcases').Meta} */
 export default {
   tsVersion: "4.7",
   options: {
@@ -9,4 +10,5 @@ export default {
       moduleResolution: ts.ModuleResolutionKind.Node16,
     },
   },
+  rollupOptions: {},
 };

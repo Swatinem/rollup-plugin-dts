@@ -1,6 +1,6 @@
 declare enum E {}
 interface Foo {
-  e: E
+  e: E;
 }
 declare namespace Bar {
   export enum F {}

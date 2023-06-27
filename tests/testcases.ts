@@ -1,7 +1,14 @@
 import * as assert from "assert";
 import fs from "fs/promises";
 import * as path from "path";
-import { InputOption, InputOptions, rollup, RollupOptions, RollupOutput } from "rollup";
+import {
+  InputOption,
+  InputOptions,
+  rollup,
+  RollupOptions,
+  RollupOutput,
+  VERSION as rollupVersionMajorMinorPatch,
+} from "rollup";
 import ts from "typescript";
 import dts, { Options } from "../src/index.js";
 import { exists, forEachFixture, Harness } from "./utils.js";
@@ -23,9 +30,21 @@ export default (t: Harness) => {
       } catch {}
 
       if (meta.tsVersion) {
-        const [major, minor] = ts.versionMajorMinor.split(".").map(Number);
-        const [reqMajor, reqMinor] = meta.tsVersion.split(".").map(Number);
-        if (major! < reqMajor! || minor! < reqMinor!) {
+        const [major, minor] = ts.versionMajorMinor.split(".").map(Number) as [number, number];
+        const [reqMajor, reqMinor] = meta.tsVersion.split(".").map(Number) as [number, number];
+        if (major < reqMajor || (major === reqMajor && minor < reqMinor)) {
+          // skip unsupported version
+          return;
+        }
+      }
+      if (meta.rollupVersion) {
+        const [major, minor, patch] = rollupVersionMajorMinorPatch.split(".").map(Number) as [number, number, number];
+        const [reqMajor, reqMinor, reqPatch] = meta.rollupVersion.split(".").map(Number) as [number, number, number];
+        if (
+          major < reqMajor ||
+          (major === reqMajor && minor < reqMinor) ||
+          (major === reqMajor && minor === reqMinor && patch < reqPatch)
+        ) {
           // skip unsupported version
           return;
         }
@@ -38,12 +57,13 @@ export default (t: Harness) => {
   });
 };
 
-interface Meta {
+export interface Meta {
   options: Options;
   rollupOptions: RollupOptions;
-  skip: boolean;
+  skip?: boolean;
   expectedError?: string;
   tsVersion?: string;
+  rollupVersion?: string;
 }
 
 async function createBundle(options: Options, rollupOptions: RollupOptions) {
