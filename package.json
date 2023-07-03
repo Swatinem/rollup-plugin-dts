@@ -26,12 +26,11 @@
   },
   "type": "module",
   "main": "./dist/rollup-plugin-dts.cjs",
+  "types": "./dist/rollup-plugin-dts.d.cts",
   "exports": {
-    "types": "./dist/rollup-plugin-dts.d.ts",
     "import": "./dist/rollup-plugin-dts.mjs",
     "require": "./dist/rollup-plugin-dts.cjs"
   },
-  "types": "./dist/rollup-plugin-dts.d.ts",
   "sideEffects": false,
   "files": [
     "dist"
