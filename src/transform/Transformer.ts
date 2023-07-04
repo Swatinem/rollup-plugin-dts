@@ -1,4 +1,4 @@
-import * as ESTree from "estree";
+import type * as ESTree from "estree";
 import ts from "typescript";
 import { convertExpression, createIdentifier, createProgram, withStartEnd } from "./astHelpers.js";
 import { DeclarationScope } from "./DeclarationScope.js";

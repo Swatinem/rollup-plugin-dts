@@ -1,7 +1,7 @@
 import * as path from "path";
-import { PluginImpl, Plugin } from "rollup";
+import type { PluginImpl, Plugin } from "rollup";
 import ts from "typescript";
-import { Options, resolveDefaultOptions, ResolvedOptions } from "./options.js";
+import { type Options, resolveDefaultOptions, type ResolvedOptions } from "./options.js";
 import { createProgram, createPrograms, dts, DTS_EXTENSIONS, formatHost, getCompilerOptions } from "./program.js";
 import { transform } from "./transform/index.js";
 

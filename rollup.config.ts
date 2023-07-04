@@ -1,7 +1,8 @@
-import { RollupWatchOptions } from "rollup";
-import pkg from "./package.json";
+import * as fs from "node:fs";
+import type { RollupWatchOptions } from "rollup";
 import dts from "./src/index.js";
 
+const pkg = JSON.parse(fs.readFileSync("./package.json", { encoding: "utf-8" }));
 const external = ["module", "path", "typescript", "rollup", "@babel/code-frame", "magic-string"];
 
 const config: Array<RollupWatchOptions> = [
