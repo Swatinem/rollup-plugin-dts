@@ -1,4 +1,4 @@
-import * as ESTree from "estree";
+import type * as ESTree from "estree";
 import ts from "typescript";
 import {
   convertExpression,
@@ -7,7 +7,7 @@ import {
   createIIFE,
   createReference,
   createReturn,
-  Range,
+  type Range,
   withStartEnd,
 } from "./astHelpers.js";
 import { UnsupportedSyntaxError } from "./errors.js";

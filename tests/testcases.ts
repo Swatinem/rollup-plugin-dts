@@ -2,15 +2,15 @@ import * as assert from "assert";
 import fs from "fs/promises";
 import * as path from "path";
 import {
-  InputOption,
-  InputOptions,
+  type InputOption,
+  type InputOptions,
   rollup,
-  RollupOptions,
-  RollupOutput,
+  type RollupOptions,
+  type RollupOutput,
   VERSION as rollupVersionMajorMinorPatch,
 } from "rollup";
 import ts from "typescript";
-import dts, { Options } from "../src/index.js";
+import dts, { type Options } from "../src/index.js";
 import { exists, forEachFixture, Harness } from "./utils.js";
 
 export default (t: Harness) => {

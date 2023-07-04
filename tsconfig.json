@@ -8,8 +8,8 @@
 
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
-    "moduleResolution": "node",
-    "module": "esnext",
+    "moduleResolution": "NodeNext",
+    "module": "NodeNext",
 
     "jsx": "react",
 
@@ -20,6 +20,7 @@
     "noImplicitReturns": true,
     "noImplicitOverride": true,
     "noUncheckedIndexedAccess": true,
+    "verbatimModuleSyntax": true,
 
     "incremental": true,
     "tsBuildInfoFile": ".build/tsconfig.build.tsbuildinfo",

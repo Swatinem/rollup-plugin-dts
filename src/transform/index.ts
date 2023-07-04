@@ -1,5 +1,5 @@
 import * as path from "path";
-import { Plugin } from "rollup";
+import type { Plugin } from "rollup";
 import ts from "typescript";
 import { NamespaceFixer } from "./NamespaceFixer.js";
 import { preProcess } from "./preprocess.js";
