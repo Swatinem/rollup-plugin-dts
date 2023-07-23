@@ -14,7 +14,7 @@ Install the package from `npm`:
 Add it to your `rollup.config.js`:
 
 ```js
-import dts from "rollup-plugin-dts";
+import { dts } from "rollup-plugin-dts";
 
 const config = [
   // …
