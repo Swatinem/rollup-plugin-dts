@@ -27,6 +27,21 @@ const config = [
 
 export default config;
 ```
+**NOTE** In some implementations of the rollup config file, you may receive the error: `[!] TypeError: dts is not a function`[^1] [^2]. In which case, use the following implementation:
+```js
+import dts from "rollup-plugin-dts";
+
+const config = [
+  // …
+  {
+    input: "./my-input/index.d.ts",
+    output: [{ file: "dist/my-library.d.ts", format: "es" }],
+    plugins: [dts.default()],
+  },
+];
+
+export default config;
+```
 
 And then instruct typescript where to find your definitions inside your `package.json`:
 
@@ -82,3 +97,7 @@ about some of these projects and their tradeoffs.
 
 The code is licensed under the copyleft **LGPL-3.0**. I have no intention to
 license this under any non-copyleft license.
+
+
+[^1]: [StackOverflow thread](https://stackoverflow.com/questions/74255565/rollup-typescript-error-dts-is-not-a-function/74304876#74304876) of issue
+[^2]: [Github issue](https://github.com/Swatinem/rollup-plugin-dts/issues/247)
