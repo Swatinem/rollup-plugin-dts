@@ -10,8 +10,7 @@ import {
   VERSION as rollupVersionMajorMinorPatch,
 } from "rollup";
 import ts from "typescript";
-import { dts } from "../src/index.js";
-import { type Options } from "../src/index.js";
+import dts, { type Options } from "../src/index.js";
 import { exists, forEachFixture, Harness } from "./utils.js";
 
 export default (t: Harness) => {
