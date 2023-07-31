@@ -209,4 +209,4 @@ const plugin: PluginImpl<Options> = (options = {}) => {
   } satisfies Plugin;
 };
 
-export default plugin;
+export { plugin as dts, plugin as default } ;
