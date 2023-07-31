@@ -1,5 +1,19 @@
 # Changelog
 
+## 5.3.1
+
+**Fixes**:
+
+- Export the plugin as a named `dts` export as well.
+- Export both `cjs` and `mjs` type definitions.
+
+**Thank you**:
+
+Features, fixes and improvements in this release have been contributed by:
+
+- [@spiltbeans](https://github.com/spiltbeans)
+- [@xiaoxiangmoe](https://github.com/xiaoxiangmoe)
+
 ## 5.3.0
 
 **Compatibility Notice**:
