@@ -39,6 +39,12 @@ And then instruct typescript where to find your definitions inside your `package
 **NOTE** that the plugin will automatically mark any external library
 (`@types` for example) as `external`, so those will be excluded from bundling.
 
+## Maintenance Mode
+
+This project is in _maintenance mode_. That means there will be no more active feature development.
+There will still be occasional releases to maintain compatibility with future TypeScript releases.
+Pull Requests are always welcome, however reaction time on both Issues and PRs can be slow.
+
 ## What to expect
 
 While this plugin is fairly complete, it does not support all imaginable use-cases.
@@ -84,7 +90,6 @@ about some of these projects and their tradeoffs.
 
 The code is licensed under the copyleft **LGPL-3.0**. I have no intention to
 license this under any non-copyleft license.
-
 
 [^1]: [StackOverflow thread](https://stackoverflow.com/questions/74255565/rollup-typescript-error-dts-is-not-a-function/74304876#74304876) of issue
 [^2]: [Github issue](https://github.com/Swatinem/rollup-plugin-dts/issues/247)
