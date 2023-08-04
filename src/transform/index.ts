@@ -4,6 +4,7 @@ import ts from "typescript";
 import { NamespaceFixer } from "./NamespaceFixer.js";
 import { preProcess } from "./preprocess.js";
 import { convert } from "./Transformer.js";
+import {ExportsFixer} from "./ExportsFixer.js";
 
 function parse(fileName: string, code: string): ts.SourceFile {
   return ts.createSourceFile(fileName, code, ts.ScriptTarget.Latest, true);
@@ -91,8 +92,8 @@ export const transform = () => {
       return { code, ast: converted.ast as any, map: preprocessed.code.generateMap() as any };
     },
 
-    renderChunk(code, chunk, options) {
-      const source = parse(chunk.fileName, code);
+    renderChunk(inputCode, chunk, options) {
+      const source = parse(chunk.fileName, inputCode);
       const fixer = new NamespaceFixer(source);
 
       const typeReferences = new Set<string>();
@@ -120,7 +121,7 @@ export const transform = () => {
         }
       }
 
-      code = writeBlock(Array.from(fileReferences, (ref) => `/// <reference path="${ref}" />`));
+      let code = writeBlock(Array.from(fileReferences, (ref) => `/// <reference path="${ref}" />`));
       code += writeBlock(Array.from(typeReferences, (ref) => `/// <reference types="${ref}" />`));
       code += fixer.fix();
 
@@ -128,7 +129,9 @@ export const transform = () => {
         code += "\nexport { }";
       }
 
-      return { code, map: { mappings: "" } };
+      const exportsFixer = new ExportsFixer(parse(chunk.fileName, code));
+
+      return { code: exportsFixer.fix(), map: { mappings: "" } };
     },
   } satisfies Plugin;
 };
