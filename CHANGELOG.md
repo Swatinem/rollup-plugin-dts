@@ -4,7 +4,7 @@
 
 **Compatibility Notice**:
 
-This release raises the minimum required TypeScript version to **4.5** and the minimum required node.js version to **16**.
+This release raises the minimum required TypeScript version to **4.5** and the minimum required node.js version to **18**.
 
 **Fixes**:
 
