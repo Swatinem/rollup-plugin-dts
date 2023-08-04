@@ -6,4 +6,4 @@ declare abstract class AbstractClass {
   member: AbstractMember;
 }
 type AbstractConstructor<T extends AbstractClass> = abstract new (...args: any[]) => T;
-export { AbstractConstructor };
+export type { AbstractConstructor };

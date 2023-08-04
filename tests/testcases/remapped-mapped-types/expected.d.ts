@@ -16,4 +16,4 @@ interface Circle {
   radius: number;
 }
 type KindlessCircle = RemoveKindField<Circle>;
-export { KindlessCircle, LazyPerson };
+export type { KindlessCircle, LazyPerson };

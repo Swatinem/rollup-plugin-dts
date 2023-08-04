@@ -1,3 +1,3 @@
 interface Bar {}
 interface Foo extends Bar {}
-export { Foo };
+export type { Foo };

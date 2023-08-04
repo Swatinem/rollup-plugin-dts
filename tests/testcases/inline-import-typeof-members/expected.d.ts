@@ -4,4 +4,4 @@ type TypeScript = typeof typescript;
 interface Test {
   rollup: rollup.RollupOptions;
 }
-export { Test, TypeScript };
+export type { Test, TypeScript };

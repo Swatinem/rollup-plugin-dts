@@ -13,7 +13,7 @@ declare namespace ns {
     e: typeof Shadowed4;
   }
   namespace childNS {
-    export { Referenced2 as ref };
+    export type { Referenced2 as ref };
   }
 }
 export { ns };

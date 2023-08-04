@@ -10,4 +10,4 @@ type Klass = {
   [0]: C;
   [Dprop]: D;
 };
-export { Klass };
+export type { Klass };

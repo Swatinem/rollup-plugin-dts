@@ -1,4 +1,4 @@
 interface Connection {
   uri: string;
 }
-export { Connection };
+export type { Connection };
