@@ -4,4 +4,4 @@ interface Foo {
   bar: Bar;
   baz: typeof Baz;
 }
-export { Foo };
+export type { Foo };

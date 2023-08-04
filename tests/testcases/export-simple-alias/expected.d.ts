@@ -1,3 +1,3 @@
 interface Foo {}
 declare type Bar = Foo;
-export { Bar };
+export type { Bar };

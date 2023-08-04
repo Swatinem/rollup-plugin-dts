@@ -2,4 +2,4 @@ interface Bar {}
 interface Foo {
   bar: Bar;
 }
-export { Foo };
+export type { Foo };

@@ -1,2 +1,2 @@
 declare type SpreadedTuple = [number, ...string[]];
-export { SpreadedTuple };
+export type { SpreadedTuple };

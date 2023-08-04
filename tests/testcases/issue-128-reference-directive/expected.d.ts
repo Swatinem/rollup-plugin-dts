@@ -5,8 +5,8 @@ export { B } from './>main-b<.js';
 declare const A = 2;
 declare type JSXElements = keyof JSX.IntrinsicElements;
 declare const a: JSXElements[];
-export { A, JSXElements, a };
+export { A, type JSXElements, a };
 // >main-b<.d.ts
 /// <reference types="node" />
 interface B {}
-export { B };
+export type { B };

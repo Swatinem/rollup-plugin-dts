@@ -1,8 +1,8 @@
 // main-a.d.mts
-export { A } from './main-b.d-beb2139a.mjs';
+export { A } from './main-b.d-e5346d3a.mjs';
 // main-b.d.mts
-export { B } from './main-b.d-beb2139a.mjs';
-// main-b.d-beb2139a.d.mts
+export { B } from './main-b.d-e5346d3a.mjs';
+// main-b.d-e5346d3a.d.mts
 interface A {}
 interface B {}
-export { A, B };
+export type { A, B };

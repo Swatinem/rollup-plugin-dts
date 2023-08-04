@@ -30,4 +30,4 @@ declare function fn<T = G>(g: T, h: Gen<H>): void;
 declare type TyFn = <T = J>(j: T, k: Gen<K>) => L;
 declare type TyCtor = new <T = M>(m: T, n: Gen<N>) => O;
 interface I2 extends Gen<P> {}
-export { Cl, I1, I2, Ty, TyCtor, TyFn, fn };
+export { Cl, type I1, type I2, type Ty, type TyCtor, type TyFn, fn };

@@ -3,4 +3,4 @@ type AnimatedProps<T> = T;
 type AnimatedComponent<T extends ElementType> = ForwardRefExoticComponent<
   AnimatedProps<ComponentPropsWithRef<T>>
 >;
-export { AnimatedComponent, AnimatedProps };
+export type { AnimatedComponent, AnimatedProps };

@@ -1,3 +1,3 @@
 interface B {}
 declare class A {}
-export { A, B };
+export { A, type B };

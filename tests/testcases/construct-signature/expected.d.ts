@@ -1,4 +1,4 @@
 interface Foo {
   new (): any;
 }
-export { Foo };
+export type { Foo };

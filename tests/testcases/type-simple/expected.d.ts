@@ -15,4 +15,4 @@ interface N {
   foo(): this;
 }
 declare const O: bigint;
-export { A, B, C, D, E, F, G, H, I, J, K, L, M, N, O };
+export { A, B, C, D, E, F, G, H, I, J, K, L, M, type N, O };

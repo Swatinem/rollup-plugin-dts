@@ -7,9 +7,6 @@ type a_d_Props = Props;
 type a_d_System<T extends Props> = System<T>;
 declare const a_d_System: typeof System;
 declare namespace a_d {
-  export {
-    a_d_Props as Props,
-    a_d_System as System,
-  };
+  export { type a_d_Props as Props, a_d_System as System };
 }
 export { a_d as A };

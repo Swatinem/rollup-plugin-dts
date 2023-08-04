@@ -32,4 +32,4 @@ declare function Func(d: D): E;
 declare type Type = {
   f: F;
 };
-export { Func$1 as AFunc, Interface$1 as AInterface, Klass$1 as AKlass, Type$1 as AType, Func as BFunc, Interface as BInterface, Klass as BKlass, Type as BType };
+export { Func$1 as AFunc, type Interface$1 as AInterface, Klass$1 as AKlass, type Type$1 as AType, Func as BFunc, type Interface as BInterface, Klass as BKlass, type Type as BType };

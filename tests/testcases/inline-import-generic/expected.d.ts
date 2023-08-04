@@ -4,4 +4,4 @@ interface Bar<T> {
 interface Foo {
   bar: Bar<number>;
 }
-export { Foo };
+export type { Foo };

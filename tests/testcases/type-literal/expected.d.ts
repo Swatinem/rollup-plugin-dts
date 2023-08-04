@@ -2,4 +2,4 @@ interface A {}
 declare type Foo = {
   a: A;
 };
-export { Foo };
+export type { Foo };

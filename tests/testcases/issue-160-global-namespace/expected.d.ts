@@ -2,10 +2,10 @@ interface A {}
 interface B {}
 declare global {
   namespace Named.Core {
-    export { A, B };
+    export type { A, B };
   }
   namespace Foo.Bar.Baz.Quux {
-    export { A, B };
+    export type { A, B };
   }
 }
-export { A };
+export type { A };

@@ -6,4 +6,4 @@ declare const fn: {
   (arg: string): string;
   staticProp: string;
 };
-export { I, fn };
+export { type I, fn };

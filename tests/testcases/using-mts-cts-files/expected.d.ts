@@ -1,10 +1,10 @@
 // mts.d.ts
-export { A } from './main-b-124c52f0.js';
+export { A } from './main-b-0fcfb715.js';
 // cts.d.ts
-export { B } from './main-b-124c52f0.js';
-// main-b-124c52f0.d.ts
+export { B } from './main-b-0fcfb715.js';
+// main-b-0fcfb715.d.ts
 interface A {
 }
 interface B {
 }
-export { A, B };
+export type { A, B };

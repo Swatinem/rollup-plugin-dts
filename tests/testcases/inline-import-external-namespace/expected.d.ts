@@ -3,4 +3,4 @@ interface Foo {
   ns1: foo;
   ns2: typeof foo;
 }
-export { Foo };
+export type { Foo };

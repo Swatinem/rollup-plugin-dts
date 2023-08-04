@@ -1,2 +1,2 @@
 interface Foo {}
-export { Foo };
+export type { Foo };
