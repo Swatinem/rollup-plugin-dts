@@ -1,5 +1,15 @@
 # Changelog
 
+## 6.0.0
+
+**Compatibility Notice**:
+
+This release raises the minimum required TypeScript version to **4.5** and the minimum required node.js version to **16**.
+
+**Fixes**:
+
+- Export types with `export { type T }` syntax.
+
 ## 5.3.1
 
 **Fixes**:
