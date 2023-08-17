@@ -4,11 +4,17 @@
 
 **Compatibility Notice**:
 
-This release raises the minimum required TypeScript version to **4.5** and the minimum required node.js version to **18**.
+This release raises the minimum required Rollup version to **3.25**, the minimum required TypeScript version to **4.5** and the minimum required node.js version to **18**.
 
 **Fixes**:
 
 - Export types with `export { type T }` syntax.
+
+**Thank you**:
+
+Features, fixes and improvements in this release have been contributed by:
+
+- [@mithodin](https://github.com/mithodin)
 
 ## 5.3.1
 
