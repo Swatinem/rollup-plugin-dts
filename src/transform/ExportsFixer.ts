@@ -31,6 +31,7 @@ export class ExportsFixer {
         const exportedName = e.name.text;
         const localName = e.propertyName?.text ?? e.name.text;
         const kind = types.some(node => node.getText() === localName) && !values.some(node => node.getText() === localName) ? 'type' as const : 'value' as const;
+        this.DEBUG && (console.log(`export ${localName} as ${exportedName} is a ${kind}`));
         return {
           exportedName,
           localName,
@@ -96,6 +97,10 @@ export class ExportsFixer {
         continue;
       }
       if (ts.isModuleDeclaration(statement)) {
+        if (statement.name && ts.isIdentifier(statement.name)) {
+          this.DEBUG && console.log(`${statement.name.getFullText()} is a value (from module declaration)`);
+          values.push(statement.name);
+        }
         recurseInto(statement.getChildren());
         continue;
       }
