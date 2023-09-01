@@ -1,5 +1,22 @@
 # Changelog
 
+## 6.0.1
+
+**Compatibility Notice**:
+
+This release lowers the minimum required node.js version to **16**.
+
+**Fixes**:
+
+- Fix namespace declarations being exported as `export { type T }`.
+
+**Thank you**:
+
+Features, fixes and improvements in this release have been contributed by:
+
+- [@mithodin](https://github.com/mithodin)
+- [@curlykay9527](https://github.com/curlykay9527)
+
 ## 6.0.0
 
 **Compatibility Notice**:
