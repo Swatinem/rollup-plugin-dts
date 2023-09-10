@@ -1,5 +1,17 @@
 # Changelog
 
+## 6.0.2
+
+**Fixes**:
+
+- Fix `typeof this` being wrongly renamed.
+
+**Thank you**:
+
+Features, fixes and improvements in this release have been contributed by:
+
+- [@crutchcorn](https://github.com/crutchcorn)
+
 ## 6.0.1
 
 **Compatibility Notice**:
