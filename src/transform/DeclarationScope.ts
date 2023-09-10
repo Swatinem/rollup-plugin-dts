@@ -92,6 +92,8 @@ export class DeclarationScope {
         }
       }
     }
+    // `this` is a reserved keyword that retrains meaning in certain Type-only contexts, including classes
+    if (name === "this") return;
     const { ident, expr } = createReference(id);
 
     this.declaration.params.push(expr);
