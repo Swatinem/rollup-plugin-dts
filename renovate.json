@@ -10,7 +10,7 @@
   "rangeStrategy": "bump",
   "packageRules": [
     {
-      "description": "Ignore node add peerDependencies",
+      "description": "Ignore node and peerDependencies",
       "matchPackageNames": ["node"],
       "matchManagers": ["npm"],
       "matchDepTypes": ["engines", "peerDependencies"],
