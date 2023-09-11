@@ -22,7 +22,7 @@
   },
   "homepage": "https://github.com/Swatinem/rollup-plugin-dts#readme",
   "engines": {
-    "node": ">=v16"
+    "node": ">=16"
   },
   "type": "module",
   "main": "./dist/rollup-plugin-dts.cjs",
@@ -52,10 +52,10 @@
     "@types/babel__code-frame": "^7.0.3",
     "@types/d3-drag": "^3.0.3",
     "@types/estree": "1.0.1",
-    "@types/node": "^20.5.9",
+    "@types/node": "^20.6.0",
     "@types/react": "^18.2.21",
     "c8": "^8.0.1",
-    "rollup": "3.28.1",
+    "rollup": "3.29.1",
     "typescript": "5.2.2"
   },
   "peerDependencies": {

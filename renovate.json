@@ -7,5 +7,14 @@
     ":automergeBranchPush",
     ":automergeRequireAllStatusChecks"
   ],
-  "rangeStrategy": "bump"
+  "rangeStrategy": "bump",
+  "packageRules": [
+    {
+      "description": "Ignore node add peerDependencies",
+      "matchPackageNames": ["node"],
+      "matchManagers": ["npm"],
+      "matchDepTypes": ["engines", "peerDependencies"],
+      "enabled": false
+    }
+  ]
 }
