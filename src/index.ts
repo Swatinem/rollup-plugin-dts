@@ -41,7 +41,7 @@ function getModule(
     // we know this exists b/c of the .filter above, so this non-null assertion is safe
     const source = existingProgram.getSourceFile(fileName)!;
     return {
-      code: source.getFullText(),
+      code: source?.getFullText(),
       source,
       program: existingProgram,
     };
@@ -51,7 +51,7 @@ function getModule(
     // we created hte program from this fileName, so the source file must exist :P
     const source = newProgram.getSourceFile(fileName)!;
     return {
-      code: source.getFullText(),
+      code: source?.getFullText(),
       source,
       program: newProgram,
     };
