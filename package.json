@@ -50,16 +50,16 @@
   "devDependencies": {
     "@babel/code-frame": "^7.22.13",
     "@types/babel__code-frame": "^7.0.4",
-    "@types/d3-drag": "^3.0.3",
-    "@types/estree": "1.0.1",
-    "@types/node": "^20.6.2",
-    "@types/react": "^18.2.21",
+    "@types/d3-drag": "^3.0.4",
+    "@types/estree": "1.0.2",
+    "@types/node": "^20.6.5",
+    "@types/react": "^18.2.22",
     "c8": "^8.0.1",
-    "rollup": "3.29.2",
+    "rollup": "3.29.3",
     "typescript": "5.2.2"
   },
   "peerDependencies": {
-    "rollup": "^3.29.2",
+    "rollup": "^3.29.3",
     "typescript": "^4.5 || ^5.0"
   },
   "optionalDependencies": {
