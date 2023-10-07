@@ -1,5 +1,23 @@
 # Changelog
 
+## 6.1.0
+
+**Compatibility Notice**:
+
+This release adds compatibility with Rollup version **4**.
+
+**Fixes**:
+
+- Fix fallback path generation.
+
+**Thank you**:
+
+Features, fixes and improvements in this release have been contributed by:
+
+- [@igordanchenko](https://github.com/igordanchenko)
+- [@cschramm](https://github.com/cschramm)
+- [@curlykay9527](https://github.com/curlykay9527)
+
 ## 6.0.2
 
 **Fixes**:
