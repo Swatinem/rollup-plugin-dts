@@ -50,10 +50,10 @@
   "devDependencies": {
     "@babel/code-frame": "^7.22.13",
     "@types/babel__code-frame": "^7.0.5",
-    "@types/d3-drag": "^3.0.5",
+    "@types/d3-drag": "^3.0.6",
     "@types/estree": "1.0.4",
     "@types/node": "^20.8.10",
-    "@types/react": "^18.2.35",
+    "@types/react": "^18.2.36",
     "c8": "^8.0.1",
     "rollup": "4.3.0",
     "typescript": "5.2.2"
