@@ -48,15 +48,15 @@
     "trailingComma": "all"
   },
   "devDependencies": {
-    "@babel/code-frame": "^7.23.5",
+    "@babel/code-frame": "^7.24.2",
     "@types/babel__code-frame": "^7.0.6",
     "@types/d3-drag": "^3.0.7",
     "@types/estree": "1.0.5",
-    "@types/node": "^20.11.16",
-    "@types/react": "^18.2.52",
+    "@types/node": "^20.11.30",
+    "@types/react": "^18.2.69",
     "c8": "^9.1.0",
-    "rollup": "4.9.6",
-    "typescript": "5.3.3"
+    "rollup": "4.13.0",
+    "typescript": "5.4.3"
   },
   "peerDependencies": {
     "rollup": "^3.29.4 || ^4",
@@ -66,6 +66,6 @@
     "@babel/code-frame": "^7.23.5"
   },
   "dependencies": {
-    "magic-string": "^0.30.6"
+    "magic-string": "^0.30.8"
   }
 }
