@@ -63,7 +63,7 @@
     "typescript": "^4.5 || ^5.0"
   },
   "optionalDependencies": {
-    "@babel/code-frame": "^7.23.5"
+    "@babel/code-frame": "^7.24.2"
   },
   "dependencies": {
     "magic-string": "^0.30.8"
