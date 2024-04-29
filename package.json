@@ -53,9 +53,9 @@
     "@types/d3-drag": "^3.0.7",
     "@types/estree": "1.0.5",
     "@types/node": "^20.12.7",
-    "@types/react": "^18.2.79",
+    "@types/react": "^18.3.1",
     "c8": "^9.1.0",
-    "rollup": "4.16.1",
+    "rollup": "4.17.0",
     "typescript": "5.4.5"
   },
   "peerDependencies": {
