@@ -189,7 +189,8 @@ export function preProcess({ sourceFile }: PreProcessInput): PreProcessOutput {
         nextToken.kind >= ts.SyntaxKind.FirstPunctuation && nextToken.kind <= ts.SyntaxKind.LastPunctuation;
 
       if (isPunctuation) {
-        code.appendLeft(nextToken.getStart(), defaultExport);
+        const addSpace = code.slice(token.getEnd(), nextToken.getStart()) != " ";
+        code.appendLeft(nextToken.getStart(), `${addSpace ? " " : ""}${defaultExport}`);
       } else {
         code.appendRight(token.getEnd(), ` ${defaultExport}`);
       }
