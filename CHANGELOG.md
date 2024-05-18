@@ -1,5 +1,17 @@
 # Changelog
 
+## 6.1.1
+
+**Fixes**:
+
+- Fix missing whitespace related to generic arguments.
+
+**Thank you**:
+
+Features, fixes and improvements in this release have been contributed by:
+
+- [@brc-dd](https://github.com/brc-dd)
+
 ## 6.1.0
 
 **Compatibility Notice**:
