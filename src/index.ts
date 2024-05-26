@@ -11,6 +11,10 @@ const TS_EXTENSIONS = /\.([cm]ts|[tj]sx?)$/;
 
 interface DtsPluginContext {
   /**
+   * The entry points of the bundle.
+   */
+  entries: string[];
+  /**
    * There exists one Program object per entry point, except when all entry points are ".d.ts" modules.
    */
   programs: ts.Program[];
@@ -24,7 +28,7 @@ interface ResolvedModule {
 }
 
 function getModule(
-  { programs, resolvedOptions: { compilerOptions, tsconfig } }: DtsPluginContext,
+  { entries, programs, resolvedOptions: { compilerOptions, tsconfig } }: DtsPluginContext,
   fileName: string,
   code: string,
 ): ResolvedModule | null {
@@ -34,9 +38,18 @@ function getModule(
     return { code };
   }
 
+  const isEntry = entries.includes(fileName);
   // Rollup doesn't tell you the entry point of each module in the bundle,
   // so we need to ask every TypeScript program for the given filename.
-  const existingProgram = programs.find((p) => !!p.getSourceFile(fileName));
+  const existingProgram = programs.find((p) => {
+    // Entry points may be in the other entry source files, but it can't emit from them.
+    // So we should find the program about the entry point which is the root files.
+    if (isEntry) {
+      return p.getRootFileNames().includes(fileName)
+    } else {
+      return !!p.getSourceFile(fileName);
+    }
+  });
   if (existingProgram) {
     // we know this exists b/c of the .filter above, so this non-null assertion is safe
     const source = existingProgram.getSourceFile(fileName)!;
@@ -63,7 +76,7 @@ function getModule(
 
 const plugin: PluginImpl<Options> = (options = {}) => {
   const transformPlugin = transform();
-  const ctx: DtsPluginContext = { programs: [], resolvedOptions: resolveDefaultOptions(options) };
+  const ctx: DtsPluginContext = { entries: [], programs: [], resolvedOptions: resolveDefaultOptions(options) };
 
   return {
     name: "dts",
@@ -170,6 +183,8 @@ const plugin: PluginImpl<Options> = (options = {}) => {
 
     resolveId(source, importer) {
       if (!importer) {
+        // store the entry point, because we need to know which program to add the file
+        ctx.entries.push(path.resolve(source));
         return;
       }
 
