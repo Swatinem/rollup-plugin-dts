@@ -52,10 +52,10 @@
     "@types/babel__code-frame": "^7.0.6",
     "@types/d3-drag": "^3.0.7",
     "@types/estree": "1.0.5",
-    "@types/node": "^20.14.13",
+    "@types/node": "^20.14.14",
     "@types/react": "^18.3.3",
     "c8": "^10.1.2",
-    "rollup": "4.19.1",
+    "rollup": "4.20.0",
     "typescript": "5.5.4"
   },
   "peerDependencies": {
@@ -66,6 +66,6 @@
     "@babel/code-frame": "^7.24.7"
   },
   "dependencies": {
-    "magic-string": "^0.30.10"
+    "magic-string": "^0.30.11"
   }
 }
