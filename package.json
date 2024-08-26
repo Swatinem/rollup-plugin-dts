@@ -53,7 +53,7 @@
     "@types/d3-drag": "^3.0.7",
     "@types/estree": "1.0.5",
     "@types/node": "^20.16.1",
-    "@types/react": "^18.3.3",
+    "@types/react": "^18.3.4",
     "c8": "^10.1.2",
     "rollup": "4.21.0",
     "typescript": "5.5.4"
