@@ -153,7 +153,7 @@ export interface Range {
 }
 
 export function withStartEnd<T extends ESTree.Node>(esNode: T, nodeOrRange: ts.Node | Range): T {
-  let range: Range =
+  const range: Range =
     "start" in nodeOrRange ? nodeOrRange : { start: nodeOrRange.getStart(), end: nodeOrRange.getEnd() };
   return Object.assign(esNode, range);
 }

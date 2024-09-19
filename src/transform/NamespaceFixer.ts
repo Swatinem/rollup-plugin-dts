@@ -70,10 +70,10 @@ export class NamespaceFixer {
         node.moduleSpecifier &&
         ts.isStringLiteral(node.moduleSpecifier)
       ) {
-        let { text } = node.moduleSpecifier;
+        const { text } = node.moduleSpecifier;
         if (text.startsWith(".") && (text.endsWith(".d.ts") || text.endsWith(".d.cts") || text.endsWith(".d.mts"))) {
-          let start = node.moduleSpecifier.getStart() + 1; // +1 to account for the quote
-          let end = node.moduleSpecifier.getEnd() - 1; // -1 to account for the quote
+          const start = node.moduleSpecifier.getStart() + 1; // +1 to account for the quote
+          const end = node.moduleSpecifier.getEnd() - 1; // -1 to account for the quote
           namespaces.unshift({
             name: "",
             exports: [],

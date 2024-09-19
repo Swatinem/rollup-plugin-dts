@@ -129,7 +129,7 @@ export class DeclarationScope {
       throw new UnsupportedSyntaxError(node.name);
     }
 
-    let object = ts.isIdentifier(node.expression)
+    const object = ts.isIdentifier(node.expression)
       ? createIdentifier(node.expression)
       : this.convertPropertyAccess(node.expression);
 
@@ -190,7 +190,7 @@ export class DeclarationScope {
     }
   }
 
-  convertMembers(members: ts.NodeArray<ts.TypeElement | ts.ClassElement>) {
+  convertMembers(members: ts.NodeArray<ts.TypeElement | ts.ClassElement>): void {
     for (const node of members) {
       if (ts.isPropertyDeclaration(node) || ts.isPropertySignature(node) || ts.isIndexSignatureDeclaration(node)) {
         if (ts.isPropertyDeclaration(node) && node.initializer && ts.isPropertyAccessExpression(node.initializer)) {
@@ -229,7 +229,7 @@ export class DeclarationScope {
     return params.length;
   }
 
-  convertTypeNode(node?: ts.TypeNode): any {
+  convertTypeNode(node?: ts.TypeNode): void {
     if (!node) {
       return;
     }
@@ -242,11 +242,13 @@ export class DeclarationScope {
       return;
     }
     if (ts.isTypeLiteralNode(node)) {
-      return this.convertMembers(node.members);
+      this.convertMembers(node.members);
+      return
     }
 
     if (ts.isArrayTypeNode(node)) {
-      return this.convertTypeNode(node.elementType);
+      this.convertTypeNode(node.elementType);
+      return
     }
     if (ts.isTupleTypeNode(node)) {
       for (const type of node.elements) {
@@ -260,7 +262,8 @@ export class DeclarationScope {
       ts.isTypeOperatorNode(node) ||
       ts.isTypePredicateNode(node)
     ) {
-      return this.convertTypeNode(node.type);
+      this.convertTypeNode(node.type);
+      return
     }
     if (ts.isUnionTypeNode(node) || ts.isIntersectionTypeNode(node)) {
       for (const type of node.types) {
@@ -353,7 +356,7 @@ export class DeclarationScope {
         if (stmt.name && ts.isIdentifier(stmt.name)) {
           this.pushTypeVariable(stmt.name);
         } else {
-          throw new UnsupportedSyntaxError(stmt, `non-Identifier name not supported`);
+          throw new UnsupportedSyntaxError(stmt, 'non-Identifier name not supported');
         }
         continue;
       }
@@ -362,7 +365,7 @@ export class DeclarationScope {
           if (ts.isIdentifier(decl.name)) {
             this.pushTypeVariable(decl.name);
           } else {
-            throw new UnsupportedSyntaxError(decl, `non-Identifier name not supported`);
+            throw new UnsupportedSyntaxError(decl, 'non-Identifier name not supported');
           }
         }
         continue;
@@ -370,7 +373,7 @@ export class DeclarationScope {
       if (ts.isExportDeclaration(stmt)) {
         // noop
       } else {
-        throw new UnsupportedSyntaxError(stmt, `namespace child (hoisting) not supported yet`);
+        throw new UnsupportedSyntaxError(stmt, 'namespace child (hoisting) not supported yet');
       }
     }
 
@@ -420,7 +423,7 @@ export class DeclarationScope {
           }
         }
       } else {
-        throw new UnsupportedSyntaxError(stmt, `namespace child (walking) not supported yet`);
+        throw new UnsupportedSyntaxError(stmt, 'namespace child (walking) not supported yet');
       }
     }
 

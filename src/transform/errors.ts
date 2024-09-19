@@ -1,6 +1,6 @@
-import * as codeFrame from "@babel/code-frame";
-import ts from "typescript";
-import { createRequire } from "module";
+import { createRequire } from "node:module";
+import type * as codeFrame from "@babel/code-frame";
+import type ts from "typescript";
 
 function getCodeFrame(): typeof codeFrame.codeFrameColumns | undefined {
   let codeFrameColumns = undefined;
