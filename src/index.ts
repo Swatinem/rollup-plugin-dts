@@ -1,4 +1,4 @@
-import * as path from "path";
+import * as path from "node:path";
 import type { PluginImpl, Plugin } from "rollup";
 import ts from "typescript";
 import { type Options, resolveDefaultOptions, type ResolvedOptions } from "./options.js";
@@ -140,7 +140,7 @@ const plugin: PluginImpl<Options> = (options = {}) => {
 
       const treatTsAsDts = () => {
         const declarationId = id.replace(TS_EXTENSIONS, dts);
-        let module = getModule(ctx, declarationId, code);
+        const module = getModule(ctx, declarationId, code);
         if (module) {
           watchFiles(module);
           return transformPlugin.transform.call(this, module.code, declarationId);

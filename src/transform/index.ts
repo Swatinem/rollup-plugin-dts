@@ -1,4 +1,4 @@
-import * as path from "path";
+import * as path from "node:path";
 import type { Plugin } from "rollup";
 import ts from "typescript";
 import { NamespaceFixer } from "./NamespaceFixer.js";
@@ -39,7 +39,7 @@ export const transform = () => {
       return {
         ...options,
         onLog(level, log, defaultHandler) {
-          if (level === "warn" && log.code == "CIRCULAR_DEPENDENCY") {
+          if (level === "warn" && log.code === "CIRCULAR_DEPENDENCY") {
             return;
           }
           if (onLog) {

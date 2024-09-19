@@ -1,4 +1,4 @@
-import * as path from "path";
+import * as path from "node:path";
 import ts from "typescript";
 
 export const DTS_EXTENSIONS = /\.d\.(c|m)?tsx?$/;
@@ -30,7 +30,7 @@ const DEFAULT_OPTIONS: ts.CompilerOptions = {
 
 const configByPath = new Map<string, ts.ParsedCommandLine>();
 
-const logCache = (...args: any[]) => (process.env.DTS_LOG_CACHE ? console.log("[cache]", ...args) : null);
+const logCache = (...args: unknown[]) => (process.env.DTS_LOG_CACHE ? console.log("[cache]", ...args) : null);
 
 /**
  * Caches the config for every path between two given paths.
@@ -71,7 +71,7 @@ export function getCompilerOptions(
     if (!configPath) {
       return { dtsFiles, dirName, compilerOptions };
     }
-    let inputDirName = dirName;
+    const inputDirName = dirName;
     dirName = path.dirname(configPath);
     const { config, error } = ts.readConfigFile(configPath, ts.sys.readFile);
     if (error) {
@@ -118,8 +118,8 @@ export function createProgram(fileName: string, overrideOptions: ts.CompilerOpti
 
 export function createPrograms(input: Array<string>, overrideOptions: ts.CompilerOptions, tsconfig?: string) {
   const programs = [];
+  const dtsFiles: Set<string> = new Set();
   let inputs: Array<string> = [];
-  let dtsFiles: Set<string> = new Set();
   let dirName = "";
   let compilerOptions: ts.CompilerOptions = {};
 

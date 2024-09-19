@@ -108,7 +108,7 @@ export function preProcess({ sourceFile }: PreProcessInput): PreProcessOutput {
       fixModifiers(code, node);
 
       // collect the ranges for re-ordering
-      if (declarations.length == 1) {
+      if (declarations.length === 1) {
         const decl = declarations[0]!;
         if (ts.isIdentifier(decl.name)) {
           pushNamedNode(decl.name.getText(), [getStart(node), getEnd(node)]);
@@ -143,7 +143,7 @@ export function preProcess({ sourceFile }: PreProcessInput): PreProcessOutput {
           code.appendLeft(commaPos, ";\n");
           const start = node.getFullStart();
           const slice = code.slice(start, node.getStart());
-          let whitespace = slice.length - slice.trimStart().length;
+          const whitespace = slice.length - slice.trimStart().length;
           if (whitespace) {
             code.overwrite(start, start + whitespace, prefix);
           } else {
@@ -230,7 +230,7 @@ export function preProcess({ sourceFile }: PreProcessInput): PreProcessOutput {
     const { line } = sourceFile.getLineAndCharacterOfPosition(ref.pos);
     const start = lineStarts[line]!;
     let end = sourceFile.getLineEndOfPosition(ref.pos);
-    if (code.slice(end, end + 1) == "\n") {
+    if (code.slice(end, end + 1) === "\n") {
       end += 1;
     }
 
@@ -245,7 +245,7 @@ export function preProcess({ sourceFile }: PreProcessInput): PreProcessOutput {
     const { line } = sourceFile.getLineAndCharacterOfPosition(ref.pos);
     const start = lineStarts[line]!;
     let end = sourceFile.getLineEndOfPosition(ref.pos);
-    if (code.slice(end, end + 1) == "\n") {
+    if (code.slice(end, end + 1) === "\n") {
       end += 1;
     }
 
@@ -371,5 +371,5 @@ function getEnd(node: ts.Node): number {
 }
 
 function newlineAt(node: ts.Node, idx: number): boolean {
-  return node.getSourceFile().getFullText()[idx] == "\n";
+  return node.getSourceFile().getFullText()[idx] === "\n";
 }
