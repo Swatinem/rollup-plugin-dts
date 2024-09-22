@@ -45,7 +45,7 @@ function getModule(
     // Entry points may be in the other entry source files, but it can't emit from them.
     // So we should find the program about the entry point which is the root files.
     if (isEntry) {
-      return p.getRootFileNames().includes(fileName)
+      return p.getRootFileNames().includes(fileName);
     } else {
       return !!p.getSourceFile(fileName);
     }
@@ -224,4 +224,4 @@ const plugin: PluginImpl<Options> = (options = {}) => {
   } satisfies Plugin;
 };
 
-export { plugin as dts, plugin as default } ;
+export { plugin as dts, plugin as default };

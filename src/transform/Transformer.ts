@@ -143,7 +143,7 @@ class Transformer {
 
   convertFunctionDeclaration(node: ts.FunctionDeclaration) {
     if (!node.name) {
-      throw new UnsupportedSyntaxError(node, 'FunctionDeclaration should have a name');
+      throw new UnsupportedSyntaxError(node, "FunctionDeclaration should have a name");
     }
 
     const scope = this.createDeclaration(node, node.name);
@@ -153,7 +153,7 @@ class Transformer {
 
   convertClassOrInterfaceDeclaration(node: ts.ClassDeclaration | ts.InterfaceDeclaration) {
     if (!node.name) {
-      throw new UnsupportedSyntaxError(node, 'ClassDeclaration / InterfaceDeclaration should have a name');
+      throw new UnsupportedSyntaxError(node, "ClassDeclaration / InterfaceDeclaration should have a name");
     }
 
     const scope = this.createDeclaration(node, node.name);
@@ -175,11 +175,11 @@ class Transformer {
   convertVariableStatement(node: ts.VariableStatement) {
     const { declarations } = node.declarationList;
     if (declarations.length !== 1) {
-      throw new UnsupportedSyntaxError(node, 'VariableStatement with more than one declaration not yet supported');
+      throw new UnsupportedSyntaxError(node, "VariableStatement with more than one declaration not yet supported");
     }
     for (const decl of declarations) {
       if (!ts.isIdentifier(decl.name)) {
-        throw new UnsupportedSyntaxError(node, 'VariableDeclaration must have a name');
+        throw new UnsupportedSyntaxError(node, "VariableDeclaration must have a name");
       }
 
       const scope = this.createDeclaration(node, decl.name);

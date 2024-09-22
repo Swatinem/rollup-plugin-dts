@@ -4,7 +4,7 @@ import ts from "typescript";
 import { NamespaceFixer } from "./NamespaceFixer.js";
 import { preProcess } from "./preprocess.js";
 import { convert } from "./Transformer.js";
-import {ExportsFixer} from "./ExportsFixer.js";
+import { ExportsFixer } from "./ExportsFixer.js";
 
 function parse(fileName: string, code: string): ts.SourceFile {
   return ts.createSourceFile(fileName, code, ts.ScriptTarget.Latest, true);

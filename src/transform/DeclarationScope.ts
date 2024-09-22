@@ -243,12 +243,12 @@ export class DeclarationScope {
     }
     if (ts.isTypeLiteralNode(node)) {
       this.convertMembers(node.members);
-      return
+      return;
     }
 
     if (ts.isArrayTypeNode(node)) {
       this.convertTypeNode(node.elementType);
-      return
+      return;
     }
     if (ts.isTupleTypeNode(node)) {
       for (const type of node.elements) {
@@ -263,7 +263,7 @@ export class DeclarationScope {
       ts.isTypePredicateNode(node)
     ) {
       this.convertTypeNode(node.type);
-      return
+      return;
     }
     if (ts.isUnionTypeNode(node) || ts.isIntersectionTypeNode(node)) {
       for (const type of node.types) {
@@ -356,7 +356,7 @@ export class DeclarationScope {
         if (stmt.name && ts.isIdentifier(stmt.name)) {
           this.pushTypeVariable(stmt.name);
         } else {
-          throw new UnsupportedSyntaxError(stmt, 'non-Identifier name not supported');
+          throw new UnsupportedSyntaxError(stmt, "non-Identifier name not supported");
         }
         continue;
       }
@@ -365,7 +365,7 @@ export class DeclarationScope {
           if (ts.isIdentifier(decl.name)) {
             this.pushTypeVariable(decl.name);
           } else {
-            throw new UnsupportedSyntaxError(decl, 'non-Identifier name not supported');
+            throw new UnsupportedSyntaxError(decl, "non-Identifier name not supported");
           }
         }
         continue;
@@ -373,7 +373,7 @@ export class DeclarationScope {
       if (ts.isExportDeclaration(stmt)) {
         // noop
       } else {
-        throw new UnsupportedSyntaxError(stmt, 'namespace child (hoisting) not supported yet');
+        throw new UnsupportedSyntaxError(stmt, "namespace child (hoisting) not supported yet");
       }
     }
 
@@ -423,7 +423,7 @@ export class DeclarationScope {
           }
         }
       } else {
-        throw new UnsupportedSyntaxError(stmt, 'namespace child (walking) not supported yet');
+        throw new UnsupportedSyntaxError(stmt, "namespace child (walking) not supported yet");
       }
     }
 
