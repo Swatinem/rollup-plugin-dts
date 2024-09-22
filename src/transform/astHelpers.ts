@@ -37,7 +37,7 @@ export function createReference(id: ESTree.Expression): { ident: ESTree.Identifi
   };
 }
 
-export function createIdentifier(node: ts.Identifier): ESTree.Identifier {
+export function createIdentifier(node: ts.Identifier | ts.StringLiteral): ESTree.Identifier {
   return withStartEnd(
     {
       type: "Identifier",

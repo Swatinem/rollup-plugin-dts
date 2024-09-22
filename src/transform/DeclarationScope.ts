@@ -99,7 +99,7 @@ export class DeclarationScope {
     this.declaration.params.push(expr);
     this.returnExpr.elements.push(ident);
   }
-  pushIdentifierReference(id: ts.Identifier) {
+  pushIdentifierReference(id: ts.Identifier | ts.StringLiteral) {
     this.pushReference(createIdentifier(id));
   }
 
