@@ -47,7 +47,11 @@ function getModule(
     if (isEntry) {
       return p.getRootFileNames().includes(fileName);
     } else {
-      return !!p.getSourceFile(fileName);
+      const sourceFile = p.getSourceFile(fileName);
+      if (sourceFile && p.isSourceFileFromExternalLibrary(sourceFile)) {
+        return false;
+      }
+      return !!sourceFile;
     }
   });
   if (existingProgram) {
