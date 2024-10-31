@@ -250,6 +250,12 @@ class Transformer {
 
   convertImportDeclaration(node: ts.ImportDeclaration | ts.ImportEqualsDeclaration) {
     if (ts.isImportEqualsDeclaration(node)) {
+      if (ts.isEntityName(node.moduleReference)) {
+        const scope = this.createDeclaration(node, node.name);
+        scope.pushReference(scope.convertEntityName(node.moduleReference));
+        return;
+      }
+
       // assume its like `import default`
       if (!ts.isExternalModuleReference(node.moduleReference)) {
         throw new UnsupportedSyntaxError(node, "ImportEquals should have a literal source.");
