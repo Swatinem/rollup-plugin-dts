@@ -197,6 +197,9 @@ export class NamespaceFixer {
             const typeParams = renderTypeParams(generics);
             code += `type ${ns.name}_${exportedName}${typeParams.in} = ${localName}${typeParams.out};\n`;
             code += `declare const ${ns.name}_${exportedName}: typeof ${localName};\n`;
+          } else if (type === "namespace") {
+            // namespaces may contain both types and values
+            code += `import ${ns.name}_${exportedName} = ${localName};\n`;
           } else {
             // functions and vars are just values
             code += `declare const ${ns.name}_${exportedName}: typeof ${localName};\n`;
