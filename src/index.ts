@@ -27,6 +27,8 @@ interface ResolvedModule {
   program?: ts.Program;
 }
 
+const refPrograms = new Map<string, ts.Program>();
+
 function getModule(
   { entries, programs, resolvedOptions: { compilerOptions, tsconfig } }: DtsPluginContext,
   fileName: string,
@@ -41,7 +43,7 @@ function getModule(
   const isEntry = entries.includes(fileName);
   // Rollup doesn't tell you the entry point of each module in the bundle,
   // so we need to ask every TypeScript program for the given filename.
-  const existingProgram = programs.find((p) => {
+  let existingProgram = programs.find((p) => {
     // Entry points may be in the other entry source files, but it can't emit from them.
     // So we should find the program about the entry point which is the root files.
     if (isEntry) {
@@ -53,6 +55,27 @@ function getModule(
       }
       return !!sourceFile;
     }
+  });
+  existingProgram?.getResolvedProjectReferences()?.forEach(ref => {
+    if (ref === undefined || ref.commandLine === undefined) return;
+
+    const { commandLine, sourceFile: tsconfigSourceFile } = ref;
+    let program = refPrograms.get(tsconfigSourceFile.fileName);
+    if (!program) {
+      program = ts.createProgram({
+        rootNames: commandLine.fileNames,
+        options: commandLine.options,
+        host: ts.createCompilerHost(commandLine.options, true),
+        projectReferences: commandLine.projectReferences,
+      });
+    }
+    refPrograms.set(tsconfigSourceFile.fileName, program);
+
+    const sourceFile = program.getSourceFile(fileName);
+    if (!sourceFile || sourceFile && program.isSourceFileFromExternalLibrary(sourceFile)) {
+      return;
+    }
+    existingProgram = program;
   });
   if (existingProgram) {
     // we know this exists b/c of the .filter above, so this non-null assertion is safe

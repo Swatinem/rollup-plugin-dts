@@ -56,7 +56,12 @@ export function getCompilerOptions(
   input: string,
   overrideOptions: ts.CompilerOptions,
   overrideConfigPath?: string,
-): { dtsFiles: Array<string>; dirName: string; compilerOptions: ts.CompilerOptions } {
+): {
+  dtsFiles: Array<string>;
+  dirName: string;
+  compilerOptions: ts.CompilerOptions;
+  projectReferences?: readonly ts.ProjectReference[];
+} {
   const compilerOptions = { ...DEFAULT_OPTIONS, ...overrideOptions };
   let dirName = path.dirname(input);
   let dtsFiles: Array<string> = [];
@@ -90,7 +95,7 @@ export function getCompilerOptions(
   } else {
     logCache("HIT", cacheKey);
   }
-  const { fileNames, options, errors } = configByPath.get(cacheKey)!;
+  const { fileNames, projectReferences, options, errors } = configByPath.get(cacheKey)!;
 
   dtsFiles = fileNames.filter((name) => DTS_EXTENSIONS.test(name));
   if (errors.length) {
@@ -100,6 +105,7 @@ export function getCompilerOptions(
   return {
     dtsFiles,
     dirName,
+    projectReferences,
     compilerOptions: {
       ...options,
       ...compilerOptions,
@@ -107,13 +113,19 @@ export function getCompilerOptions(
   };
 }
 
-export function createProgram(fileName: string, overrideOptions: ts.CompilerOptions, tsconfig?: string) {
-  const { dtsFiles, compilerOptions } = getCompilerOptions(fileName, overrideOptions, tsconfig);
-  return ts.createProgram(
-    [fileName].concat(Array.from(dtsFiles)),
-    compilerOptions,
-    ts.createCompilerHost(compilerOptions, true),
-  );
+export function createProgram(
+  fileName: string,
+  overrideOptions: ts.CompilerOptions,
+  tsconfig?: string,
+  overrideProjectReferences?: readonly ts.ProjectReference[],
+) {
+  const { dtsFiles, projectReferences, compilerOptions } = getCompilerOptions(fileName, overrideOptions, tsconfig);
+  return ts.createProgram({
+    rootNames: [fileName].concat(Array.from(dtsFiles)),
+    options: compilerOptions,
+    host: ts.createCompilerHost(compilerOptions, true),
+    projectReferences: overrideProjectReferences || projectReferences,
+  });
 }
 
 export function createPrograms(input: Array<string>, overrideOptions: ts.CompilerOptions, tsconfig?: string) {
@@ -122,6 +134,7 @@ export function createPrograms(input: Array<string>, overrideOptions: ts.Compile
   let inputs: Array<string> = [];
   let dirName = "";
   let compilerOptions: ts.CompilerOptions = {};
+  let projectReferences: undefined | readonly ts.ProjectReference[] = [];
 
   for (let main of input) {
     if (DTS_EXTENSIONS.test(main)) {
@@ -134,15 +147,19 @@ export function createPrograms(input: Array<string>, overrideOptions: ts.Compile
 
     if (!inputs.length) {
       inputs.push(main);
-      ({ dirName, compilerOptions } = options);
+      ({ dirName, compilerOptions, projectReferences } = options);
       continue;
     }
 
     if (options.dirName === dirName) {
       inputs.push(main);
     } else {
-      const host = ts.createCompilerHost(compilerOptions, true);
-      const program = ts.createProgram(inputs.concat(Array.from(dtsFiles)), compilerOptions, host);
+      const program = ts.createProgram({
+        rootNames: inputs.concat(Array.from(dtsFiles)),
+        options: compilerOptions,
+        host: ts.createCompilerHost(compilerOptions, true),
+        projectReferences,
+      });
       programs.push(program);
 
       inputs = [main];
@@ -152,7 +169,12 @@ export function createPrograms(input: Array<string>, overrideOptions: ts.Compile
 
   if (inputs.length) {
     const host = ts.createCompilerHost(compilerOptions, true);
-    const program = ts.createProgram(inputs.concat(Array.from(dtsFiles)), compilerOptions, host);
+    const program = ts.createProgram({
+      rootNames: inputs.concat(Array.from(dtsFiles)),
+      options: compilerOptions,
+      host,
+      projectReferences,
+    });
     programs.push(program);
   }
 
