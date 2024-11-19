@@ -190,6 +190,9 @@ const plugin: PluginImpl<Options> = (options = {}) => {
           },
           undefined, // cancellationToken
           true, // emitOnlyDtsFiles
+          undefined, // customTransformers
+          // @ts-ignore This is a private API for workers, should be safe to use as TypeScript Playground has used it for a long time.
+          true, // forceDtsEmit
         );
         if (emitSkipped) {
           const errors = diagnostics.filter((diag) => diag.category === ts.DiagnosticCategory.Error);
