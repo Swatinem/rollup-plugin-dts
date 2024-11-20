@@ -15,12 +15,6 @@ export interface Options {
    */
   compilerOptions?: ts.CompilerOptions;
   /**
-   * Project references are used to enable incremental builds.
-   * If you have a project with multiple sub-projects, you can use this
-   * feature to only rebuild the sub-projects that have changed.
-   */
-  projectReferences?: readonly ts.ProjectReference[];
-  /**
    * Path to tsconfig.json, by default, will try to load 'tsconfig.json'
    */
   tsconfig?: string;

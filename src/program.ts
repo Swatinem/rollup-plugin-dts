@@ -96,6 +96,18 @@ export function getCompilerOptions(
     logCache("HIT", cacheKey);
   }
   const { fileNames, projectReferences, options, errors } = configByPath.get(cacheKey)!;
+  if (!fileNames.includes(input)) {
+    if (!projectReferences?.length) {
+      throw new Error(`File "${input}" is not included in the project`);
+    }
+    for (const ref of projectReferences) {
+      try {
+        return getCompilerOptions(input, overrideOptions, ref.path);
+      } catch (e) {
+      }
+    }
+    throw new Error(`File "${input}" is not included in the project`);
+  }
 
   dtsFiles = fileNames.filter((name) => DTS_EXTENSIONS.test(name));
   if (errors.length) {
