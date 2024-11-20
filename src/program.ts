@@ -96,7 +96,20 @@ export function getCompilerOptions(
     logCache("HIT", cacheKey);
   }
   const { fileNames, projectReferences, options, errors } = configByPath.get(cacheKey)!;
-  if (!fileNames.includes(input)) {
+  recusive: if (!fileNames.includes(input)) {
+    if (options.paths) {
+      for (const key of Object.keys(options.paths)) {
+        if (input.startsWith(key.replace(/\*$/, ""))) {
+          break recusive;
+        }
+      }
+    }
+    if ({
+      ...options,
+      ...compilerOptions,
+    }.allowJs && input.endsWith('.js')) {
+      break recusive;
+    }
     if (!projectReferences?.length) {
       throw new Error(`File "${input}" is not included in the project`);
     }
