@@ -3,5 +3,8 @@
   "compilerOptions": {
     "composite": true
   },
+  "references": [
+    { "path": "./tsconfig.server.json" }
+  ],
   "include": ["./client"]
 }
