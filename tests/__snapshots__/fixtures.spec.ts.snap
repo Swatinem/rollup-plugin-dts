@@ -1,0 +1,18 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`fixtures > project-with-references 1`] = `
+[
+  "index.d.ts",
+]
+`;
+
+exports[`fixtures > project-with-references 2`] = `
+"interface User {
+    name: string;
+}
+
+declare const user: User;
+
+export { user };
+"
+`;

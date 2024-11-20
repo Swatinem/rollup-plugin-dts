@@ -41,8 +41,7 @@
     "build": "tsc && rollup --config .build/rollup.config.js",
     "prepublishOnly": "npm run test",
     "pretest": "npm run build",
-    "test": "c8 node .build/tests/index.js",
-    "build:by-rollup": "npm run build && cd fixtures/project-with-references/; rm -rf node_modules && npm i && npm run build; cd $OLDPWD"
+    "test": "vitest run tests/fixtures.spec.ts && c8 node .build/tests/index.js"
   },
   "prettier": {
     "printWidth": 120,
@@ -57,7 +56,8 @@
     "@types/react": "^18.3.12",
     "c8": "^10.1.2",
     "rollup": "4.27.2",
-    "typescript": "5.6.3"
+    "typescript": "5.6.3",
+    "vitest": "^2.1.5"
   },
   "peerDependencies": {
     "rollup": "^3.29.4 || ^4",

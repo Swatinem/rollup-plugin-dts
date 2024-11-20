@@ -2,8 +2,7 @@
   "name": "project-with-references",
   "private": true,
   "scripts": {
-    "build": "rollup -c",
-    "build:a": "tsc -p tsconfig.json"
+    "build": "rollup -c"
   },
   "dependencies": {
     "rollup": "^4.27.3",
