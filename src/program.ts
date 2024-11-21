@@ -62,6 +62,7 @@ export function getCompilerOptions(
   compilerOptions: ts.CompilerOptions;
   projectReferences?: readonly ts.ProjectReference[];
 } {
+  input = input.split("\\").join("/");
   const compilerOptions = { ...DEFAULT_OPTIONS, ...overrideOptions };
   let dirName = path.dirname(input);
   let dtsFiles: Array<string> = [];
