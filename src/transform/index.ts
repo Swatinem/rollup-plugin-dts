@@ -5,6 +5,7 @@ import { NamespaceFixer } from "./NamespaceFixer.js";
 import { preProcess } from "./preprocess.js";
 import { convert } from "./Transformer.js";
 import { ExportsFixer } from "./ExportsFixer.js";
+import { TypeOnlyFixer } from "./TypeOnlyFixer.js";
 
 function parse(fileName: string, code: string): ts.SourceFile {
   return ts.createSourceFile(fileName, code, ts.ScriptTarget.Latest, true);
@@ -129,7 +130,10 @@ export const transform = () => {
         code += "\nexport { }";
       }
 
-      const exportsFixer = new ExportsFixer(parse(chunk.fileName, code));
+      const typeOnlyFixer = new TypeOnlyFixer(parse(chunk.fileName, code));
+      const { code: typeOnlyFixedCode, typeOnlyHints } = typeOnlyFixer.fix();
+
+      const exportsFixer = new ExportsFixer(parse(chunk.fileName, typeOnlyFixedCode), typeOnlyHints);
 
       return { code: exportsFixer.fix(), map: { mappings: "" } };
     },
