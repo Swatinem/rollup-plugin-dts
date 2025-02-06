@@ -1,4 +1,5 @@
 import ts from "typescript";
+import type { TypeHint } from "./TypeOnlyFixer.js";
 
 type NamedExport = {
   localName: string;
@@ -15,7 +16,10 @@ type ExportDeclaration = {
 
 export class ExportsFixer {
   private readonly DEBUG = !!process.env.DTS_EXPORTS_FIXER_DEBUG;
-  constructor(private readonly source: ts.SourceFile) {}
+  constructor(
+    private readonly source: ts.SourceFile,
+    private readonly typeOnlyHints: Map<string, TypeHint[]>
+  ) {}
 
   public fix(): string {
     const exports = this.findExports();
@@ -25,13 +29,17 @@ export class ExportsFixer {
 
   private findExports(): Array<ExportDeclaration> {
     const { rawExports, values, types } = this.getExportsAndLocals();
+    const typeOnlyNames = [...this.typeOnlyHints.values()]
+      .flatMap((hints) => hints.map((hint) => hint.originalName))
 
     return rawExports.map((rawExport) => {
       const elements = rawExport.elements.map((e) => {
         const exportedName = e.name.text;
         const localName = e.propertyName?.text ?? e.name.text;
-        const kind =
-          types.some((node) => node.getText() === localName) && !values.some((node) => node.getText() === localName)
+        const kind = 
+          (types.some((node) => node.getText() === localName) && !values.some((node) => node.getText() === localName))
+          || e.isTypeOnly 
+          || typeOnlyNames.includes(localName)
             ? ("type" as const)
             : ("value" as const);
         this.DEBUG && console.log(`export ${localName} as ${exportedName} is a ${kind}`);
