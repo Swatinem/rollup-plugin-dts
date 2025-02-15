@@ -15,14 +15,3 @@ declare enum H {}
 declare namespace I {}
 
 declare module 'J' {}
-
-// export { A, B, C, D, E, F, G, H, I }
-// export default A
-
-/** Mark this file as an module */
-// import type { Component } from 'react';
-// or
-// export type _ = any
-
-/** Mark this file as closed module */
-// export {}
