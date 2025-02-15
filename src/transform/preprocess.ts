@@ -90,7 +90,10 @@ export function preProcess({ sourceFile, isEntry }: PreProcessInput): PreProcess
         // collect the exported name, maybe as `default`.
         if (matchesModifier(node, ts.ModifierFlags.ExportDefault)) {
           defaultExport = name;
-        } else if (treatAsGlobalModule || matchesModifier(node, ts.ModifierFlags.Export)) {
+        } else if (
+          (treatAsGlobalModule && ts.isIdentifier(node.name))
+          || matchesModifier(node, ts.ModifierFlags.Export)
+        ) {
           exportedNames.add(name);
         }
         if (!(node.flags & ts.NodeFlags.GlobalAugmentation)) {
