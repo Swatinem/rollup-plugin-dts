@@ -4,6 +4,7 @@ import ts from "typescript";
 import { type Options, resolveDefaultOptions, type ResolvedOptions } from "./options.js";
 import { createProgram, createPrograms, dts, DTS_EXTENSIONS, formatHost, getCompilerOptions } from "./program.js";
 import { transform } from "./transform/index.js";
+import { trimExtension } from "./helpers.js";
 
 export type { Options };
 
@@ -98,7 +99,7 @@ const plugin: PluginImpl<Options> = (options = {}) => {
         // an explicit object, which strips the file extension
         options.input = {};
         for (const filename of input) {
-          let name = filename.replace(/((\.d)?\.(c|m)?(t|j)sx?)$/, "");
+          let name = trimExtension(filename)
           if (path.isAbsolute(filename)) {
             name = path.basename(name);
           } else {

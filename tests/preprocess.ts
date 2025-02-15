@@ -18,7 +18,7 @@ async function assertTestcase(dir: string, bless: boolean) {
   const contents = await fs.readFile(fileName, "utf-8");
 
   const sourceFile = ts.createSourceFile(fileName, contents, ts.ScriptTarget.Latest, true);
-  const result = preProcess({ sourceFile });
+  const result = preProcess({ sourceFile, isEntry: true });
   const code = result.code.toString();
 
   await assertExpectedResult(path.join(dir, "expected.d.ts"), code, bless);
