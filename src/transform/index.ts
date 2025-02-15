@@ -6,6 +6,7 @@ import { preProcess } from "./preprocess.js";
 import { convert } from "./Transformer.js";
 import { ExportsFixer } from "./ExportsFixer.js";
 import { TypeOnlyFixer } from "./TypeOnlyFixer.js";
+import { trimExtension } from "../helpers.js";
 
 function parse(fileName: string, code: string): ts.SourceFile {
   return ts.createSourceFile(fileName, code, ts.ScriptTarget.Latest, true);
@@ -73,8 +74,16 @@ export const transform = () => {
     },
 
     transform(code, fileName) {
+      // `fileName` may not match the name in the moduleIds,
+      // as we generate the `fileName` manually in the previews step,
+      // so we need to find the correct moduleId.
+      const name = trimExtension(fileName)
+      const moduleIds = this.getModuleIds()
+      const moduleId = Array.from(moduleIds).find((id) => trimExtension(id) === name)
+      const isEntry = Boolean(moduleId && this.getModuleInfo(moduleId)?.isEntry)
+
       let sourceFile = parse(fileName, code);
-      const preprocessed = preProcess({ sourceFile });
+      const preprocessed = preProcess({ sourceFile, isEntry });
       // `sourceFile.fileName` here uses forward slashes
       allTypeReferences.set(sourceFile.fileName, preprocessed.typeReferences);
       allFileReferences.set(sourceFile.fileName, preprocessed.fileReferences);

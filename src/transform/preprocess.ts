@@ -15,6 +15,7 @@ type Range = [start: number, end: number];
 
 interface PreProcessInput {
   sourceFile: ts.SourceFile;
+  isEntry: boolean;
 }
 
 interface PreProcessOutput {
@@ -38,8 +39,12 @@ interface PreProcessOutput {
  * - [ ] Duplicate the identifiers of a namespace `export`, so that renaming does
  *   not break it
  */
-export function preProcess({ sourceFile }: PreProcessInput): PreProcessOutput {
+export function preProcess({ sourceFile, isEntry }: PreProcessInput): PreProcessOutput {
   const code = new MagicString(sourceFile.getFullText());
+
+  // Only treat as global module if it's not an entry point,
+  // otherwise the final output will be mismatched with the entry.
+  const treatAsGlobalModule = !isEntry && isGlobalModule(sourceFile)
 
   /** All the names that are declared in the `SourceFile`. */
   const declaredNames = new Set<string>();
@@ -85,7 +90,7 @@ export function preProcess({ sourceFile }: PreProcessInput): PreProcessOutput {
         // collect the exported name, maybe as `default`.
         if (matchesModifier(node, ts.ModifierFlags.ExportDefault)) {
           defaultExport = name;
-        } else if (matchesModifier(node, ts.ModifierFlags.Export)) {
+        } else if (treatAsGlobalModule || matchesModifier(node, ts.ModifierFlags.Export)) {
           exportedNames.add(name);
         }
         if (!(node.flags & ts.NodeFlags.GlobalAugmentation)) {
@@ -107,7 +112,7 @@ export function preProcess({ sourceFile }: PreProcessInput): PreProcessOutput {
         if (ts.isIdentifier(decl.name)) {
           const name = decl.name.getText();
           declaredNames.add(name);
-          if (isExport) {
+          if (treatAsGlobalModule || isExport) {
             exportedNames.add(name);
           }
         }
@@ -505,6 +510,33 @@ export function preProcess({ sourceFile }: PreProcessInput): PreProcessOutput {
       }
     }
   }
+}
+
+/**
+ * If the `SourceFile` is a "global module":
+ * 
+ * 1. Doesn't have any top-level `export {}` or `export default` statements,
+ *    otherwise it's a "scoped module".
+ * 
+ * 2. Should have at least one top-level `import` or `export` statement,
+ *    otherwise it's not a module.
+ * 
+ * Issue: https://github.com/Swatinem/rollup-plugin-dts/issues/334
+ */
+function isGlobalModule(sourceFile: ts.SourceFile) {
+  let isModule = false
+
+  for (const node of sourceFile.statements) {
+    if(ts.isExportDeclaration(node) || ts.isExportAssignment(node)) {
+      return false
+    }
+
+    if(isModule || ts.isImportDeclaration(node) || matchesModifier(node, ts.ModifierFlags.Export)) {
+      isModule = true
+    }
+  }
+
+  return isModule
 }
 
 function fixModifiers(code: MagicString, node: ts.Node) {
