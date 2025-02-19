@@ -69,10 +69,7 @@ export interface Meta {
 async function createBundle(options: Options, rollupOptions: RollupOptions) {
   const bundle = await rollup({
     ...rollupOptions,
-    plugins: [
-      ...(Array.isArray(rollupOptions.plugins) ? rollupOptions.plugins : []), 
-      dts(options)
-    ],
+    plugins: [dts(options)],
     onwarn() {},
   });
   return bundle.generate({
