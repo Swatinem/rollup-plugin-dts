@@ -6,7 +6,7 @@ import { preProcess } from "./preprocess.js";
 import { convert } from "./Transformer.js";
 import { ExportsFixer } from "./ExportsFixer.js";
 import { TypeOnlyFixer } from "./TypeOnlyFixer.js";
-import { trimExtension } from "../helpers.js";
+import { JSON_EXTENSIONS, trimExtension } from "../helpers.js";
 
 function parse(fileName: string, code: string): ts.SourceFile {
   return ts.createSourceFile(fileName, code, ts.ScriptTarget.Latest, true);
@@ -81,9 +81,10 @@ export const transform = () => {
       const moduleIds = this.getModuleIds()
       const moduleId = Array.from(moduleIds).find((id) => trimExtension(id) === name)
       const isEntry = Boolean(moduleId && this.getModuleInfo(moduleId)?.isEntry)
+      const isJSON = Boolean(moduleId && JSON_EXTENSIONS.test(moduleId))
 
       let sourceFile = parse(fileName, code);
-      const preprocessed = preProcess({ sourceFile, isEntry });
+      const preprocessed = preProcess({ sourceFile, isEntry, isJSON });
       // `sourceFile.fileName` here uses forward slashes
       allTypeReferences.set(sourceFile.fileName, preprocessed.typeReferences);
       allFileReferences.set(sourceFile.fileName, preprocessed.fileReferences);

@@ -16,6 +16,7 @@ type Range = [start: number, end: number];
 interface PreProcessInput {
   sourceFile: ts.SourceFile;
   isEntry: boolean;
+  isJSON?: boolean;
 }
 
 interface PreProcessOutput {
@@ -39,7 +40,7 @@ interface PreProcessOutput {
  * - [ ] Duplicate the identifiers of a namespace `export`, so that renaming does
  *   not break it
  */
-export function preProcess({ sourceFile, isEntry }: PreProcessInput): PreProcessOutput {
+export function preProcess({ sourceFile, isEntry, isJSON }: PreProcessInput): PreProcessOutput {
   const code = new MagicString(sourceFile.getFullText());
 
   // Only treat as global module if it's not an entry point,
@@ -234,6 +235,23 @@ export function preProcess({ sourceFile, isEntry }: PreProcessInput): PreProcess
   }
   if (exportedNames.size) {
     code.append(`\nexport { ${[...exportedNames].join(", ")} };\n`);
+  }
+  if(isJSON) {
+    /**
+     * Add a default export for JSON modules.
+     * 
+     * The typescript compiler only generate named exports for each top-level key,
+     * but we also need a default export for JSON modules in most cases.
+     * This also aligns with the behavior of `@rollup/plugin-json`.
+     */
+    defaultExport = uniqName("export_default");
+    code.append([
+      `\ndeclare const ${defaultExport}: {`,
+      [...exportedNames].map(name => `  ${name}: typeof ${name};`).join("\n"),
+      `};`,
+      `export default ${defaultExport};\n` 
+      ].join('\n')
+    );
   }
   for (const [fileId, importName] of inlineImports.entries()) {
     code.prepend(`import * as ${importName} from "${fileId}";\n`);
