@@ -185,8 +185,9 @@ const plugin: PluginImpl<Options> = (options = {}) => {
       // if it's a .d.ts file, handle it as-is
       if (DTS_EXTENSIONS.test(id)) return handleDtsFile();
 
-      // if it's a json file, use the typescript compiler to generate the declarations
-      // This is commonly used with `@rollup/plugin-json` to import JSON files as modules
+      // if it's a json file, use the typescript compiler to generate the declarations,
+      // requires `compilerOptions.resolveJsonModule: true`.
+      // This is also commonly used with `@rollup/plugin-json` to import JSON files.
       if (JSON_EXTENSIONS.test(id)) return generateDts();
 
       // first attempt to treat .ts files as .d.ts files, and otherwise use the typescript compiler to generate the declarations
