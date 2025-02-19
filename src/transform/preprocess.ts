@@ -238,7 +238,7 @@ export function preProcess({ sourceFile, isEntry, isJSON }: PreProcessInput): Pr
   }
   if(isJSON) {
     /**
-     * Add a default export for JSON modules.
+     * Add default export for JSON modules.
      * 
      * The typescript compiler only generate named exports for each top-level key,
      * but we also need a default export for JSON modules in most cases.
