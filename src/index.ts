@@ -2,9 +2,9 @@ import * as path from "node:path";
 import type { PluginImpl, Plugin } from "rollup";
 import ts from "typescript";
 import { type Options, resolveDefaultOptions, type ResolvedOptions } from "./options.js";
-import { createProgram, createPrograms, dts, DTS_EXTENSIONS, formatHost, getCompilerOptions } from "./program.js";
+import { createProgram, createPrograms, formatHost, getCompilerOptions } from "./program.js";
 import { transform } from "./transform/index.js";
-import { trimExtension } from "./helpers.js";
+import { trimExtension, DTS_EXTENSIONS, JSON_EXTENSIONS, getDeclarationId } from "./helpers.js";
 
 export type { Options };
 
@@ -119,7 +119,7 @@ const plugin: PluginImpl<Options> = (options = {}) => {
     },
 
     transform(code, id) {
-      if (!TS_EXTENSIONS.test(id)) {
+      if (!TS_EXTENSIONS.test(id) && !JSON_EXTENSIONS.test(id)) {
         return null;
       }
 
@@ -144,7 +144,7 @@ const plugin: PluginImpl<Options> = (options = {}) => {
       };
 
       const treatTsAsDts = () => {
-        const declarationId = id.replace(TS_EXTENSIONS, dts);
+        const declarationId = getDeclarationId(id);
         const module = getModule(ctx, declarationId, code);
         if (module) {
           watchFiles(module);
@@ -153,12 +153,12 @@ const plugin: PluginImpl<Options> = (options = {}) => {
         return null;
       };
 
-      const generateDtsFromTs = () => {
+      const generateDts = () => {
         const module = getModule(ctx, id, code);
         if (!module || !module.source || !module.program) return null;
         watchFiles(module);
 
-        const declarationId = id.replace(TS_EXTENSIONS, dts);
+        const declarationId = getDeclarationId(id);
 
         let generated!: ReturnType<typeof transformPlugin.transform>;
         const { emitSkipped, diagnostics } = module.program.emit(
@@ -185,8 +185,12 @@ const plugin: PluginImpl<Options> = (options = {}) => {
       // if it's a .d.ts file, handle it as-is
       if (DTS_EXTENSIONS.test(id)) return handleDtsFile();
 
+      // if it's a json file, use the typescript compiler to generate the declarations
+      // This is commonly used with `@rollup/plugin-json` to import JSON files as modules
+      if (JSON_EXTENSIONS.test(id)) return generateDts();
+
       // first attempt to treat .ts files as .d.ts files, and otherwise use the typescript compiler to generate the declarations
-      return treatTsAsDts() ?? generateDtsFromTs();
+      return treatTsAsDts() ?? generateDts();
     },
 
     resolveId(source, importer) {
