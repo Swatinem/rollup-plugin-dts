@@ -184,17 +184,34 @@ export class TypeOnlyFixer {
         const hint = element.propertyName?.text 
           ? hints.get(element.propertyName.text)?.[0]
           : null;
-        if(
-          (hint?.isTypeOnlyNamedReExport || hint?.isTypeOnlyNamespaceReExport)
-          && hint.used
-        ) {
-          // Remove re-exported type hints.
-          // export { A$type_only_named_re_export as A }
-          // export { A$type_only_namespace_re_export as A }
-          // ↓
-          // export { }
-          this.code.remove(element.getStart(), element.getEnd());
-          removedCount++;
+        if(hint?.isTypeOnlyNamedReExport || hint?.isTypeOnlyNamespaceReExport) {
+          if(hint.used) {
+            // Remove re-exported type hints,
+            // because they are already handled(re-exported) in the import statement.
+            // export { A$type_only_named_re_export as A }
+            // export { A$type_only_namespace_re_export as A }
+            // ↓
+            // export { }
+            this.code.remove(element.getStart(), element.getEnd());
+            removedCount++;
+          } else {
+            // Rename re-exported type hints.
+            // export { A$type_only_named_re_export as A }
+            // export { A$type_only_namespace_re_export as A }
+            // ↓
+            // export { type _current_name as A }
+            for(const [_hintName, _hint] of hints.entries()) {
+              if(_hint.some(h => h.hintName === element.propertyName!.text)) {
+                this.code.overwrite(
+                  element.propertyName!.getStart(),
+                  element.propertyName!.getEnd(),
+                  `type ${_hintName}`,
+                );
+                break;
+              }
+            }
+          }
+
           continue;
         }
 
@@ -272,9 +289,7 @@ export class TypeOnlyFixer {
   }
 
   private createNamedBindings(element: TypeHintElement, isTypeOnly: boolean) {
-    const typeModifier = !isTypeOnly 
-      // && (element.hint?.isTypeOnlyImport || element.hint?.isTypeOnlyNamedReExport)
-      && element.hint?.isTypeOnly
+    const typeModifier = !isTypeOnly && element.hint?.isTypeOnly
       ? 'type ' 
       : ''
     return element.sourceName === element.importName 
