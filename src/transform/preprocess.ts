@@ -236,7 +236,7 @@ export function preProcess({ sourceFile, isEntry, isJSON }: PreProcessInput): Pr
   if (exportedNames.size) {
     code.append(`\nexport { ${[...exportedNames].join(", ")} };\n`);
   }
-  if(isJSON) {
+  if(isJSON && exportedNames.size) {
     /**
      * Add default export for JSON modules.
      * 

@@ -4,4 +4,5 @@ declare const export_default: {
   name: typeof name;
   age: typeof age;
 };
-export { age, export_default as foo, name };
+declare const _exports: string[];
+export { age, _exports as bar, export_default as foo, name };
