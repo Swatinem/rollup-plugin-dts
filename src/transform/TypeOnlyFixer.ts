@@ -347,3 +347,26 @@ export function parseTypeOnlyName(name: string): Omit<TypeHint, 'originalName'> 
     hintName: name,
   }
 }
+
+function findHintOriginalName(
+  name: string,
+  type: 'import' | 'export',
+  records: Array<{ aliasHint: TypeHint, referenceHint: TypeHint }>
+) {
+  const hintType = type === 'import' ? 'referenceHint' : 'aliasHint'
+  const _records = records.filter((record) => record[hintType].hintName === name)
+
+  const mappedHintType = type === 'import' ? 'aliasHint' : 'referenceHint'
+  const names: Set<string> = new Set()
+
+  for(const record of _records) {
+    if(record[mappedHintType].isTypeOnly) {
+      const _names = findHintOriginalName(record[mappedHintType].hintName, type, records)
+      _names.forEach(name => names.add(name))
+    } else {
+      names.add(record[mappedHintType].hintName)
+    }
+  }
+
+  return Array.from(names)
+}
