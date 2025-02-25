@@ -2,241 +2,201 @@ import MagicString from "magic-string";
 import ts from "typescript";
 
 export interface TypeHint {
-  isTypeOnly: boolean
-  isTypeOnlyImport: boolean
-  isTypeOnlyNamedImport: boolean
-  isTypeOnlyExport: boolean
-  isTypeOnlyNamedReExport: boolean
-  isTypeOnlyNamespaceReExport: boolean
-  hintName: string
-  originalName: string
-  used?: boolean
+  name: string;
+  isTypeOnly: boolean;
+  isTypeOnlyImport: boolean;
+  isTypeOnlyNamedImport: boolean;
+  isTypeOnlyNamedExport: boolean;
+  isTypeOnlyReExport: boolean;
+  rewrited?: boolean;
 }
 
-interface TypeHintStatement {
-  statement: ts.TypeAliasDeclaration
-  alias: string
-  reference: string
-  aliasHint: Omit<TypeHint, 'originalName'>
-  referenceHint: Omit<TypeHint, 'originalName'>
-}
-
-interface TypeHintElement {
-  sourceName: string
-  importName: string
-  hint?: TypeHint
-}
+type TypeHintRecords = Array<{ aliasHint: TypeHint, referenceHint: TypeHint }>;
 
 export class TypeOnlyFixer {
-  private code: MagicString
+  private readonly source: ts.SourceFile;
+  private readonly code: MagicString;
 
-  constructor(private readonly source: ts.SourceFile) {
-    this.code = new MagicString(this.source.getFullText());
+  constructor(source: ts.SourceFile) {
+    this.source = source;
+    this.code = new MagicString(source.getFullText());
   }
 
   fix() {
-    const hints = this.findTypeOnlyHints()
-    if(hints.size) {
-      this.fixTypeOnlyImports(hints)
-      this.fixTypeOnlyExports(hints)
+    const records = this.findTypeHintRecords();
+
+    if(records.length) {
+      for (const statement of this.source.statements) { 
+        this.fixTypeOnlyImport(statement, records);
+        this.fixTypeOnlyExport(statement, records);
+      }
     }
-    const code = this.code.toString()
-    return {
-      code: code,
-      typeOnlyHints: hints
+
+    return this.code.toString();
+  }
+
+  private fixTypeOnlyImport(statement: ts.Statement, records: TypeHintRecords) {
+    if (!ts.isImportDeclaration(statement) || !statement.importClause) {
+      return;
+    }
+
+    const typeImports: string[] = [];
+    const valueImports: string[] = [];
+    const specifier = statement.moduleSpecifier.getText();
+
+    // Restore type-only imports.
+    if(statement.importClause.name) {
+      const hints = findImportNameHints(statement.importClause.name.text, records);
+
+      if(!hints) {
+        valueImports.push(`import ${statement.importClause.name.text} from ${specifier};`);
+      } else {
+        for(const hint of hints) {
+          // import uniqName from 'a'
+          // type A$type_only_import = uniqName
+          // type A = A$type_only_import
+          // ↓
+          // import type A from 'a'
+          typeImports.push(`import type ${hint.originalName} from ${specifier};`);
+        }
+      }
+    }
+
+    // Restore type-only namespace imports/re-exports.
+    if (
+      statement.importClause.namedBindings 
+      && ts.isNamespaceImport(statement.importClause.namedBindings)
+    ) {
+      const _hints = findImportNameHints(statement.importClause.namedBindings.name.text, records);
+
+      if(!_hints) {
+        valueImports.push(`import * as ${statement.importClause.namedBindings.name.text} from ${specifier};`);
+      } else {
+        for(const hint of _hints) {
+          if(hint.hint.isTypeOnlyImport) {
+            // import * as uniqName from 'a'
+            // type A$type_only_namespace_import = uniqName
+            // type A = A$type_only_namespace_import
+            // ↓
+            // import type * as A from 'a'
+            typeImports.push(`import type * as ${hint.originalName} from ${specifier};`);
+          } else if (hint.hint.isTypeOnlyReExport) {
+            // import * as uniqName from 'a'
+            // type A$type_only_namespace_re_export = uniqName
+            // export type { A$type_only_namespace_re_export as A }
+            // ↓
+            // export type * as A from 'a'
+            hint.hint.rewrited = true;
+            typeImports.push(`export type * as ${hint.originalName} from ${specifier};`);
+          }
+        }
+      }
+    }
+
+    // Restore type-only named imports/re-exports.
+    if (
+      statement.importClause.namedBindings 
+      && ts.isNamedImports(statement.importClause.namedBindings)
+    ) {
+      const typeOnlyNamedImports: Array<[sourceName: string, localName: string]> = [];
+      const typeOnlyNamedReExports: Array<[sourceName: string, localName: string]> = [];
+      const valueNamedImports: Array<[sourceName: string, localName: string]> = [];
+
+      for (const element of statement.importClause.namedBindings.elements) {
+        const localName = element.name.text;
+        const sourceName = element.propertyName?.text || localName;
+        const _hints = findImportNameHints(localName, records);
+
+        if(!_hints) {
+          valueNamedImports.push([sourceName, localName]);
+        } else {
+          for(const hint of _hints) {
+            if(hint.hint.isTypeOnlyNamedImport) {
+              // import { A as uniqName } from 'a'
+              // type A$type_only_named_import = uniqName
+              // type A = A$type_only_named_import
+              // ↓
+              // import type { A } from 'a'
+              typeOnlyNamedImports.push([sourceName, hint.originalName]);
+            } else if(hint.hint.isTypeOnlyReExport) {
+              // import { A as uniqName } from 'a'
+              // type A$type_only_named_re_export = uniqName
+              // export { A$type_only_named_re_export as A }
+              // ↓
+              // export type { A } from 'a'
+              hint.hint.rewrited = true;
+              typeOnlyNamedReExports.push([sourceName, hint.originalName]);
+            }
+          }
+        }
+      }
+
+      if(typeOnlyNamedImports.length) {
+        typeImports.push(`import type { ${getNamedBindings(typeOnlyNamedImports)} } from ${specifier};`);
+      }
+
+      if(typeOnlyNamedReExports.length) {
+        typeImports.push(`export type { ${getNamedBindings(typeOnlyNamedReExports)} } from ${specifier};`);
+      }
+
+      if(valueNamedImports.length) {
+        valueImports.push(`import { ${getNamedBindings(valueNamedImports)} } from ${specifier};`);
+      }
+    }
+
+    if(typeImports.length) {
+      this.code.overwrite(
+        statement.getStart(),
+        statement.getEnd(),
+        [...valueImports, ...typeImports].join('\n'),
+      )
     }
   }
 
-  private fixTypeOnlyImports(hints: Map<string, TypeHint[]>) {
-    for (const statement of this.source.statements) {
-      if (!ts.isImportDeclaration(statement) || !statement.importClause) {
+  private fixTypeOnlyExport(statement: ts.Statement, hints: TypeHintRecords) {
+    if (
+      !ts.isExportDeclaration(statement) 
+      || !statement.exportClause
+      || !ts.isNamedExports(statement.exportClause)
+      || statement.moduleSpecifier
+    ) {
+      return;
+    }
+
+    let removedCount = 0;
+    for(const element of statement.exportClause.elements) {
+      if(!element.propertyName?.text) {
         continue;
       }
 
-      // Restore type-only imports.
-      if(statement.importClause.name) {
-        const hint = hints.get(statement.importClause.name.text)?.[0];
+      const exportName = element.name.text;
+      const localName = element.propertyName.text;
+      const hint = findExportNameHint(localName, hints);
 
-        // import A$type_only_import from 'a'
-        // ↓
-        // import type A from 'a';
-        if(hint?.isTypeOnlyImport) {
-          this.code.overwrite(
-            statement.importClause.getStart(), 
-            statement.importClause.getEnd(), 
-            `type ${hint.originalName}`,
-          );
-          continue;
-        }
-      }
-  
-      // Restore type-only namespace imports/re-exports.
-      if (
-        statement.importClause.namedBindings 
-        && ts.isNamespaceImport(statement.importClause.namedBindings)
-      ) {
-        const hint = hints.get(statement.importClause.namedBindings.name.text)?.[0];
-
-        // import * as A$type_only_namespace_import from 'a'
-        // ↓
-        // import type * as A from 'a'
-        if(hint?.isTypeOnlyImport) {
-          this.code.overwrite(
-            statement.importClause.getStart(), 
-            statement.importClause.getEnd(), 
-            `type * as ${hint.originalName}`,
-          )
-          continue;
-        } 
-        
-        // import * as A$type_only_namespace_re_export from 'a'
-        // ↓
-        // export type * as A from 'a'
-        if(hint?.isTypeOnlyNamespaceReExport) {
-          const specifier = statement.moduleSpecifier.getText()
-          hint.used = true
-          hints.get(hint.hintName)!.forEach(hint => hint.used = true)
-          this.code.overwrite(
-            statement.getStart(), 
-            statement.getEnd(), 
-            `export type * as ${hint.originalName} from ${specifier};`,
-          );
-          continue;
-        }
-      }
-  
-      // Restore type-only named imports/re-exports.
-      if (
-        statement.importClause.namedBindings 
-        && ts.isNamedImports(statement.importClause.namedBindings)
-      ) {
-        const elements: TypeHintElement[] = [];
-
-        for (const element of statement.importClause.namedBindings.elements) {
-          const importName = element.name.text;
-          const sourceName = element.propertyName?.text || importName;
-          const elementHints = hints.get(importName);
-
-          if(!elementHints) {
-            elements.push({ sourceName, importName });
-          } else {
-            elements.push(...elementHints.map(hint => ({
-              sourceName,
-              importName: hint.originalName || importName,
-              hint,
-            })))
-          }
-        }
-
-        const isNamedReExport = elements.some((element) => element.hint?.isTypeOnlyNamedReExport);
-        const hasTypeOnly = elements.some((element) => element.hint?.isTypeOnly);
-        const isTypeOnly = elements.length > 0 && elements.every((element) => element.hint?.isTypeOnly)
-
-        const namedBindings = elements
-          .map((element) => this.createNamedBindings(element, isTypeOnly))
-          .join(', ');
-        const typeModifier = isTypeOnly ? 'type ' : '';
-
-        if(isNamedReExport) {
-          const specifier = statement.moduleSpecifier.getText();
-          elements.forEach((element) => {
-            if(element.hint) {
-              element.hint.used = true;
-              hints.get(element.hint.hintName)!.forEach(hint => hint.used = true);
-            }
-          })
-          // import { A as uniqName } from 'a'
-          // type A$type_only_named_re_export = uniqName
-          // ↓
-          // export type { A } from 'a'
-          this.code.overwrite(
-            statement.getStart(),
-            statement.getEnd(),
-            `export ${typeModifier}{ ${namedBindings} } from ${specifier};`,
-          );
-        } else if(hasTypeOnly) {
-          // import { A as uniqName } from 'a'
-          // type A$type_only_named_import = uniqName
-          // ↓
-          // import type { A } from 'a'
-          this.code.overwrite(
-            statement.importClause.getStart(),
-            statement.importClause.getEnd(),
-            `${typeModifier}{ ${namedBindings} }`,
-          )
-        }
-      }
-    }
-  }
-
-  private fixTypeOnlyExports(hints: Map<string, TypeHint[]>) {
-    for (const statement of this.source.statements) {
-      if (
-        !ts.isExportDeclaration(statement) 
-        || !statement.exportClause
-        || !ts.isNamedExports(statement.exportClause)
-      ) {
+      if(!hint) {
         continue;
+      } 
+
+      if(hint.hint.rewrited) {
+        this.code.remove(element.getStart(), element.getEnd());
+        removedCount++;
+      } else {
+        this.code.overwrite(
+          element.getStart(),
+          element.getEnd(),
+          `type ${getNamedBindings([[hint.originalName, exportName]])}`,
+        )
       }
+    }
 
-      let removedCount = 0;
-      for(const element of statement.exportClause.elements) {
-        const hint = element.propertyName?.text 
-          ? hints.get(element.propertyName.text)?.[0]
-          : null;
-        if(hint?.isTypeOnlyNamedReExport || hint?.isTypeOnlyNamespaceReExport) {
-          if(hint.used) {
-            // Remove re-exported type hints,
-            // because they are already handled(re-exported) in the import statement.
-            // export { A$type_only_named_re_export as A }
-            // export { A$type_only_namespace_re_export as A }
-            // ↓
-            // export { }
-            this.code.remove(element.getStart(), element.getEnd());
-            removedCount++;
-          } else {
-            // Rename re-exported type hints.
-            // export { A$type_only_named_re_export as A }
-            // export { A$type_only_namespace_re_export as A }
-            // ↓
-            // export { type _current_name as A }
-            for(const [_hintName, _hint] of hints.entries()) {
-              if(_hint.some(h => h.hintName === element.propertyName!.text)) {
-                this.code.overwrite(
-                  element.propertyName!.getStart(),
-                  element.propertyName!.getEnd(),
-                  `type ${_hintName}`,
-                );
-                break;
-              }
-            }
-          }
-
-          continue;
-        }
-
-        if(hint?.isTypeOnly && element.propertyName) {
-          // Restore type-only named exports.
-          // export { A$type_only_export as A }
-          // ↓
-          // export { type A }
-          this.code.overwrite(
-            element.propertyName.getStart(),
-            element.propertyName.getEnd(),
-            `type ${hint.originalName}`,
-          );
-        }
-      }
-
-      if(removedCount && removedCount === statement.exportClause.elements.length) {
-        // Remove the entire export statement if all elements are re-exported types.
-        this.code.remove(statement.getStart(), statement.getEnd());
-      }
+    if(removedCount && removedCount === statement.exportClause.elements.length) {
+      // Remove the entire export statement if all elements are re-exported types.
+      this.code.remove(statement.getStart(), statement.getEnd());
     }
   }
 
-  private findTypeOnlyHints(): Map<string, TypeHint[]> {
-    const hintStatements: TypeHintStatement[] = [];
+  private findTypeHintRecords() {
+    const records: TypeHintRecords = [];
     
     for (const statement of this.source.statements) {
       if (
@@ -249,124 +209,113 @@ export class TypeOnlyFixer {
         const aliasHint = parseTypeOnlyName(alias);
         const referenceHint = parseTypeOnlyName(reference);
 
-        if (aliasHint.isTypeOnly || referenceHint.isTypeOnly) {
-          hintStatements.push({ statement, alias, reference, aliasHint, referenceHint });
+        if(aliasHint.isTypeOnly || referenceHint.isTypeOnly) {
+          records.push({ aliasHint, referenceHint });
+          this.code.remove(statement.getStart(), statement.getEnd());
         }
       }
     }
-  
-    const hints = new Map<string, TypeHint[]>();
 
-    for (const { statement, alias, aliasHint, reference, referenceHint } of hintStatements) {
-      if(referenceHint.isTypeOnlyImport) {
-        pushHint(reference, { ...referenceHint, originalName: alias });
-      }
-      if(aliasHint.isTypeOnlyNamedImport) {
-        const originalName = hintStatements.find(({ reference }) => reference === alias)!.alias;
-        pushHint(reference, { ...aliasHint, originalName });
-      }
-      if(aliasHint.isTypeOnlyExport) {
-        pushHint(alias, { ...aliasHint, originalName: reference });
-      }
-      if(aliasHint.isTypeOnlyNamedReExport || aliasHint.isTypeOnlyNamespaceReExport) {
-        const originalName = aliasHint.isTypeOnlyNamedReExport
-          ? alias.split(TYPE_ONLY_NAMED_RE_EXPORT)[0]!
-          : alias.split(TYPE_ONLY_NAMESPACE_RE_EXPORT)[0]!
-        pushHint(reference, { ...aliasHint, originalName});
-        pushHint(alias, { ...aliasHint, originalName});
-      }
-      if(aliasHint.isTypeOnly || referenceHint.isTypeOnly) {
-        this.code.remove(statement.getStart(), statement.getEnd());
-      }
-    }
-
-    return hints
-
-    function pushHint(name: string, hint: TypeHint) {
-      const _hints = hints.get(name)
-      _hints ? _hints.push(hint) : hints.set(name, [hint])
-    }
-  }
-
-  private createNamedBindings(element: TypeHintElement, isTypeOnly: boolean) {
-    const typeModifier = !isTypeOnly && element.hint?.isTypeOnly
-      ? 'type ' 
-      : ''
-    return element.sourceName === element.importName 
-      ? `${typeModifier}${element.importName}` 
-      : `${typeModifier}${element.sourceName} as ${element.importName}`
+    return records;
   }
 }
 
-const UNIQ_IMPORT = '$UNIQ_IMPORT'
-const TYPE_ONLY_IMPORT = '$TYPE_ONLY_IMPORT'
-const TYPE_ONLY_NAMED_IMPORT = '$TYPE_ONLY_NAMED_IMPORT'
-const TYPE_ONLY_EXPORT = '$TYPE_ONLY_EXPORT'
-const TYPE_ONLY_NAMED_RE_EXPORT = '$TYPE_ONLY_NAMED_RE_EXPORT'
-const TYPE_ONLY_NAMESPACE_RE_EXPORT = '$TYPE_ONLY_NAMESPACE_RE_EXPORT'
-let typeHintIds = 0
+function findImportNameHints(name: string, records: TypeHintRecords) {
+  const matchedRecords = records.filter((record) => record.referenceHint.name === name);
 
-export function createUniqImportTypeName() {
-  return `${UNIQ_IMPORT}_${typeHintIds++}`
-}
-export function createTypeOnlyImportName(name: string) {
-  return `${name}${TYPE_ONLY_IMPORT}_${typeHintIds++}`
-}
-export function createTypeOnlyNamedImportName(name: string) {
-  return `${name}${TYPE_ONLY_NAMED_IMPORT}_${typeHintIds++}`
-}
-export function createTypeOnlyExportName(name: string) {
-  return `${name}${TYPE_ONLY_EXPORT}_${typeHintIds++}`
-}
-export function createTypeOnlyNamedReExportName(name: string) {
-  return `${name}${TYPE_ONLY_NAMED_RE_EXPORT}_${typeHintIds++}`
-}
-export function createTypeOnlyNamespaceReExportName(name: string) {
-  return `${name}${TYPE_ONLY_NAMESPACE_RE_EXPORT}_${typeHintIds++}`
-}
-export function parseTypeOnlyName(name: string): Omit<TypeHint, 'originalName'> {
-  const isTypeOnlyImport = name.includes(TYPE_ONLY_IMPORT)
-  const isTypeOnlyNamedImport = name.includes(TYPE_ONLY_NAMED_IMPORT)
-  const isTypeOnlyExport = name.includes(TYPE_ONLY_EXPORT)
-  const isTypeOnlyNamedReExport = name.includes(TYPE_ONLY_NAMED_RE_EXPORT)
-  const isTypeOnlyNamespaceReExport = name.includes(TYPE_ONLY_NAMESPACE_RE_EXPORT)
-
-  const isTypeOnly = isTypeOnlyImport 
-    || isTypeOnlyNamedImport
-    || isTypeOnlyExport 
-    || isTypeOnlyNamedReExport 
-    || isTypeOnlyNamespaceReExport
+  if(!matchedRecords.length) {
+    return null;
+  }
   
+  return matchedRecords.map((record) => ({
+    hint: record.aliasHint,
+    originalName: record.aliasHint.isTypeOnlyReExport
+      ? record.aliasHint.name.split(TYPE_ONLY_RE_EXPORT)[0]!
+      : findOriginalName(record.aliasHint.name, 'import', records),
+  }))
+}
+
+function findExportNameHint(name: string, records: TypeHintRecords) {
+  const matchedRecord = records.find((record) => 
+    record.aliasHint.isTypeOnly && record.aliasHint.name === name
+  );
+
+  if(!matchedRecord) {
+    return null;
+  }
+
   return {
-    isTypeOnly,
-    isTypeOnlyImport,
-    isTypeOnlyNamedImport,
-    isTypeOnlyExport,
-    isTypeOnlyNamedReExport,
-    isTypeOnlyNamespaceReExport,
-    hintName: name,
+    hint: matchedRecord.aliasHint,
+    originalName: findOriginalName(name, 'export', records),
   }
 }
 
-function findHintOriginalName(
+function findOriginalName(
   name: string,
   type: 'import' | 'export',
   records: Array<{ aliasHint: TypeHint, referenceHint: TypeHint }>
 ) {
-  const hintType = type === 'import' ? 'referenceHint' : 'aliasHint'
-  const _records = records.filter((record) => record[hintType].hintName === name)
+  const hintKey = type === 'import' ? 'referenceHint' : 'aliasHint';
+  const record = records.find((record) => record[hintKey].name === name);
 
-  const mappedHintType = type === 'import' ? 'aliasHint' : 'referenceHint'
-  const names: Set<string> = new Set()
-
-  for(const record of _records) {
-    if(record[mappedHintType].isTypeOnly) {
-      const _names = findHintOriginalName(record[mappedHintType].hintName, type, records)
-      _names.forEach(name => names.add(name))
-    } else {
-      names.add(record[mappedHintType].hintName)
-    }
+  if(!record) {
+    return name;
   }
+  
+  const reversedHintKey = type === 'import' ? 'aliasHint' : 'referenceHint';
+  if(record[reversedHintKey].isTypeOnly) {
+    return findOriginalName(record[reversedHintKey].name, type, records);
+  } else {
+    return record[reversedHintKey].name;
+  }
+}
 
-  return Array.from(names)
+function getNamedBindings(bindings: Array<[sourceName: string, targetName: string]>  ) {
+  return bindings.map(([sourceName, targetName]) => sourceName === targetName 
+    ? sourceName 
+    : `${sourceName} as ${targetName}`
+  ).join(', ');
+}
+
+const UNIQ_IMPORT = '$UNIQ_IMPORT';
+const TYPE_ONLY_IMPORT = '$TYPE_ONLY_IMPORT';
+const TYPE_ONLY_NAMED_IMPORT = '$TYPE_ONLY_NAMED_IMPORT';
+const TYPE_ONLY_NAMED_EXPORT = '$TYPE_ONLY_NAMED_EXPORT';
+const TYPE_ONLY_RE_EXPORT = '$TYPE_ONLY_RE_EXPORT';
+let typeHintIds = 0;
+
+export function createUniqImportTypeName() {
+  return `${UNIQ_IMPORT}_${typeHintIds++}`;
+}
+export function createTypeOnlyImportName(name: string) {
+  return `${name}${TYPE_ONLY_IMPORT}_${typeHintIds++}`;
+}
+export function createTypeOnlyNamedImportName(name: string) {
+  return `${name}${TYPE_ONLY_NAMED_IMPORT}_${typeHintIds++}`;
+}
+export function createTypeOnlyExportName(name: string) {
+  return `${name}${TYPE_ONLY_NAMED_EXPORT}_${typeHintIds++}`;
+}
+export function createTypeOnlyReExportName(name: string) {
+  return `${name}${TYPE_ONLY_RE_EXPORT}_${typeHintIds++}`;
+}
+function parseTypeOnlyName(name: string): Omit<TypeHint, 'originalName'> {
+  const isTypeOnlyImport = name.includes(TYPE_ONLY_IMPORT);
+  const isTypeOnlyNamedImport = name.includes(TYPE_ONLY_NAMED_IMPORT);
+  const isTypeOnlyNamedExport = name.includes(TYPE_ONLY_NAMED_EXPORT);
+  const isTypeOnlyReExport = name.includes(TYPE_ONLY_RE_EXPORT);
+
+  const isTypeOnly = isTypeOnlyImport 
+    || isTypeOnlyNamedImport
+    || isTypeOnlyNamedExport 
+    || isTypeOnlyReExport 
+  
+  return {
+    name,
+    isTypeOnly,
+    isTypeOnlyImport,
+    isTypeOnlyNamedImport,
+    isTypeOnlyNamedExport,
+    isTypeOnlyReExport,
+  }
 }

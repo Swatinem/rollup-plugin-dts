@@ -1,5 +1,4 @@
 import ts from "typescript";
-import type { TypeHint } from "./TypeOnlyFixer.js";
 
 type NamedExport = {
   localName: string;
@@ -16,10 +15,7 @@ type ExportDeclaration = {
 
 export class ExportsFixer {
   private readonly DEBUG = !!process.env.DTS_EXPORTS_FIXER_DEBUG;
-  constructor(
-    private readonly source: ts.SourceFile,
-    private readonly typeOnlyHints: Map<string, TypeHint[]>
-  ) {}
+  constructor(private readonly source: ts.SourceFile) {}
 
   public fix(): string {
     const exports = this.findExports();
@@ -29,8 +25,6 @@ export class ExportsFixer {
 
   private findExports(): Array<ExportDeclaration> {
     const { rawExports, values, types } = this.getExportsAndLocals();
-    const typeOnlyNames = [...this.typeOnlyHints.values()]
-      .flatMap((hints) => hints.map((hint) => hint.originalName))
 
     return rawExports.map((rawExport) => {
       const elements = rawExport.elements.map((e) => {
@@ -39,7 +33,6 @@ export class ExportsFixer {
         const kind = 
           (types.some((node) => node.getText() === localName) && !values.some((node) => node.getText() === localName))
           || e.isTypeOnly 
-          || typeOnlyNames.includes(localName)
             ? ("type" as const)
             : ("value" as const);
         this.DEBUG && console.log(`export ${localName} as ${exportedName} is a ${kind}`);
@@ -74,6 +67,25 @@ export class ExportsFixer {
     for (const statement of statements) {
       this.DEBUG && console.log(statement.getText(), statement.kind);
       if (ts.isImportDeclaration(statement)) {
+        if(statement.importClause?.isTypeOnly && statement.importClause.name) {
+          this.DEBUG && console.log(`${statement.importClause.name.getFullText()} is a type`);
+          types.push(statement.importClause.name)
+        }
+
+        if(statement.importClause?.namedBindings) {
+          if(statement.importClause?.isTypeOnly && ts.isNamespaceImport(statement.importClause.namedBindings)) {
+            this.DEBUG && console.log(`${statement.importClause.namedBindings.name.getFullText()} is a type`);
+            types.push(statement.importClause.namedBindings.name)
+          } else if(ts.isNamedImports(statement.importClause.namedBindings)) {
+            const typeElements = statement.importClause?.isTypeOnly
+              ? statement.importClause.namedBindings.elements
+              : statement.importClause.namedBindings.elements.filter((e) => e.isTypeOnly);
+
+            this.DEBUG && console.log(`${typeElements.map((e) => e.name).join(", ")} are types`);
+            types.push(...typeElements.map((e) => e.name))
+          }
+        }
+
         continue;
       }
       if (ts.isInterfaceDeclaration(statement) || ts.isTypeAliasDeclaration(statement)) {

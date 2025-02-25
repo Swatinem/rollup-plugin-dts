@@ -140,9 +140,9 @@ export const transform = () => {
       }
 
       const typeOnlyFixer = new TypeOnlyFixer(parse(chunk.fileName, code));
-      const { code: typeOnlyFixedCode, typeOnlyHints } = typeOnlyFixer.fix();
+      const typeOnlyFixedCode = typeOnlyFixer.fix();
 
-      const exportsFixer = new ExportsFixer(parse(chunk.fileName, typeOnlyFixedCode), typeOnlyHints);
+      const exportsFixer = new ExportsFixer(parse(chunk.fileName, typeOnlyFixedCode));
 
       return { code: exportsFixer.fix(), map: { mappings: "" } };
     },

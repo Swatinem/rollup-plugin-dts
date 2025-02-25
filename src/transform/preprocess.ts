@@ -6,8 +6,7 @@ import {
   createTypeOnlyExportName,
   createTypeOnlyImportName, 
   createTypeOnlyNamedImportName, 
-  createTypeOnlyNamedReExportName, 
-  createTypeOnlyNamespaceReExportName, 
+  createTypeOnlyReExportName, 
   createUniqImportTypeName, 
 } from './TypeOnlyFixer.js'
 
@@ -285,19 +284,23 @@ export function preProcess({ sourceFile, isEntry }: PreProcessInput): PreProcess
     // Transform type-only imports.
     if(node.importClause.isTypeOnly && node.importClause.name) {
       const importName = node.importClause.name.text;
+      const uniqName = createUniqImportTypeName();
       const importHintName = createTypeOnlyImportName(importName);
       
       // import type A from 'a'
       // ↓
-      // import type A$type_only_import from 'a'
+      // import type uniqName from 'a'
+      // type A$type_only_import = uniqName
       // type A = A$type_only_import
       code.overwrite(
         node.importClause.name.getStart(), 
         node.importClause.name.getEnd(), 
-        importHintName
+        uniqName
       );
-      code.appendRight(node.getEnd(), `\ntype ${importName} = ${importHintName};`);
-      return;
+      code.appendRight(
+        node.getEnd(), 
+        `type ${importHintName} = ${uniqName};\ntype ${importName} = ${importHintName};\n`,
+      );
     }
 
     // Transform type-only namespace imports.
@@ -307,19 +310,23 @@ export function preProcess({ sourceFile, isEntry }: PreProcessInput): PreProcess
       && ts.isNamespaceImport(node.importClause.namedBindings)
     ) {
       const importName = node.importClause.namedBindings.name.text;
+      const uniqName = createUniqImportTypeName();
       const importHintName = createTypeOnlyImportName(importName);
 
       // import type * as A from 'a'
       // ↓
-      // import type * as A$type_only_namespace_import from 'a'
+      // import type * as uniqName from 'a'
+      // type A$type_only_namespace_import = uniqName
       // type A = A$type_only_namespace_import
       code.overwrite(
         node.importClause.namedBindings.name.getStart(), 
         node.importClause.namedBindings.name.getEnd(), 
-        importHintName
+        uniqName
       );
-      code.appendRight(node.getEnd(), `\ntype ${importName} = ${importHintName};`);
-      return;
+      code.appendRight(
+        node.getEnd(), 
+        `type ${importHintName} = ${uniqName};\ntype ${importName} = ${importHintName};\n`,
+      );
     }
 
     // Transform type-only named imports.
@@ -343,11 +350,10 @@ export function preProcess({ sourceFile, isEntry }: PreProcessInput): PreProcess
           );
           code.appendRight(
             node.getEnd(), 
-            `\ntype ${importHintName} = ${importUniqName};\ntype ${importName} = ${importHintName};`,
+            `type ${importHintName} = ${importUniqName};\ntype ${importName} = ${importHintName};\n`,
           );
         }
       }
-      return;
     }
   }
 
@@ -393,7 +399,7 @@ export function preProcess({ sourceFile, isEntry }: PreProcessInput): PreProcess
         const importName = element.propertyName?.text || exportName;
         if(node.isTypeOnly || element.isTypeOnly) {
           const importUniqName = createUniqImportTypeName();
-          const exportHintName = createTypeOnlyNamedReExportName(exportName);
+          const exportHintName = createTypeOnlyReExportName(exportName);
           typeHints.push({ importName, importUniqName, exportHintName, exportName });
         } else {
           values.push(element.getText());
@@ -414,7 +420,7 @@ export function preProcess({ sourceFile, isEntry }: PreProcessInput): PreProcess
           [
             values.length ? `export { ${values.join(', ')} } from ${specifier};` : '',
             `import type { ${typeHints.map(hint => `${hint.importName} as ${hint.importUniqName}`).join(', ')} } from ${specifier};`,
-            typeHints.map(hint => `type ${hint.exportHintName} = ${hint.importUniqName};`).join('\n'),
+            ...typeHints.map(hint => `type ${hint.exportHintName} = ${hint.importUniqName};`),
             `export type { ${typeHints.map(hint => `${hint.exportHintName} as ${hint.exportName}`).join(', ')} };`
           ].filter(Boolean).join('\n'),
         );
@@ -433,8 +439,7 @@ export function preProcess({ sourceFile, isEntry }: PreProcessInput): PreProcess
       const specifier = node.moduleSpecifier.getText();
       const exportName = node.exportClause.name.text;
       const importUniqName = createUniqImportTypeName();
-      const exportHintName = createTypeOnlyNamespaceReExportName(exportName);
-
+      const exportHintName = createTypeOnlyReExportName(exportName);
 
       // export type * as A from 'a'
       // ↓
@@ -454,7 +459,8 @@ export function preProcess({ sourceFile, isEntry }: PreProcessInput): PreProcess
       return;
     }
 
-    // TODO: The bare re-export is still not supported.
+    // TODO: The type-only bare re-export is still not supported,
+    // it will be bundled as `export * from 'a'`.
     // export type * from 'a'
   }
 

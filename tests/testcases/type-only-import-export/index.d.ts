@@ -36,3 +36,9 @@ export type * from 'n'
 
 export * as I from 'i'
 export type * as O from 'o'
+
+interface Foo {
+  inline: string
+}
+export type { Foo as FooInlne }
+export type { Foo } from './foo'

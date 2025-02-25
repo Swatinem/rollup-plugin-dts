@@ -20,4 +20,8 @@ export * from 'n';
 import * as i from 'i';
 export { i as I };
 export type * as O from 'o';
-export type { B, B$1 as B2, B$1 as B3, D, E3 as E2, E3, E4, F, G1, E as default };
+interface Foo$1 {}
+interface Foo {
+  inline: string
+}
+export type { B, B$1 as B2, B$1 as B3, D, E3 as E2, E3, E4, F, Foo$1 as Foo, Foo as FooInlne, G1, E as default };
