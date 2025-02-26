@@ -1,8 +1,6 @@
 import * as path from "node:path";
 import ts from "typescript";
-
-export const DTS_EXTENSIONS = /\.d\.(c|m)?tsx?$/;
-export const dts = ".d.ts";
+import { DTS_EXTENSIONS } from "./helpers.js";
 
 export const formatHost: ts.FormatDiagnosticsHost = {
   getCurrentDirectory: () => ts.sys.getCurrentDirectory(),
@@ -26,6 +24,8 @@ const DEFAULT_OPTIONS: ts.CompilerOptions = {
   preserveSymlinks: true,
   // Ensure we can parse the latest code
   target: ts.ScriptTarget.ESNext,
+  // Allows importing `*.json`
+  resolveJsonModule: true,
 };
 
 const configByPath = new Map<string, ts.ParsedCommandLine>();
