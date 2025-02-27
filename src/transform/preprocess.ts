@@ -3,11 +3,9 @@ import ts from "typescript";
 import { matchesModifier } from "./astHelpers.js";
 import { UnsupportedSyntaxError } from "./errors.js";
 import {
-  createTypeOnlyExportName,
-  createTypeOnlyImportName, 
-  createTypeOnlyNamedImportName, 
+  createUniqName, 
+  createTypeOnlyName,
   createTypeOnlyReExportName, 
-  createUniqImportTypeName, 
 } from './TypeOnlyFixer.js'
 
 type Range = [start: number, end: number];
@@ -281,77 +279,43 @@ export function preProcess({ sourceFile, isEntry }: PreProcessInput): PreProcess
       return;
     }
 
-    // Transform type-only imports.
     if(node.importClause.isTypeOnly && node.importClause.name) {
-      const importName = node.importClause.name.text;
-      const uniqName = createUniqImportTypeName();
-      const importHintName = createTypeOnlyImportName(importName);
-      
-      // import type A from 'a'
+      const name = node.importClause.name.text;
+      const hintName = createTypeOnlyName(name);
+
+      // import type A from 'a';
       // ↓
-      // import type uniqName from 'a'
-      // type A$type_only_import = uniqName
-      // type A = A$type_only_import
-      code.overwrite(
-        node.importClause.name.getStart(), 
-        node.importClause.name.getEnd(), 
-        uniqName
-      );
-      code.appendRight(
-        node.getEnd(), 
-        `type ${importHintName} = ${uniqName};\ntype ${importName} = ${importHintName};\n`,
-      );
+      // import type A from 'a';
+      // type A$type_only_import = A;
+      code.appendRight(node.getEnd(), `type ${hintName} = ${name};\n`);
     }
 
-    // Transform type-only namespace imports.
     if (
       node.importClause.isTypeOnly 
       && node.importClause.namedBindings 
       && ts.isNamespaceImport(node.importClause.namedBindings)
     ) {
-      const importName = node.importClause.namedBindings.name.text;
-      const uniqName = createUniqImportTypeName();
-      const importHintName = createTypeOnlyImportName(importName);
+      const name = node.importClause.namedBindings.name.text;
+      const hintName = createTypeOnlyName(name);
 
       // import type * as A from 'a'
       // ↓
-      // import type * as uniqName from 'a'
-      // type A$type_only_namespace_import = uniqName
-      // type A = A$type_only_namespace_import
-      code.overwrite(
-        node.importClause.namedBindings.name.getStart(), 
-        node.importClause.namedBindings.name.getEnd(), 
-        uniqName
-      );
-      code.appendRight(
-        node.getEnd(), 
-        `type ${importHintName} = ${uniqName};\ntype ${importName} = ${importHintName};\n`,
-      );
+      // import type * as A from 'a'
+      // type A$type_only_import = A
+      code.appendRight(node.getEnd(), `type ${hintName} = ${name};\n`);
     }
 
-    // Transform type-only named imports.
     if (node.importClause.namedBindings && ts.isNamedImports(node.importClause.namedBindings)) {
       for (const element of node.importClause.namedBindings.elements) {
         if(node.importClause.isTypeOnly || element.isTypeOnly) {
-          const importName = element.name.text;
-          const sourceName = element.propertyName?.text || importName;
-          const importUniqName = createUniqImportTypeName();
-          const importHintName = createTypeOnlyNamedImportName(importName)
+          const name = element.name.text;
+          const hintName = createTypeOnlyName(name);
 
           // import type { A } from 'a'
           // ↓
-          // import type { A as uniqName } from 'a'
-          // type A$type_only_named_import = uniqName
-          // type A = A$type_only_named_import
-          code.overwrite(
-            element.getStart(), 
-            element.getEnd(), 
-            `${element.isTypeOnly ? 'type ' : ''}${sourceName} as ${importUniqName}`
-          );
-          code.appendRight(
-            node.getEnd(), 
-            `type ${importHintName} = ${importUniqName};\ntype ${importName} = ${importHintName};\n`,
-          );
+          // import type { A } from 'a'
+          // type A$type_only_import = A
+          code.appendRight(node.getEnd(), `type ${hintName} = ${name};\n`);
         }
       }
     }
@@ -362,24 +326,17 @@ export function preProcess({ sourceFile, isEntry }: PreProcessInput): PreProcess
       return;
     }
 
-    // Transform type-only named exports.
     if(node.exportClause && ts.isNamedExports(node.exportClause) && !node.moduleSpecifier) {
       for (const element of node.exportClause.elements) {
         if(node.isTypeOnly || element.isTypeOnly) {
-          const exportName = element.name.text
-          const localName = element.propertyName?.text || exportName
-          const exportHintName = createTypeOnlyExportName(localName)
+          const name = element.propertyName?.text || element.name.text;
+          const hintName = createTypeOnlyName(name);
 
           // export type { A }
           // ↓ 
-          // type A$type_only_named_export = A
-          // export type { A$type_only_named_export as A }
-          code.appendLeft(node.getStart(), `type ${exportHintName} = ${localName};\n`)
-          code.overwrite(
-            element.getStart(), 
-            element.getEnd(), 
-            `${element.isTypeOnly ? 'type ' : ''}${exportHintName} as ${exportName}`
-          );
+          // type A$type_only_export = A
+          // export type { A }
+          code.appendLeft(node.getStart(), `type ${hintName} = ${name};\n`);
         }
       }
       return;
@@ -387,41 +344,36 @@ export function preProcess({ sourceFile, isEntry }: PreProcessInput): PreProcess
 
     // Transform type-only named re-exports.
     if(node.exportClause && ts.isNamedExports(node.exportClause) && node.moduleSpecifier) {
-      const typeHints: Array<{ 
-        importName: string
-        importUniqName: string
-        exportHintName: string
-        exportName: string
-      }> = []
       const values: string[] = [];
+      const types: Array<{ uniqName: string; hintName: string; sourceName: string; targetName: string }> = [];
+      const specifier = node.moduleSpecifier.getText();
+
       for (const element of node.exportClause.elements) {
-        const exportName = element.name.text;
-        const importName = element.propertyName?.text || exportName;
+        const targetName = element.name.text;
+        const sourceName = element.propertyName?.text || targetName;
         if(node.isTypeOnly || element.isTypeOnly) {
-          const importUniqName = createUniqImportTypeName();
-          const exportHintName = createTypeOnlyReExportName(exportName);
-          typeHints.push({ importName, importUniqName, exportHintName, exportName });
+          const uniqName = createUniqName();
+          const hintName = createTypeOnlyReExportName(targetName);
+          types.push({ sourceName, uniqName, hintName, targetName });
         } else {
           values.push(element.getText());
         }
       }
 
-      if(typeHints.length) {
-        const specifier = node.moduleSpecifier.getText();
-
+      if(types.length) {
         // export type { A } from 'a'
         // ↓
         // import type { A as uniqName } from 'a'
-        // type A$type_only_named_re_export = uniqName
-        // export type { A$type_only_named_re_export as A }
+        // type A$type_only_re_export = uniqName
+        // export type { uniqName as A }
         code.overwrite(
           node.getStart(), 
           node.getEnd(), 
           [
             values.length ? `export { ${values.join(', ')} } from ${specifier};` : '',
-            `import type { ${typeHints.map(hint => `${hint.importName} as ${hint.importUniqName}`).join(', ')} } from ${specifier};`,
-            ...typeHints.map(hint => `type ${hint.exportHintName} = ${hint.importUniqName};`),
-            `export type { ${typeHints.map(hint => `${hint.exportHintName} as ${hint.exportName}`).join(', ')} };`
+            `import type { ${types.map(hint => `${hint.sourceName} as ${hint.uniqName}`).join(', ')} } from ${specifier};`,
+            ...types.map(hint => `type ${hint.hintName} = ${hint.uniqName};`),
+            `export type { ${types.map(hint => `${hint.uniqName} as ${hint.targetName}`).join(', ')} };`
           ].filter(Boolean).join('\n'),
         );
       }
@@ -429,7 +381,6 @@ export function preProcess({ sourceFile, isEntry }: PreProcessInput): PreProcess
       return;
     }
 
-    // Transform type-only namespace re-exports.
     if(
       node.exportClause 
       && node.isTypeOnly 
@@ -437,22 +388,22 @@ export function preProcess({ sourceFile, isEntry }: PreProcessInput): PreProcess
       && node.moduleSpecifier
     ) {
       const specifier = node.moduleSpecifier.getText();
-      const exportName = node.exportClause.name.text;
-      const importUniqName = createUniqImportTypeName();
-      const exportHintName = createTypeOnlyReExportName(exportName);
+      const name = node.exportClause.name.text;
+      const uniqName = createUniqName();
+      const hintName = createTypeOnlyReExportName(name);
 
       // export type * as A from 'a'
       // ↓
       // import type * as uniqName from 'a'
-      // type A$type_only_namespace_re_export = uniqName
-      // export type { A$type_only_namespace_re_export as A }
+      // type A$type_only_re_export = uniqName
+      // export type { uniqName as A }
       code.overwrite(
         node.getStart(), 
         node.getEnd(),
         [
-          `import type * as ${importUniqName} from ${specifier};`,
-          `type ${exportHintName} = ${importUniqName};`,
-          `export type { ${exportHintName} as ${exportName} };`
+          `import type * as ${uniqName} from ${specifier};`,
+          `type ${hintName} = ${uniqName};`,
+          `export type { ${uniqName} as ${name} };`
         ].join('\n'),
       );
 
