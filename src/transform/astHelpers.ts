@@ -147,6 +147,30 @@ export function convertExpression(node: ts.Expression): ESTree.Expression {
   }
 }
 
+/**
+ * TypeScript statement:  type A$TYPE_ONLY = B;
+ * ↓
+ * ESTree statement:      B.A$TYPE_ONLY;
+ */
+export function convertTypeOnlyHintStatement(node: ts.TypeAliasDeclaration) {
+  return withStartEnd({
+      type: "ExpressionStatement",
+      expression: {
+        type: "MemberExpression",
+        computed: false,
+        optional: false,
+        object: withStartEnd({
+          type: "Identifier",
+          name: node.type.getText(),
+        }, node.type),
+        property: withStartEnd({
+          type: "Identifier",
+          name: node.name.text,
+        }, node.name),
+      },
+    }, node);
+}
+
 export interface Range {
   start: number;
   end: number;
