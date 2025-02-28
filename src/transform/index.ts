@@ -3,7 +3,6 @@ import type { Plugin } from "rollup";
 import { NamespaceFixer } from "./NamespaceFixer.js";
 import { preProcess } from "./preprocess.js";
 import { convert } from "./Transformer.js";
-import { ExportsFixer } from "./ExportsFixer.js";
 import { TypeOnlyFixer } from "./TypeOnlyFixer.js";
 import { trimExtension, parse } from "../helpers.js";
 
@@ -135,11 +134,9 @@ export const transform = () => {
       }
 
       const typeOnlyFixer = new TypeOnlyFixer(chunk.fileName, code);
-      const typeOnlyFixedCode = typeOnlyFixer.fix();
+      code = typeOnlyFixer.fix();
 
-      const exportsFixer = new ExportsFixer(parse(chunk.fileName, typeOnlyFixedCode));
-
-      return { code: exportsFixer.fix(), map: { mappings: "" } };
+      return { code, map: { mappings: "" } };
     },
   } satisfies Plugin;
 };
