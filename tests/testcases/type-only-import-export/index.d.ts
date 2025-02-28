@@ -42,3 +42,7 @@ interface Foo {
 }
 export type { Foo as FooInlne }
 export type { Foo } from './foo'
+
+import type { BarType } from './bar'
+import { BarValue } from './bar'
+export { BarType, BarValue }

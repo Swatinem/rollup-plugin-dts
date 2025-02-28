@@ -130,7 +130,7 @@ export const transform = () => {
       code += fixer.fix();
 
       if (!code) {
-        code += "\nexport { }";
+        code += "\nexport { };";
       }
 
       const typeOnlyFixer = new TypeOnlyFixer(chunk.fileName, code);

@@ -11,8 +11,9 @@ export class TypeOnlyFixer {
   private readonly code: MagicString;
 
   private types: Set<string> = new Set();
-  private reExportTypes: Set<string> = new Set();
   private values: Set<string> = new Set();
+  private typeHints: Set<string> = new Set();
+  private reExportTypeHints: Set<string> = new Set();
 
   private importNodes: ImportDeclarationWithClause[] = [];
   private exportNodes: ExportDeclarationWithClause[] = [];
@@ -42,7 +43,7 @@ export class TypeOnlyFixer {
     
     if(node.importClause.name) {
       const name = node.importClause.name.text
-      if(this.types.has(name)) {
+      if(this.isTypeOnly(name)) {
         // import A from 'a';    ->   import type A from 'a';
         typeImports.push(`import type ${name} from ${specifier};`);
       } else {
@@ -55,7 +56,7 @@ export class TypeOnlyFixer {
       && ts.isNamespaceImport(node.importClause.namedBindings)
     ) {
       const name = node.importClause.namedBindings.name.text;
-      if(this.types.has(name)) {
+      if(this.isTypeOnly(name)) {
         // import * as A from 'a';   ->   import type * as A from 'a';
         typeImports.push(`import type * as ${name} from ${specifier};`);
       } else {
@@ -72,7 +73,7 @@ export class TypeOnlyFixer {
 
       for(const element of node.importClause.namedBindings.elements) {
         const name = element.name.text;
-        if(this.types.has(name)) {
+        if(this.isTypeOnly(name)) {
           // import { A as B } from 'a';   ->   import type { A as B } from 'a';
           typeNames.push(element.getText());
         } else {
@@ -92,7 +93,7 @@ export class TypeOnlyFixer {
       this.code.overwrite(
         node.getStart(), 
         node.getEnd(), 
-        [...valueImports, ...typeImports].join('\n')
+        [...valueImports, ...typeImports].join(`\n${getNodeIndent(node)}`),
       );
     }
   }
@@ -100,12 +101,11 @@ export class TypeOnlyFixer {
   private fixTypeOnlyExport(node: ExportDeclarationWithClause) {
     const typeExports: string[] = [];
     const valueExports: string[] = [];
-    const skippedExports: string[] = [];
     const specifier = node.moduleSpecifier?.getText();
 
     if(ts.isNamespaceExport(node.exportClause)) {
       const name = node.exportClause.name.text;
-      if(this.reExportTypes.has(name)) {
+      if(this.isReExportTypeOnly(name)) {
         // export * as A from 'a';   ->   export type * as A from 'a';
         typeExports.push(`export type * as ${name} from ${specifier!};`)
       } else {
@@ -120,8 +120,8 @@ export class TypeOnlyFixer {
       for(const element of node.exportClause.elements) {
         const name = element.propertyName?.text || element.name.text;
         const isType = node.moduleSpecifier
-          ? this.reExportTypes.has(element.name.text)
-          : this.types.has(name);
+          ? this.isReExportTypeOnly(element.name.text)
+          : this.isTypeOnly(name);
         if(isType) {
           // export { A as B } from 'a';   ->   export type { A as B } from 'a';
           typeNames.push(element.getText())
@@ -139,11 +139,11 @@ export class TypeOnlyFixer {
       }
     }
 
-    if(typeExports.length || skippedExports.length) {
+    if(typeExports.length) {
       this.code.overwrite(
         node.getStart(),
         node.getEnd(),
-        [...valueExports, ...typeExports].join('\n')
+        [...valueExports, ...typeExports].join(`\n${getNodeIndent(node)}`)
       );
     }
   }
@@ -179,11 +179,11 @@ export class TypeOnlyFixer {
 
           if(aliasHint.isTypeOnly) {
             this.DEBUG && console.log(`${reference} is a type (from type-only hint)`);
-            this.types.add(reference)
+            this.typeHints.add(reference)
             if(aliasHint.isReExport) {
               const reExportName = alias.split(TYPE_ONLY_RE_EXPORT)[0]!
               this.DEBUG && console.log(`${reExportName} is a type (from type-only re-export hint)`);
-              this.reExportTypes.add(reExportName);
+              this.reExportTypeHints.add(reExportName);
             }
             this.code.remove(node.getStart(), node.getEnd());
           }
@@ -230,6 +230,19 @@ export class TypeOnlyFixer {
       this.DEBUG && console.log("unhandled statement", node.getFullText(), node.kind);
     }
   }
+
+  private isTypeOnly(name: string) {
+    return this.typeHints.has(name) || (this.types.has(name) && !this.values.has(name));
+  }
+
+  private isReExportTypeOnly(name: string) {
+    return this.reExportTypeHints.has(name);
+  }
+}
+
+function getNodeIndent(node: ts.Node) {
+  const match = node.getFullText().match(/^(?:\n*)([ ]*)/)
+  return ' '.repeat(match?.[1]?.length || 0);
 }
 
 let typeOnlyHintIds = 0;
