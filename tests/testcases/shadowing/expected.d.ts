@@ -16,4 +16,5 @@ declare type GenericType<K = any, L = K> = {
   l: L;
 };
 interface GenericExtends<M = any, N = M> extends GenericInterface<M, N> {}
-export { type ConditionalInfer, type GenericExtends, type GenericInterface, GenericKlass, type GenericType, type Mapped, genericFunction };
+export { GenericKlass, genericFunction };
+export type { ConditionalInfer, GenericExtends, GenericInterface, GenericType, Mapped };

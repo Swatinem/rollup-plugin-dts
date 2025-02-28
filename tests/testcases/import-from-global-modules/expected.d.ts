@@ -9,4 +9,5 @@ declare class G {}
 declare enum H {}
 declare namespace I {}
 declare module 'J' {}
-export { type A, type B, C, D, E, F, G, H, I };
+export { C, D, E, F, G, H, I };
+export type { A, B };

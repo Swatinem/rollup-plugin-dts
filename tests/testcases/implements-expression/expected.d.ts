@@ -11,4 +11,5 @@ interface MyComponentProps extends ns.Props<G> {
   bar: string;
 }
 declare class MyComponent extends ns.Component<MyComponentProps> {}
-export { MyComponent, type MyComponentProps };
+export { MyComponent };
+export type { MyComponentProps };

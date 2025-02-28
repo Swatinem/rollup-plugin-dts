@@ -1,16 +1,10 @@
 import * as path from "node:path";
 import type { Plugin } from "rollup";
-import ts from "typescript";
 import { NamespaceFixer } from "./NamespaceFixer.js";
 import { preProcess } from "./preprocess.js";
 import { convert } from "./Transformer.js";
-import { ExportsFixer } from "./ExportsFixer.js";
 import { TypeOnlyFixer } from "./TypeOnlyFixer.js";
-import { JSON_EXTENSIONS, trimExtension } from "../helpers.js";
-
-function parse(fileName: string, code: string): ts.SourceFile {
-  return ts.createSourceFile(fileName, code, ts.ScriptTarget.Latest, true);
-}
+import { parse, trimExtension, JSON_EXTENSIONS } from "../helpers.js";
 
 /**
  * This is the *transform* part of `rollup-plugin-dts`.
@@ -137,15 +131,13 @@ export const transform = () => {
       code += fixer.fix();
 
       if (!code) {
-        code += "\nexport { }";
+        code += "\nexport { };";
       }
 
-      const typeOnlyFixer = new TypeOnlyFixer(parse(chunk.fileName, code));
-      const { code: typeOnlyFixedCode, typeOnlyHints } = typeOnlyFixer.fix();
+      const typeOnlyFixer = new TypeOnlyFixer(chunk.fileName, code);
+      code = typeOnlyFixer.fix();
 
-      const exportsFixer = new ExportsFixer(parse(chunk.fileName, typeOnlyFixedCode), typeOnlyHints);
-
-      return { code: exportsFixer.fix(), map: { mappings: "" } };
+      return { code, map: { mappings: "" } };
     },
   } satisfies Plugin;
 };

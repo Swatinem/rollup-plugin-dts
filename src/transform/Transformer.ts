@@ -1,8 +1,9 @@
 import type * as ESTree from "estree";
 import ts from "typescript";
-import { convertExpression, createIdentifier, createProgram, withStartEnd } from "./astHelpers.js";
+import { convertExpression, convertTypeOnlyHintStatement, createIdentifier, createProgram, withStartEnd } from "./astHelpers.js";
 import { DeclarationScope } from "./DeclarationScope.js";
 import { UnsupportedSyntaxError } from "./errors.js";
+import { parseTypeOnlyName } from "./TypeOnlyFixer.js";
 
 type ESTreeImports = ESTree.ImportDeclaration["specifiers"];
 
@@ -165,6 +166,11 @@ class Transformer {
   }
 
   convertTypeAliasDeclaration(node: ts.TypeAliasDeclaration) {
+    if(parseTypeOnlyName(node.name.text).isTypeOnly) {
+      this.pushStatement(convertTypeOnlyHintStatement(node))
+      return
+    }
+    
     const scope = this.createDeclaration(node, node.name);
 
     const typeVariables = scope.convertTypeParameters(node.typeParameters);
