@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "resolveJsonModule": true,
+    
+    "lib": ["es2018", "esnext", "dom"],
+    "skipDefaultLibCheck": true,
+
+    "strict": true,
+
+    "allowSyntheticDefaultImports": true,
+    "moduleResolution": "node",
+    "module": "esnext",
+    "stripInternal": true,
+
+    "newLine": "lf",
+
+    "noEmit": true,
+    "declaration": true,
+    "emitDeclarationOnly": true
+  }
+}

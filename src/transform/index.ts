@@ -4,7 +4,7 @@ import { NamespaceFixer } from "./NamespaceFixer.js";
 import { preProcess } from "./preprocess.js";
 import { convert } from "./Transformer.js";
 import { TypeOnlyFixer } from "./TypeOnlyFixer.js";
-import { trimExtension, parse } from "../helpers.js";
+import { parse, trimExtension, JSON_EXTENSIONS } from "../helpers.js";
 
 /**
  * This is the *transform* part of `rollup-plugin-dts`.
@@ -75,9 +75,10 @@ export const transform = () => {
       const moduleIds = this.getModuleIds()
       const moduleId = Array.from(moduleIds).find((id) => trimExtension(id) === name)
       const isEntry = Boolean(moduleId && this.getModuleInfo(moduleId)?.isEntry)
+      const isJSON = Boolean(moduleId && JSON_EXTENSIONS.test(moduleId))
 
       let sourceFile = parse(fileName, code);
-      const preprocessed = preProcess({ sourceFile, isEntry });
+      const preprocessed = preProcess({ sourceFile, isEntry, isJSON });
       // `sourceFile.fileName` here uses forward slashes
       allTypeReferences.set(sourceFile.fileName, preprocessed.typeReferences);
       allFileReferences.set(sourceFile.fileName, preprocessed.fileReferences);
