@@ -11,4 +11,5 @@ interface Cache2 {
   destroy: () => void;
 }
 declare const Cache2: () => Cache2;
-export { Cache, Cache2, type CacheInfo, uniqueId };
+export { Cache, Cache2, uniqueId };
+export type { CacheInfo };

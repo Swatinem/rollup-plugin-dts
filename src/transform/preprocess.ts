@@ -2,11 +2,7 @@ import MagicString from "magic-string";
 import ts from "typescript";
 import { matchesModifier } from "./astHelpers.js";
 import { UnsupportedSyntaxError } from "./errors.js";
-import {
-  createUniqName, 
-  createTypeOnlyName,
-  createTypeOnlyReExportName, 
-} from './TypeOnlyFixer.js'
+import { createTypeOnlyName, createTypeOnlyReExportName } from './TypeOnlyFixer.js'
 
 type Range = [start: number, end: number];
 
@@ -71,7 +67,24 @@ export function preProcess({ sourceFile, isEntry }: PreProcessInput): PreProcess
       code.remove(node.getStart(), node.getEnd());
       continue;
     }
-    if (
+
+    if (ts.isImportDeclaration(node)) {
+      if(!node.importClause) {
+        continue;
+      }
+      
+      if (node.importClause.name) {
+        declaredNames.add(node.importClause.name.text);
+      } 
+      if (node.importClause.namedBindings) {
+        if(ts.isNamespaceImport(node.importClause.namedBindings)) {
+          declaredNames.add(node.importClause.namedBindings.name.text);
+        } else {
+          node.importClause.namedBindings.elements
+            .forEach((element) => declaredNames.add(element.name.text))
+        }
+      }
+    } else if (
       ts.isEnumDeclaration(node) ||
       ts.isFunctionDeclaration(node) ||
       ts.isInterfaceDeclaration(node) ||
@@ -282,12 +295,12 @@ export function preProcess({ sourceFile, isEntry }: PreProcessInput): PreProcess
     if(node.importClause.isTypeOnly && node.importClause.name) {
       const name = node.importClause.name.text;
       const hintName = createTypeOnlyName(name);
-
       // import type A from 'a';
       // ↓
       // import type A from 'a';
       // type A$type_only_import = A;
-      code.appendRight(node.getEnd(), `type ${hintName} = ${name};\n`);
+      code.appendRight(node.getEnd(), `\ntype ${hintName} = ${name};\n`);
+      return;
     }
 
     if (
@@ -297,12 +310,12 @@ export function preProcess({ sourceFile, isEntry }: PreProcessInput): PreProcess
     ) {
       const name = node.importClause.namedBindings.name.text;
       const hintName = createTypeOnlyName(name);
-
       // import type * as A from 'a'
       // ↓
       // import type * as A from 'a'
       // type A$type_only_import = A
-      code.appendRight(node.getEnd(), `type ${hintName} = ${name};\n`);
+      code.appendRight(node.getEnd(), `\ntype ${hintName} = ${name};\n`);
+      return;
     }
 
     if (node.importClause.namedBindings && ts.isNamedImports(node.importClause.namedBindings)) {
@@ -310,12 +323,11 @@ export function preProcess({ sourceFile, isEntry }: PreProcessInput): PreProcess
         if(node.importClause.isTypeOnly || element.isTypeOnly) {
           const name = element.name.text;
           const hintName = createTypeOnlyName(name);
-
           // import type { A } from 'a'
           // ↓
           // import type { A } from 'a'
           // type A$type_only_import = A
-          code.appendRight(node.getEnd(), `type ${hintName} = ${name};\n`);
+          code.appendRight(node.getEnd(), `\ntype ${hintName} = ${name};\n`);
         }
       }
     }
@@ -326,35 +338,18 @@ export function preProcess({ sourceFile, isEntry }: PreProcessInput): PreProcess
       return;
     }
 
-    if(node.exportClause && ts.isNamedExports(node.exportClause) && !node.moduleSpecifier) {
-      for (const element of node.exportClause.elements) {
-        if(node.isTypeOnly || element.isTypeOnly) {
-          const name = element.propertyName?.text || element.name.text;
-          const hintName = createTypeOnlyName(name);
-
-          // export type { A }
-          // ↓ 
-          // type A$type_only_export = A
-          // export type { A }
-          code.appendLeft(node.getStart(), `type ${hintName} = ${name};\n`);
-        }
-      }
-      return;
-    }
-
-    // Transform type-only named re-exports.
     if(node.exportClause && ts.isNamedExports(node.exportClause) && node.moduleSpecifier) {
       const values: string[] = [];
-      const types: Array<{ uniqName: string; hintName: string; sourceName: string; targetName: string }> = [];
+      const types: Array<{ localName: string; hintName: string; sourceName: string; targetName: string }> = [];
       const specifier = node.moduleSpecifier.getText();
 
       for (const element of node.exportClause.elements) {
         const targetName = element.name.text;
         const sourceName = element.propertyName?.text || targetName;
         if(node.isTypeOnly || element.isTypeOnly) {
-          const uniqName = createUniqName();
+          const localName = uniqName(getSafeName((node.moduleSpecifier as ts.StringLiteral).text));
           const hintName = createTypeOnlyReExportName(targetName);
-          types.push({ sourceName, uniqName, hintName, targetName });
+          types.push({ sourceName, localName, hintName, targetName });
         } else {
           values.push(element.getText());
         }
@@ -371,27 +366,35 @@ export function preProcess({ sourceFile, isEntry }: PreProcessInput): PreProcess
           node.getEnd(), 
           [
             values.length ? `export { ${values.join(', ')} } from ${specifier};` : '',
-            `import type { ${types.map(hint => `${hint.sourceName} as ${hint.uniqName}`).join(', ')} } from ${specifier};`,
-            ...types.map(hint => `type ${hint.hintName} = ${hint.uniqName};`),
-            `export type { ${types.map(hint => `${hint.uniqName} as ${hint.targetName}`).join(', ')} };`
+            `import type { ${types.map(hint => `${getNameBinding(hint.sourceName, hint.localName)}`).join(', ')} } from ${specifier};`,
+            ...types.map(hint => `type ${hint.hintName} = ${hint.localName};`),
+            `export type { ${types.map(hint => `${getNameBinding(hint.localName, hint.targetName)}`).join(', ')} };`
           ].filter(Boolean).join('\n'),
         );
       }
-
       return;
     }
 
-    if(
-      node.exportClause 
-      && node.isTypeOnly 
-      && ts.isNamespaceExport(node.exportClause) 
-      && node.moduleSpecifier
-    ) {
+    if(node.exportClause && ts.isNamedExports(node.exportClause) && !node.moduleSpecifier) {
+      for (const element of node.exportClause.elements) {
+        if(node.isTypeOnly || element.isTypeOnly) {
+          const name = element.propertyName?.text || element.name.text;
+          const hintName = createTypeOnlyName(name);
+          // export type { A }
+          // ↓ 
+          // type A$type_only_export = A
+          // export type { A }
+          code.appendLeft(node.getStart(), `\ntype ${hintName} = ${name};\n`);
+        }
+      }
+      return;
+    }
+
+    if(node.exportClause && node.isTypeOnly && ts.isNamespaceExport(node.exportClause) && node.moduleSpecifier) {
       const specifier = node.moduleSpecifier.getText();
       const name = node.exportClause.name.text;
-      const uniqName = createUniqName();
+      const localName = uniqName(getSafeName((node.moduleSpecifier as ts.StringLiteral).text));
       const hintName = createTypeOnlyReExportName(name);
-
       // export type * as A from 'a'
       // ↓
       // import type * as uniqName from 'a'
@@ -401,18 +404,16 @@ export function preProcess({ sourceFile, isEntry }: PreProcessInput): PreProcess
         node.getStart(), 
         node.getEnd(),
         [
-          `import type * as ${uniqName} from ${specifier};`,
-          `type ${hintName} = ${uniqName};`,
-          `export type { ${uniqName} as ${name} };`
+          `import type * as ${localName} from ${specifier};`,
+          `type ${hintName} = ${localName};`,
+          `export type { ${getNameBinding(localName, name)} };`
         ].join('\n'),
       );
-
       return;
     }
 
     // TODO: The type-only bare re-export is still not supported,
-    // it will be bundled as `export * from 'a'`.
-    // export type * from 'a'
+    // `export type * from 'a';` will be bundled as `export * from 'a';`
   }
 
   function checkInlineImport(node: ts.Node) {
@@ -441,7 +442,7 @@ export function preProcess({ sourceFile, isEntry }: PreProcessInput): PreProcess
   function createNamespaceImport(fileId: string) {
     let importName = inlineImports.get(fileId);
     if (!importName) {
-      importName = uniqName(fileId.replace(/[^a-zA-Z0-9_$]/g, () => "_"));
+      importName = uniqName(getSafeName(fileId));
       inlineImports.set(fileId, importName);
     }
     return importName;
@@ -543,6 +544,14 @@ function duplicateExports(code: MagicString, module: ts.ModuleDeclaration) {
       }
     }
   }
+}
+
+function getNameBinding(sourceName: string, targetName: string) {
+  return sourceName === targetName ? sourceName : `${sourceName} as ${targetName}`;
+}
+
+function getSafeName(fileId: string) {
+  return fileId.replace(/[^a-zA-Z0-9_$]/g, () => "_")
 }
 
 function getStart(node: ts.Node): number {

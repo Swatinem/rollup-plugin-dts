@@ -1,24 +1,28 @@
 import MagicString from "magic-string";
 import ts from "typescript";
 import { parse } from "../helpers.js";
+import { LanguageService } from "./languageService.js";
 
 type ImportDeclarationWithClause = ts.ImportDeclaration & Required<Pick<ts.ImportDeclaration, 'importClause'>>;
 type ExportDeclarationWithClause = ts.ExportDeclaration & Required<Pick<ts.ExportDeclaration, 'exportClause'>>;
 
 export class TypeOnlyFixer {
   private readonly DEBUG = !!process.env.DTS_EXPORTS_FIXER_DEBUG;
-  private readonly source: ts.SourceFile;
+  private readonly rawCode: string;
   private readonly code: MagicString;
+  private readonly source: ts.SourceFile;
+  private service: LanguageService | undefined;
 
   private types: Set<string> = new Set();
   private values: Set<string> = new Set();
-  private typeHints: Set<string> = new Set();
-  private reExportTypeHints: Set<string> = new Set();
+  private typeHints: Map<string, number> = new Map();
+  private reExportTypeHints: Map<string, number> = new Map();
 
   private importNodes: ImportDeclarationWithClause[] = [];
   private exportNodes: ExportDeclarationWithClause[] = [];
 
   constructor(fileName: string, rawCode: string) {
+    this.rawCode = rawCode;
     this.source = parse(fileName, rawCode);
     this.code = new MagicString(rawCode);
   }
@@ -26,56 +30,66 @@ export class TypeOnlyFixer {
   fix() {
     this.analyze(this.source.statements);
 
-    for (const node of this.importNodes) {
-      this.fixTypeOnlyImport(node);
+    if(this.typeHints.size || this.reExportTypeHints.size) {
+      this.service = new LanguageService(this.rawCode);
+      this.importNodes.forEach((node) => this.fixTypeOnlyImport(node));
     }
-    for (const node of this.exportNodes) {
-      this.fixTypeOnlyExport(node);
+    if(this.types.size) {
+      this.exportNodes.forEach((node) => this.fixTypeOnlyExport(node));
     }
 
-    return this.code.toString();
+    return this.types.size ? this.code.toString() : this.rawCode;
   }
 
   private fixTypeOnlyImport(node: ImportDeclarationWithClause) {
+    let hasRemoved = false;
     const typeImports: string[] = [];
     const valueImports: string[] = [];
+
     const specifier = node.moduleSpecifier.getText();
+    const nameNode = node.importClause.name
+    const namedBindings = node.importClause.namedBindings;
     
-    if(node.importClause.name) {
-      const name = node.importClause.name.text
+    if(nameNode) {
+      const name = nameNode.text;
       if(this.isTypeOnly(name)) {
-        // import A from 'a';    ->   import type A from 'a';
-        typeImports.push(`import type ${name} from ${specifier};`);
+        if(this.isUselessImport(nameNode)) {
+          hasRemoved = true;
+        } else {
+          // import A from 'a';    ->   import type A from 'a';
+          typeImports.push(`import type ${name} from ${specifier};`);
+        }
       } else {
         valueImports.push(`import ${name} from ${specifier};`);
       }
     }
 
-    if(
-      node.importClause.namedBindings
-      && ts.isNamespaceImport(node.importClause.namedBindings)
-    ) {
-      const name = node.importClause.namedBindings.name.text;
+    if(namedBindings && ts.isNamespaceImport(namedBindings)) {
+      const name = namedBindings.name.text;
       if(this.isTypeOnly(name)) {
-        // import * as A from 'a';   ->   import type * as A from 'a';
-        typeImports.push(`import type * as ${name} from ${specifier};`);
+        if(this.isUselessImport(namedBindings.name)) {
+          hasRemoved = true;
+        } else {
+          // import * as A from 'a';   ->   import type * as A from 'a';
+          typeImports.push(`import type * as ${name} from ${specifier};`);
+        }
       } else {
         valueImports.push(`import * as ${name} from ${specifier};`);
       }
     }
 
-    if(
-      node.importClause.namedBindings
-      && ts.isNamedImports(node.importClause.namedBindings)
-    ) {
+    if(namedBindings && ts.isNamedImports(namedBindings)) {
       const typeNames: string[] = [];
       const valueNames: string[] = [];
 
-      for(const element of node.importClause.namedBindings.elements) {
-        const name = element.name.text;
-        if(this.isTypeOnly(name)) {
-          // import { A as B } from 'a';   ->   import type { A as B } from 'a';
-          typeNames.push(element.getText());
+      for(const element of namedBindings.elements) {
+        if(this.isTypeOnly(element.name.text)) {
+          if(this.isUselessImport(element.name)) {
+            hasRemoved = true;
+          } else {
+            // import { A as B } from 'a';   ->   import type { A as B } from 'a';
+            typeNames.push(element.getText());
+          }
         } else {
           valueNames.push(element.getText());
         }
@@ -89,7 +103,7 @@ export class TypeOnlyFixer {
       }
     }
 
-    if(typeImports.length) {
+    if(typeImports.length || hasRemoved) {
       this.code.overwrite(
         node.getStart(), 
         node.getEnd(), 
@@ -179,11 +193,12 @@ export class TypeOnlyFixer {
 
           if(aliasHint.isTypeOnly) {
             this.DEBUG && console.log(`${reference} is a type (from type-only hint)`);
-            this.typeHints.add(reference)
+            this.types.add(reference);
+            this.typeHints.set(reference, (this.typeHints.get(reference) || 0) + 1);
             if(aliasHint.isReExport) {
               const reExportName = alias.split(TYPE_ONLY_RE_EXPORT)[0]!
               this.DEBUG && console.log(`${reExportName} is a type (from type-only re-export hint)`);
-              this.reExportTypeHints.add(reExportName);
+              this.reExportTypeHints.set(reExportName, (this.reExportTypeHints.get(reExportName) || 0) + 1);
             }
             this.code.remove(node.getStart(), node.getEnd());
           }
@@ -231,8 +246,21 @@ export class TypeOnlyFixer {
     }
   }
 
+  // The type-hint statements may lead to redundant import statements. 
+  // After type-hint statements been removed, 
+  // it is better to also remove these redundant import statements as well. 
+  // Of course, this is not necessary since it won't cause issues, 
+  // but it can make the output bundles cleaner :)
+  private isUselessImport(node: ts.Identifier) {
+    // `referenceCount` contains it self.
+    const referenceCount = this.service!.findReferenceCount(node);
+    const typeHintCount = this.typeHints.get(node.text);
+    return (typeHintCount && typeHintCount + 1 >= referenceCount);
+  }
+
   private isTypeOnly(name: string) {
-    return this.typeHints.has(name) || (this.types.has(name) && !this.values.has(name));
+    return this.typeHints.has(name) 
+      || (this.types.has(name) && !this.values.has(name));
   }
 
   private isReExportTypeOnly(name: string) {
@@ -249,9 +277,6 @@ let typeOnlyHintIds = 0;
 const TYPE_ONLY = '$TYPE_ONLY_';
 const TYPE_ONLY_RE_EXPORT = '$TYPE_ONLY_RE_EXPORT_';
 
-export function createUniqName() {
-  return `$imports_${typeOnlyHintIds++}`;
-}
 export function createTypeOnlyName(name: string) {
   return `${name}${TYPE_ONLY}${typeOnlyHintIds++}`;
 }

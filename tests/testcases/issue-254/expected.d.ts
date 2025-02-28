@@ -5,4 +5,5 @@ interface Foo {
 declare namespace Bar {
   export enum F {}
 }
-export { Bar, type Foo };
+export { Bar };
+export type { Foo };

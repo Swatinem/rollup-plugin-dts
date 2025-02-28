@@ -1,10 +1,10 @@
 export { default as A } from 'a';
 export { default as D } from 'd';
-export type { B } from 'b';
-export type { E as E2, E as E3, E as default } from 'e';
-export type { G1 } from 'g1';
-export type { B as B2, B as B3 } from 'b1';
-export type { E as E4 } from 'e3';
+export { B } from 'b';
+export { E as E2, E as E3, E as default } from 'e';
+export { G1 } from 'g1';
+export { B as B2, B as B3 } from 'b1';
+export { E as E4 } from 'e3';
 import * as c from 'c';
 export { c as C };
 export { c as C1 };
@@ -20,16 +20,15 @@ export * from 'i1';
 export * from 'n';
 import * as i from 'i';
 export { i as I };
-export type * as O from 'o';
-
+import type * as o from 'o';
+export type { o as O };
 interface Foo$1 {}
-
 declare class BarType { }
 declare class BarValue { }
-
+interface O {}
+declare class X {}
 interface Foo {
   inline: string
 }
-
 export { BarValue };
-export type { BarType, Foo$1 as Foo, Foo as FooInlne };
+export type { BarType, Foo$1 as Foo, Foo as FooInlne, O as O1, X };

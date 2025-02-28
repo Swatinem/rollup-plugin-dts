@@ -148,27 +148,29 @@ export function convertExpression(node: ts.Expression): ESTree.Expression {
 }
 
 /**
+ * Turn type-only hint statements into "AssignmentExpression" statements.
+ * 
  * TypeScript statement:  type A$TYPE_ONLY = B;
  * ↓
- * ESTree statement:      B.A$TYPE_ONLY;
+ * ESTree statement:      A$TYPE_ONLY = B;
+ * 
+ * This statement will be kept in the final output because of "side effects",
+ * so that we can use it to restore the type-only modifier of imports/exports.
+ * 
+ * However, the drawback is that it may result in some **import statements**
+ * that should be treeshaken not being treeshaken.
+ * (This does not affect the treeshake results of exports and other types of statements.)
  */
 export function convertTypeOnlyHintStatement(node: ts.TypeAliasDeclaration) {
   return withStartEnd({
-      type: "ExpressionStatement",
-      expression: {
-        type: "MemberExpression",
-        computed: false,
-        optional: false,
-        object: withStartEnd({
-          type: "Identifier",
-          name: node.type.getText(),
-        }, node.type),
-        property: withStartEnd({
-          type: "Identifier",
-          name: node.name.text,
-        }, node.name),
-      },
-    }, node);
+    type: "ExpressionStatement",
+    expression: {
+      type: "AssignmentExpression",
+      operator: "=",
+      left: createIdentifier(node.name),
+      right: createIdentifier((node.type as ts.TypeReferenceNode).typeName as ts.Identifier)
+    },
+  }, node);
 }
 
 export interface Range {

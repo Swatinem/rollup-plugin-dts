@@ -35,7 +35,13 @@ export * from 'i1'
 export type * from 'n'
 
 export * as I from 'i'
+
+interface O {}
+export { O as O1 }
 export type * as O from 'o'
+
+declare class X {}
+export type { X }
 
 interface Foo {
   inline: string

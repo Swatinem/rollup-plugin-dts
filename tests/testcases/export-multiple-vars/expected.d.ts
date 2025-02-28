@@ -9,4 +9,5 @@ declare const options: {
 declare const params: {
   normalize: (inVar: In) => Out;
 };
-export { type In, type Out, config, options, params };
+export { config, options, params };
+export type { In, Out };
