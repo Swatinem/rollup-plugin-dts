@@ -134,10 +134,9 @@ export const transform = () => {
         code += "\nexport { };";
       }
 
-      const typeOnlyFixer = new TypeOnlyFixer(chunk.fileName, code);
-      code = typeOnlyFixer.fix();
+      const typeOnlyFixer = new TypeOnlyFixer(chunk.fileName, code, !!options.sourcemap);
 
-      return { code, map: { mappings: "" } };
+      return typeOnlyFixer.fix();
     },
   } satisfies Plugin;
 };
