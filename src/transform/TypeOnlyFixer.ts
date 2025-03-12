@@ -21,7 +21,7 @@ export class TypeOnlyFixer {
   private importNodes: ImportDeclarationWithClause[] = [];
   private exportNodes: ExportDeclarationWithClause[] = [];
 
-  constructor(fileName: string, rawCode: string) {
+  constructor(fileName: string, rawCode: string, private sourcemap: boolean) {
     this.rawCode = rawCode;
     this.source = parse(fileName, rawCode);
     this.code = new MagicString(rawCode);
@@ -38,7 +38,15 @@ export class TypeOnlyFixer {
       this.exportNodes.forEach((node) => this.fixTypeOnlyExport(node));
     }
 
-    return this.types.size ? this.code.toString() : this.rawCode;
+    return this.types.size
+      ? {
+          code: this.code.toString(),
+          map: this.sourcemap ? this.code.generateMap() : null,
+        }
+      : {
+          code: this.rawCode,
+          map: null,
+        };
   }
 
   private fixTypeOnlyImport(node: ImportDeclarationWithClause) {
@@ -49,7 +57,7 @@ export class TypeOnlyFixer {
     const specifier = node.moduleSpecifier.getText();
     const nameNode = node.importClause.name
     const namedBindings = node.importClause.namedBindings;
-    
+
     if(nameNode) {
       const name = nameNode.text;
       if(this.isTypeOnly(name)) {
@@ -105,8 +113,8 @@ export class TypeOnlyFixer {
 
     if(typeImports.length || hasRemoved) {
       this.code.overwrite(
-        node.getStart(), 
-        node.getEnd(), 
+        node.getStart(),
+        node.getEnd(),
         [...valueImports, ...typeImports].join(`\n${getNodeIndent(node)}`),
       );
     }
@@ -125,7 +133,7 @@ export class TypeOnlyFixer {
       } else {
         valueExports.push(`export * as ${name} from ${specifier!};`)
       }
-    } 
+    }
 
     if(ts.isNamedExports(node.exportClause)) {
       const typeNames: string[] = [];
@@ -246,10 +254,10 @@ export class TypeOnlyFixer {
     }
   }
 
-  // The type-hint statements may lead to redundant import statements. 
-  // After type-hint statements been removed, 
-  // it is better to also remove these redundant import statements as well. 
-  // Of course, this is not necessary since it won't cause issues, 
+  // The type-hint statements may lead to redundant import statements.
+  // After type-hint statements been removed,
+  // it is better to also remove these redundant import statements as well.
+  // Of course, this is not necessary since it won't cause issues,
   // but it can make the output bundles cleaner :)
   private isUselessImport(node: ts.Identifier) {
     // `referenceCount` contains it self.
@@ -259,7 +267,7 @@ export class TypeOnlyFixer {
   }
 
   private isTypeOnly(name: string) {
-    return this.typeHints.has(name) 
+    return this.typeHints.has(name)
       || (this.types.has(name) && !this.values.has(name));
   }
 
