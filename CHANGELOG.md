@@ -1,5 +1,33 @@
 # Changelog
 
+## 6.2.0
+
+**Features**:
+
+- Support importing json modules
+- Return Source Map Differences to Rollup
+
+**Fixes**:
+
+- Unable to find the program when entry points exist intersection dependency
+- Create program for `imports` input file
+- Force emit types even when there's errors
+- Preserve type members of namespace in re-exported module
+- Imports and exports follows type-only
+- Import "local types" from "global modules"
+- Correctly restore type-only import/export names
+
+**Thank you**:
+
+Features, fixes and improvements in this release have been contributed by:
+
+- [@NWYLZW](https://github.com/NWYLZW)
+- [@castarco](https://github.com/castarco)
+- [@hyrious](https://github.com/hyrious)
+- [@andersk](https://github.com/andersk)
+- [@kricsleo](https://github.com/kricsleo)
+- [@alan-agius4](https://github.com/alan-agius4)
+
 ## 6.1.1
 
 **Fixes**:
