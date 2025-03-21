@@ -195,6 +195,7 @@ export function preProcess({ sourceFile, isEntry, isJSON }: PreProcessInput): Pr
     checkInlineImport(node);
 
     /**
+     * TODO: type-only import/export fixer.
      * Temporarily disable the type-only import/export transformation,
      * because the current implementation is unsafe.
      * 

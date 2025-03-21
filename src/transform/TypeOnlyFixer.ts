@@ -196,6 +196,7 @@ export class TypeOnlyFixer {
         this.types.add(alias);
 
         /**
+         * TODO: type-only import/export fixer.
          * Temporarily disable the type-only import/export transformation,
          * because the current implementation is unsafe.
          * 
