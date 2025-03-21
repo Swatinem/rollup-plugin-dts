@@ -195,22 +195,28 @@ export class TypeOnlyFixer {
         this.DEBUG && console.log(`${node.name.getFullText()} is a type`);
         this.types.add(alias);
 
-        if (ts.isTypeReferenceNode(node.type) && ts.isIdentifier(node.type.typeName)) {
-          const reference = node.type.typeName.text;
-          const aliasHint = parseTypeOnlyName(alias);
+        /**
+         * Temporarily disable the type-only import/export transformation,
+         * because the current implementation is unsafe.
+         * 
+         * Issue: https://github.com/Swatinem/rollup-plugin-dts/issues/340
+         */
+        // if (ts.isTypeReferenceNode(node.type) && ts.isIdentifier(node.type.typeName)) {
+        //   const reference = node.type.typeName.text;
+        //   const aliasHint = parseTypeOnlyName(alias);
 
-          if(aliasHint.isTypeOnly) {
-            this.DEBUG && console.log(`${reference} is a type (from type-only hint)`);
-            this.types.add(reference);
-            this.typeHints.set(reference, (this.typeHints.get(reference) || 0) + 1);
-            if(aliasHint.isReExport) {
-              const reExportName = alias.split(TYPE_ONLY_RE_EXPORT)[0]!
-              this.DEBUG && console.log(`${reExportName} is a type (from type-only re-export hint)`);
-              this.reExportTypeHints.set(reExportName, (this.reExportTypeHints.get(reExportName) || 0) + 1);
-            }
-            this.code.remove(node.getStart(), node.getEnd());
-          }
-        }
+        //   if(aliasHint.isTypeOnly) {
+        //     this.DEBUG && console.log(`${reference} is a type (from type-only hint)`);
+        //     this.types.add(reference);
+        //     this.typeHints.set(reference, (this.typeHints.get(reference) || 0) + 1);
+        //     if(aliasHint.isReExport) {
+        //       const reExportName = alias.split(TYPE_ONLY_RE_EXPORT)[0]!
+        //       this.DEBUG && console.log(`${reExportName} is a type (from type-only re-export hint)`);
+        //       this.reExportTypeHints.set(reExportName, (this.reExportTypeHints.get(reExportName) || 0) + 1);
+        //     }
+        //     this.code.remove(node.getStart(), node.getEnd());
+        //   }
+        // }
         continue;
       }
 

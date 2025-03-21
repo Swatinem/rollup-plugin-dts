@@ -194,8 +194,14 @@ export function preProcess({ sourceFile, isEntry, isJSON }: PreProcessInput): Pr
     // recursively check inline imports
     checkInlineImport(node);
 
-    transformTypeOnlyImport(node);
-    transformTypeOnlyExport(node);
+    /**
+     * Temporarily disable the type-only import/export transformation,
+     * because the current implementation is unsafe.
+     * 
+     * Issue: https://github.com/Swatinem/rollup-plugin-dts/issues/340
+     */
+    // transformTypeOnlyImport(node);
+    // transformTypeOnlyExport(node);
 
     if (!matchesModifier(node, ts.ModifierFlags.ExportDefault)) {
       continue;
@@ -305,6 +311,7 @@ export function preProcess({ sourceFile, isEntry, isJSON }: PreProcessInput): Pr
     fileReferences,
   };
 
+  // @ts-expect-error temporary disabled
   function transformTypeOnlyImport(node: ts.Node) {
     if (!ts.isImportDeclaration(node) || !node.importClause) {
       return;
@@ -351,6 +358,7 @@ export function preProcess({ sourceFile, isEntry, isJSON }: PreProcessInput): Pr
     }
   }
 
+  // @ts-expect-error temporary disabled
   function transformTypeOnlyExport(node: ts.Node) {
     if(!ts.isExportDeclaration(node)) {
       return;
