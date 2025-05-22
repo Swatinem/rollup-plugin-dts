@@ -226,8 +226,12 @@ const plugin: PluginImpl<Options> = (options = {}) => {
         return;
       }
 
-      if (!ctx.resolvedOptions.respectExternal && resolvedModule.isExternalLibraryImport) {
-        // here, we define everything that comes from `node_modules` as `external`.
+      if (resolvedModule.isExternalLibraryImport && resolvedModule.packageId && ctx.resolvedOptions.includeExternal.includes(resolvedModule.packageId.name)) {
+        // include types from specified external modules
+        return { id: path.resolve(resolvedModule.resolvedFileName) };
+      }
+      else if (!ctx.resolvedOptions.respectExternal && resolvedModule.isExternalLibraryImport) {
+        // here, we define everything else that comes from `node_modules` as `external`.
         return { id: source, external: true };
       } else {
         // using `path.resolve` here converts paths back to the system specific separators
