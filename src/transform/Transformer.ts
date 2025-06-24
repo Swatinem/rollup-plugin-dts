@@ -169,14 +169,14 @@ class Transformer {
      * TODO: type-only import/export fixer.
      * Temporarily disable the type-only import/export transformation,
      * because the current implementation is unsafe.
-     * 
+     *
      * Issue: https://github.com/Swatinem/rollup-plugin-dts/issues/340
      */
     // if(parseTypeOnlyName(node.name.text).isTypeOnly) {
     //   this.pushStatement(convertTypeOnlyHintStatement(node))
     //   return
     // }
-    
+
     const scope = this.createDeclaration(node, node.name);
 
     const typeVariables = scope.convertTypeParameters(node.typeParameters);
@@ -223,6 +223,7 @@ class Transformer {
             type: "ExportAllDeclaration",
             source,
             exported: null,
+            attributes: [],
           },
           node,
         ),
@@ -235,6 +236,7 @@ class Transformer {
             type: "ExportAllDeclaration",
             source,
             exported: createIdentifier(node.exportClause.name),
+            attributes: [],
           },
           node,
         ),
@@ -253,6 +255,7 @@ class Transformer {
             declaration: null,
             specifiers,
             source,
+            attributes: [],
           },
           node,
         ),
@@ -283,6 +286,7 @@ class Transformer {
               },
             ],
             source: convertExpression(node.moduleReference.expression) as any,
+            attributes: [],
           },
           node,
         ),
@@ -308,6 +312,7 @@ class Transformer {
           type: "ImportDeclaration",
           specifiers,
           source,
+          attributes: [],
         },
         node,
       ),

@@ -8,5 +8,5 @@ export default {
       b: "main-b.tsx",
     },
   },
-  rollupVersion: '3.25.0',
+  rollupVersion: "4.44.0",
 };

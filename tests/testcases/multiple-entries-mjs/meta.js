@@ -9,5 +9,5 @@ export default {
       chunkFileNames: "[name]-[hash].d.mts",
     },
   },
-  rollupVersion: '3.25.0',
+  rollupVersion: "4.44.0",
 };

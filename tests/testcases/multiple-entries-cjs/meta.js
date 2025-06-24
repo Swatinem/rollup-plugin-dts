@@ -6,5 +6,5 @@ export default {
     input: ["main-a.d.ts", "main-b.d.ts"],
     output: { entryFileNames: "[name].d.cts" },
   },
-  rollupVersion: '3.25.0',
+  rollupVersion: "4.44.0",
 };

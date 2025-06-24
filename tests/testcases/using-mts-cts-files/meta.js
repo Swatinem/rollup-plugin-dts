@@ -9,5 +9,5 @@ export default {
       cts: "main-b.cts",
     },
   },
-  rollupVersion: '3.25.0',
+  rollupVersion: "4.44.0",
 };
