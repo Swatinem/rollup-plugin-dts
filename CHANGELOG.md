@@ -1,5 +1,29 @@
 # Changelog
 
+## 6.2.2
+
+**Features**:
+
+- Add `includeExternal` option
+
+**Thank you**:
+
+Features, fixes and improvements in this release have been contributed by:
+
+- [@Hyddan](https://github.com/Hyddan)
+
+## 6.2.1
+
+**Fixes**:
+
+- Disable problematic type-only import/export changes
+
+**Thank you**:
+
+Features, fixes and improvements in this release have been contributed by:
+
+- [@kricsleo](https://github.com/kricsleo)
+
 ## 6.2.0
 
 **Features**:
