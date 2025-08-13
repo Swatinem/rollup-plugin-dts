@@ -27,6 +27,7 @@ import { parse, trimExtension, JSON_EXTENSIONS } from "../helpers.js";
 export const transform = () => {
   const allTypeReferences = new Map<string, Set<string>>();
   const allFileReferences = new Map<string, Set<string>>();
+  const allValueReferences = new Map<string, Set<string>>();
 
   return {
     name: "dts-transform",
@@ -88,6 +89,8 @@ export const transform = () => {
       sourceFile = parse(fileName, code);
       const converted = convert({ sourceFile });
 
+      allValueReferences.set(sourceFile.fileName, converted.valueReferences);
+
       if (process.env.DTS_DUMP_AST) {
         console.log(fileName);
         console.log(code);
@@ -103,9 +106,13 @@ export const transform = () => {
 
       const typeReferences = new Set<string>();
       const fileReferences = new Set<string>();
+      const valueReferences = new Set<string>();
       for (const fileName of Object.keys(chunk.modules)) {
         for (const ref of allTypeReferences.get(fileName.split("\\").join("/")) || []) {
           typeReferences.add(ref);
+        }
+        for (const ref of allValueReferences.get(fileName.split("\\").join("/")) || []) {
+          valueReferences.add(ref);
         }
         for (const ref of allFileReferences.get(fileName.split("\\").join("/")) || []) {
           if (ref.startsWith(".")) {
@@ -135,6 +142,7 @@ export const transform = () => {
       }
 
       const typeOnlyFixer = new TypeOnlyFixer(chunk.fileName, code, !!options.sourcemap);
+      typeOnlyFixer.setValueReferences(typeReferences);
 
       return typeOnlyFixer.fix();
     },
