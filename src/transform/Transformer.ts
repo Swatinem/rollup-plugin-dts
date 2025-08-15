@@ -12,6 +12,7 @@ interface ConvertInput {
 
 interface ConvertOutput {
   ast: ESTree.Program;
+  valueReferences: Set<string>;
 }
 
 export function convert({ sourceFile }: ConvertInput): ConvertOutput {
@@ -21,6 +22,7 @@ export function convert({ sourceFile }: ConvertInput): ConvertOutput {
 
 class Transformer {
   ast: ESTree.Program;
+  allTypeReferences: Set<string> = new Set();
 
   declarations = new Map<string, DeclarationScope>();
 
@@ -29,11 +31,18 @@ class Transformer {
     for (const stmt of sourceFile.statements) {
       this.convertStatement(stmt);
     }
+
+    for (const scope of this.declarations.values()) {
+      for (const valueRef of scope.getValueReferences()) {
+        this.allTypeReferences.add(valueRef);
+      }
+    }
   }
 
   transform(): ConvertOutput {
     return {
       ast: this.ast,
+      valueReferences: this.allTypeReferences,
     };
   }
 
