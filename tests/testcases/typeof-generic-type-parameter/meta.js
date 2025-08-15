@@ -7,7 +7,7 @@ export default {
   },
   rollupOptions: {
     input: {
-      index: "index.ts",
+      index: "index.d.ts",
     },
     external: ["./models", "./test"],
   },
