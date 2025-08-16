@@ -1,5 +1,17 @@
 # Changelog
 
+## 6.2.3
+
+**Fixes**:
+
+- Preserve imports for types used in typeof generic
+
+**Thank you**:
+
+Features, fixes and improvements in this release have been contributed by:
+
+- [@dayongkr](https://github.com/dayongkr)
+
 ## 6.2.2
 
 **Features**:
