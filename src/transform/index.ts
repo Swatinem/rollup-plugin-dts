@@ -5,6 +5,8 @@ import { preProcess } from "./preprocess.js";
 import { convert } from "./Transformer.js";
 import { TypeOnlyFixer } from "./TypeOnlyFixer.js";
 import { parse, trimExtension, JSON_EXTENSIONS } from "../helpers.js";
+import { RelativeModuleDeclarationFixer } from "./ModuleDeclarationFixer.js";
+import MagicString from "magic-string";
 
 /**
  * This is the *transform* part of `rollup-plugin-dts`.
@@ -72,11 +74,11 @@ export const transform = () => {
       // `fileName` may not match the name in the moduleIds,
       // as we generate the `fileName` manually in the previews step,
       // so we need to find the correct moduleId.
-      const name = trimExtension(fileName)
-      const moduleIds = this.getModuleIds()
-      const moduleId = Array.from(moduleIds).find((id) => trimExtension(id) === name)
-      const isEntry = Boolean(moduleId && this.getModuleInfo(moduleId)?.isEntry)
-      const isJSON = Boolean(moduleId && JSON_EXTENSIONS.test(moduleId))
+      const name = trimExtension(fileName);
+      const moduleIds = this.getModuleIds();
+      const moduleId = Array.from(moduleIds).find((id) => trimExtension(id) === name);
+      const isEntry = Boolean(moduleId && this.getModuleInfo(moduleId)?.isEntry);
+      const isJSON = Boolean(moduleId && JSON_EXTENSIONS.test(moduleId));
 
       let sourceFile = parse(fileName, code);
       const preprocessed = preProcess({ sourceFile, isEntry, isJSON });
@@ -141,10 +143,19 @@ export const transform = () => {
         code += "\nexport { };";
       }
 
-      const typeOnlyFixer = new TypeOnlyFixer(chunk.fileName, code, !!options.sourcemap);
+      const typeOnlyFixer = new TypeOnlyFixer(chunk.fileName, code);
       typeOnlyFixer.setValueReferences(typeReferences);
 
-      return typeOnlyFixer.fix();
+      const typesFixed = typeOnlyFixer.fix();
+
+      const relativeModuleDeclarationFixed = new RelativeModuleDeclarationFixer(
+        chunk.fileName,
+        "magicCode" in typesFixed && typesFixed.magicCode ? typesFixed.magicCode : new MagicString(code),
+        !!options.sourcemap,
+        "./" + (options.file && options.file !== "-" ? path.basename(options.file, ".d.ts") : "index"),
+      );
+
+      return relativeModuleDeclarationFixed.fix();
     },
   } satisfies Plugin;
 };

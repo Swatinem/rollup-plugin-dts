@@ -22,7 +22,7 @@ export class TypeOnlyFixer {
   private importNodes: ImportDeclarationWithClause[] = [];
   private exportNodes: ExportDeclarationWithClause[] = [];
 
-  constructor(fileName: string, rawCode: string, private sourcemap: boolean) {
+  constructor(fileName: string, rawCode: string) {
     this.rawCode = rawCode;
     this.source = parse(fileName, rawCode);
     this.code = new MagicString(rawCode);
@@ -45,8 +45,7 @@ export class TypeOnlyFixer {
 
     return this.types.size
       ? {
-          code: this.code.toString(),
-          map: this.sourcemap ? this.code.generateMap() : null,
+          magicCode: this.code,
         }
       : {
           code: this.rawCode,
