@@ -39,7 +39,6 @@ export class DeclarationScope {
   declaration: ESTree.FunctionDeclaration;
   iife?: ESTree.ExpressionStatement;
   private returnExpr: ESTree.ArrayExpression;
-  private valueReferences: Set<string> = new Set();
 
   constructor({ id, range }: DeclarationScopeOptions) {
     if (id) {
@@ -71,14 +70,6 @@ export class DeclarationScope {
   pushTypeVariable(id: ts.Identifier) {
     const name = id.getText();
     this.scopes[this.scopes.length - 1]?.add(name);
-  }
-
-  markAsValue(name: string) {
-    this.valueReferences.add(name);
-  }
-
-  getValueReferences(): Set<string> {
-    return this.valueReferences;
   }
 
   pushReference(id: ESTree.Expression) {
@@ -313,13 +304,6 @@ export class DeclarationScope {
     if (ts.isTypeQueryNode(node)) {
       const reference = this.convertEntityName(node.exprName);
       this.pushReference(reference);
-
-      if (reference.type === "Identifier") {
-        this.markAsValue(reference.name);
-      } else if (reference.type === "MemberExpression" && reference.object.type === "Identifier") {
-        this.markAsValue(reference.object.name);
-      }
-
       this.convertTypeArguments(node);
 
       return;
