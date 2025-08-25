@@ -17,7 +17,6 @@ export class TypeOnlyFixer {
   private values: Set<string> = new Set();
   private typeHints: Map<string, number> = new Map();
   private reExportTypeHints: Map<string, number> = new Map();
-  private typeofValueReferences: Set<string> = new Set();
 
   private importNodes: ImportDeclarationWithClause[] = [];
   private exportNodes: ExportDeclarationWithClause[] = [];
@@ -28,9 +27,6 @@ export class TypeOnlyFixer {
     this.code = new MagicString(rawCode);
   }
 
-  setValueReferences(valueReferences: Set<string>) {
-    this.typeofValueReferences = valueReferences;
-  }
 
   fix() {
     this.analyze(this.source.statements);
@@ -278,9 +274,6 @@ export class TypeOnlyFixer {
   }
 
   private isTypeOnly(name: string) {
-    if(this.typeofValueReferences.has(name)) {
-      return false;
-    }
     return this.typeHints.has(name)
       || (this.types.has(name) && !this.values.has(name));
   }
