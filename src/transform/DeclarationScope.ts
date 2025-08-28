@@ -373,6 +373,27 @@ export class DeclarationScope {
         }
         continue;
       }
+      if (ts.isImportDeclaration(stmt)) {
+        if (stmt.importClause) {
+          if (stmt.importClause.name) {
+            this.pushTypeVariable(stmt.importClause.name);
+          }
+          if (stmt.importClause.namedBindings) {
+            if (ts.isNamespaceImport(stmt.importClause.namedBindings)) {
+              this.pushTypeVariable(stmt.importClause.namedBindings.name);
+            } else {
+              for (const el of stmt.importClause.namedBindings.elements) {
+                this.pushTypeVariable(el.name);
+              }
+            }
+          }
+        }
+        continue;
+      }
+      if (ts.isImportEqualsDeclaration(stmt)) {
+        this.pushTypeVariable(stmt.name);
+        continue;
+      }
       if (ts.isExportDeclaration(stmt)) {
         // noop
       } else {
@@ -413,6 +434,18 @@ export class DeclarationScope {
       }
       if (ts.isEnumDeclaration(stmt)) {
         // noop
+        continue;
+      }
+      // handle imports in the walking pass
+      if (ts.isImportDeclaration(stmt)) {
+        // noop, already handled by hoisting
+        continue;
+      }
+      if (ts.isImportEqualsDeclaration(stmt)) {
+        if (ts.isEntityName(stmt.moduleReference)) {
+          this.pushReference(this.convertEntityName(stmt.moduleReference));
+        }
+        // we ignore `import foo = require(...)` as that is a module import
         continue;
       }
       if (ts.isExportDeclaration(stmt)) {
