@@ -18,6 +18,32 @@ interface PreProcessOutput {
   fileReferences: Set<string>;
 }
 
+function preProcessNamespaceBody(body: ts.ModuleBlock, code: MagicString, sourceFile: ts.SourceFile) {
+  for (const stmt of body.statements) {
+    // Safely call the new context-aware function on all children
+    fixModifiers(code, stmt);
+
+    if (ts.isModuleDeclaration(stmt)) {
+      duplicateExports(code, stmt);
+    }
+
+    // Rewrite `import =` to `type =`
+    if (
+      ts.isImportEqualsDeclaration(stmt) &&
+      // Add this condition to avoid rewriting local aliases
+      !ts.isIdentifier(stmt.moduleReference)
+    ) {
+      const importKeyword = stmt.getChildren().find((child) => child.kind === ts.SyntaxKind.ImportKeyword);
+      if (importKeyword) {
+        code.overwrite(importKeyword.getStart(sourceFile), importKeyword.getEnd(), "type");
+      }
+    } else if (ts.isModuleDeclaration(stmt) && stmt.body && ts.isModuleBlock(stmt.body)) {
+      // Recurse for nested namespaces
+      preProcessNamespaceBody(stmt.body, code, sourceFile);
+    }
+  }
+}
+
 /**
  * The pre-process step has the following goals:
  * - [x] Fixes the "modifiers", removing any `export` modifier and adding any
@@ -114,6 +140,10 @@ export function preProcess({ sourceFile, isEntry, isJSON }: PreProcessInput): Pr
 
       // duplicate exports of namespaces
       if (ts.isModuleDeclaration(node)) {
+        if (node.body && ts.isModuleBlock(node.body)) {
+          preProcessNamespaceBody(node.body, code, sourceFile);
+        }
+
         duplicateExports(code, node);
       }
 
@@ -532,26 +562,42 @@ function fixModifiers(code: MagicString, node: ts.Node) {
   if (!ts.canHaveModifiers(node)) {
     return;
   }
-  let hasDeclare = false;
-  const needsDeclare =
-    ts.isEnumDeclaration(node) ||
-    ts.isClassDeclaration(node) ||
-    ts.isFunctionDeclaration(node) ||
-    ts.isModuleDeclaration(node) ||
-    ts.isVariableStatement(node);
-  for (const mod of node.modifiers ?? []) {
-    switch (mod.kind) {
-      case ts.SyntaxKind.ExportKeyword: // fall through
-      case ts.SyntaxKind.DefaultKeyword:
-        // TODO: be careful about that `+ 1`
-        code.remove(mod.getStart(), mod.getEnd() + 1);
-        break;
-      case ts.SyntaxKind.DeclareKeyword:
-        hasDeclare = true;
+
+  const isTopLevel = node.parent.kind === ts.SyntaxKind.SourceFile;
+
+  if (isTopLevel) {
+    // For top-level statements, remove `export`/`default` and ensure `declare` exists
+    let hasDeclare = false;
+    const needsDeclare =
+      ts.isEnumDeclaration(node) ||
+      ts.isClassDeclaration(node) ||
+      ts.isFunctionDeclaration(node) ||
+      ts.isModuleDeclaration(node) ||
+      ts.isVariableStatement(node);
+
+    for (const mod of node.modifiers ?? []) {
+      switch (mod.kind) {
+        case ts.SyntaxKind.ExportKeyword: // fall through
+        case ts.SyntaxKind.DefaultKeyword:
+          // TODO: be careful about that `+ 1`
+          code.remove(mod.getStart(), mod.getEnd() + 1);
+          break;
+        case ts.SyntaxKind.DeclareKeyword:
+          hasDeclare = true;
+      }
     }
-  }
-  if (needsDeclare && !hasDeclare) {
-    code.appendRight(node.getStart(), "declare ");
+    if (needsDeclare && !hasDeclare) {
+      code.appendRight(node.getStart(), "declare ");
+    }
+  } else {
+    // For statements inside a namespace/module, only remove `export` from a nested namespace
+    // Leave all other members (vars, types, etc.) untouched
+    if (ts.isModuleDeclaration(node)) {
+      const exportKeyword = node.modifiers?.find((mod) => mod.kind === ts.SyntaxKind.ExportKeyword);
+      if (exportKeyword) {
+        code.remove(exportKeyword.getStart(), exportKeyword.getEnd() + 1);
+      }
+    }
   }
 }
 
