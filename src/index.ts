@@ -29,10 +29,11 @@ interface ResolvedModule {
 }
 
 function getModule(
-  { entries, programs, resolvedOptions: { compilerOptions, tsconfig } }: DtsPluginContext,
+  { entries, programs, resolvedOptions }: DtsPluginContext,
   fileName: string,
   code: string,
 ): ResolvedModule | null {
+  const { compilerOptions, tsconfig } = resolvedOptions;
   // Create any `ts.SourceFile` objects on-demand for ".d.ts" modules,
   // but only when there are zero ".ts" entry points.
   if (!programs.length && DTS_EXTENSIONS.test(fileName)) {
@@ -64,6 +65,18 @@ function getModule(
       program: existingProgram,
     };
   } else if (ts.sys.fileExists(fileName)) {
+    // For .d.ts files from external libraries (node_modules), return just the code without creating a program.
+    // The programs.find() above returns false for external library files (line 52-54), causing
+    // existingProgram to be undefined even though the file exists in a program. Without this check,
+    // we would create a new program for each external .d.ts file, causing memory exhaustion
+    // with large packages like type-fest (170+ files → 170+ programs → OOM).
+    if (programs.length > 0 && DTS_EXTENSIONS.test(fileName)) {
+      // Apply this optimization when bundling external packages via includeExternal or respectExternal
+      const shouldBundleExternal = resolvedOptions.includeExternal.length > 0 || resolvedOptions.respectExternal;
+      if (shouldBundleExternal) {
+        return { code };
+      }
+    }
     const newProgram = createProgram(fileName, compilerOptions, tsconfig);
     programs.push(newProgram);
     // we created hte program from this fileName, so the source file must exist :P
