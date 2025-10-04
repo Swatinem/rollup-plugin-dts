@@ -27,18 +27,8 @@ function preProcessNamespaceBody(body: ts.ModuleBlock, code: MagicString, source
       duplicateExports(code, stmt);
     }
 
-    // Rewrite `import =` to `type =`
-    if (
-      ts.isImportEqualsDeclaration(stmt) &&
-      // Add this condition to avoid rewriting local aliases
-      !ts.isIdentifier(stmt.moduleReference)
-    ) {
-      const importKeyword = stmt.getChildren().find((child) => child.kind === ts.SyntaxKind.ImportKeyword);
-      if (importKeyword) {
-        code.overwrite(importKeyword.getStart(sourceFile), importKeyword.getEnd(), "type");
-      }
-    } else if (ts.isModuleDeclaration(stmt) && stmt.body && ts.isModuleBlock(stmt.body)) {
-      // Recurse for nested namespaces
+    // Recurse for nested namespaces
+    if (ts.isModuleDeclaration(stmt) && stmt.body && ts.isModuleBlock(stmt.body)) {
       preProcessNamespaceBody(stmt.body, code, sourceFile);
     }
   }
