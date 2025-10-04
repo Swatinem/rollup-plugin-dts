@@ -3,7 +3,8 @@ interface TargetType {
 }
 declare namespace Outer {
   namespace Inner {
-    type ShadowedType = TargetType;
+    // Import shadows outer interface, verifies scoping and tree-shaking
+    import ShadowedType = TargetType;
     export type Result = ShadowedType;
   }
 }

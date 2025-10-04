@@ -7,6 +7,7 @@ interface ShadowedType {
 
 export namespace Outer {
   export namespace Inner {
+    // Import shadows outer interface, verifies scoping and tree-shaking
     import ShadowedType = Types.TargetType;
     export type Result = ShadowedType;
   }
