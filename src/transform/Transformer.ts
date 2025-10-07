@@ -225,7 +225,6 @@ class Transformer {
     } else if (ts.isPropertyAccessExpression(expr)) {
       this.trackExpressionReferences(expr.expression, scope);
     }
-    // Add more expression types as needed
   }
 
   convertExportDeclaration(node: ts.ExportDeclaration | ts.ExportAssignment) {

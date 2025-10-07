@@ -177,6 +177,21 @@ export function convertExpression(node: ts.Expression): ESTree.Expression {
       node,
     );
   }
+  if (ts.isArrayLiteralExpression(node)) {
+    return withStartEnd(
+      {
+        type: "ArrayExpression",
+        elements: node.elements.map((elem) => {
+          if (ts.isExpression(elem)) {
+            return convertExpression(elem);
+          } else {
+            throw new UnsupportedSyntaxError(elem, "Unsupported element type in array literal");
+          }
+        }),
+      },
+      node,
+    );
+  }
   if (ts.isIdentifier(node)) {
     return createIdentifier(node);
   } else if (node.kind == ts.SyntaxKind.NullKeyword) {
