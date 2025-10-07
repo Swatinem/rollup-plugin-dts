@@ -224,9 +224,23 @@ export function preProcess({ sourceFile, isEntry, isJSON }: PreProcessInput): Pr
     // transformTypeOnlyImport(node);
     // transformTypeOnlyExport(node);
 
+    // Handle export default with object/array literals
+    // These need to be converted to named declarations so Rollup can track references within them
+    if (ts.isExportAssignment(node) && !node.isExportEquals) {
+      if (ts.isObjectLiteralExpression(node.expression) || ts.isArrayLiteralExpression(node.expression)) {
+        if (!defaultExport) {
+          defaultExport = uniqName("export_default");
+        }
+        // Replace "export default" with "declare var export_default ="
+        code.overwrite(node.getStart(), node.expression.getStart(), `declare var ${defaultExport} = `);
+        continue;
+      }
+    }
+
     if (!matchesModifier(node, ts.ModifierFlags.ExportDefault)) {
       continue;
     }
+
     // only function and class can be default exported, and be missing a name
     if (ts.isFunctionDeclaration(node) || ts.isClassDeclaration(node)) {
       if (node.name) {

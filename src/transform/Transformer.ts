@@ -196,6 +196,34 @@ class Transformer {
 
       const scope = this.createDeclaration(node, decl.name);
       scope.convertTypeNode(decl.type);
+
+      // Track references in the initializer (e.g., for object literals)
+      if (decl.initializer) {
+        this.trackExpressionReferences(decl.initializer, scope);
+      }
+    }
+  }
+
+  // Helper to track identifier references in expressions
+  private trackExpressionReferences(expr: ts.Expression, scope: DeclarationScope) {
+    if (ts.isIdentifier(expr)) {
+      scope.pushIdentifierReference(expr);
+    } else if (ts.isObjectLiteralExpression(expr)) {
+      for (const prop of expr.properties) {
+        if (ts.isShorthandPropertyAssignment(prop)) {
+          scope.pushIdentifierReference(prop.name);
+        } else if (ts.isPropertyAssignment(prop)) {
+          this.trackExpressionReferences(prop.initializer, scope);
+        }
+      }
+    } else if (ts.isArrayLiteralExpression(expr)) {
+      for (const elem of expr.elements) {
+        if (ts.isExpression(elem)) {
+          this.trackExpressionReferences(elem, scope);
+        }
+      }
+    } else if (ts.isPropertyAccessExpression(expr)) {
+      this.trackExpressionReferences(expr.expression, scope);
     }
   }
 

@@ -138,6 +138,60 @@ export function convertExpression(node: ts.Expression): ESTree.Expression {
       },
     );
   }
+  if (ts.isObjectLiteralExpression(node)) {
+    return withStartEnd(
+      {
+        type: "ObjectExpression",
+        properties: node.properties.map((prop) => {
+          if (ts.isPropertyAssignment(prop)) {
+            return withStartEnd(
+              {
+                type: "Property",
+                key: ts.isIdentifier(prop.name) ? createIdentifier(prop.name) : convertExpression(prop.name as ts.Expression),
+                value: convertExpression(prop.initializer),
+                kind: "init",
+                method: false,
+                shorthand: false,
+                computed: ts.isComputedPropertyName(prop.name),
+              } as ESTree.Property,
+              prop,
+            );
+          } else if (ts.isShorthandPropertyAssignment(prop)) {
+            return withStartEnd(
+              {
+                type: "Property",
+                key: createIdentifier(prop.name),
+                value: createIdentifier(prop.name),
+                kind: "init",
+                method: false,
+                shorthand: true,
+                computed: false,
+              } as ESTree.Property,
+              prop,
+            );
+          } else {
+            throw new UnsupportedSyntaxError(prop, "Unsupported property type in object literal");
+          }
+        }),
+      },
+      node,
+    );
+  }
+  if (ts.isArrayLiteralExpression(node)) {
+    return withStartEnd(
+      {
+        type: "ArrayExpression",
+        elements: node.elements.map((elem) => {
+          if (ts.isExpression(elem)) {
+            return convertExpression(elem);
+          } else {
+            throw new UnsupportedSyntaxError(elem, "Unsupported element type in array literal");
+          }
+        }),
+      },
+      node,
+    );
+  }
   if (ts.isIdentifier(node)) {
     return createIdentifier(node);
   } else if (node.kind == ts.SyntaxKind.NullKeyword) {
