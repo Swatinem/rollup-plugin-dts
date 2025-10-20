@@ -23,10 +23,6 @@ function preProcessNamespaceBody(body: ts.ModuleBlock, code: MagicString, source
     // Safely call the new context-aware function on all children
     fixModifiers(code, stmt);
 
-    if (ts.isModuleDeclaration(stmt)) {
-      duplicateExports(code, stmt);
-    }
-
     // Recurse for nested namespaces
     if (ts.isModuleDeclaration(stmt) && stmt.body && ts.isModuleBlock(stmt.body)) {
       preProcessNamespaceBody(stmt.body, code, sourceFile);
@@ -593,16 +589,8 @@ function fixModifiers(code: MagicString, node: ts.Node) {
     if (needsDeclare && !hasDeclare) {
       code.appendRight(node.getStart(), "declare ");
     }
-  } else {
-    // For statements inside a namespace/module, only remove `export` from a nested namespace
-    // Leave all other members (vars, types, etc.) untouched
-    if (ts.isModuleDeclaration(node)) {
-      const exportKeyword = node.modifiers?.find((mod) => mod.kind === ts.SyntaxKind.ExportKeyword);
-      if (exportKeyword) {
-        code.remove(exportKeyword.getStart(), exportKeyword.getEnd() + 1);
-      }
-    }
   }
+  // For statements inside namespaces, preserve all modifiers (including export)
 }
 
 function duplicateExports(code: MagicString, module: ts.ModuleDeclaration) {
