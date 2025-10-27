@@ -4,7 +4,7 @@ declare namespace ArrayObjectStore {
     id: string;
     value: number;
   }
-  namespace Util {
+  export namespace Util {
     export function helper(): void;
   }
 }
