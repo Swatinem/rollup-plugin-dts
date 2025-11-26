@@ -1,5 +1,25 @@
 # Changelog
 
+## 6.3.0
+
+**Features**:
+
+- Support default export of object/array literals
+- Add support for child imports and nesting in namespaces
+
+**Fixes**:
+
+- Rewrite names of module declarations with relative paths
+- Remove unused reference tracking
+
+**Thank you**:
+
+Features, fixes and improvements in this release have been contributed by:
+
+- [@schoel-bis](https://github.com/schoel-bis)
+- [@privatenumber](https://github.com/privatenumber)
+- [@dayongkr](https://github.com/dayongkr)
+
 ## 6.2.3
 
 **Fixes**:
