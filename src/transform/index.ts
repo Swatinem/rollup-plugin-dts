@@ -145,7 +145,7 @@ export const transform = () => {
         chunk.fileName,
         "magicCode" in typesFixed && typesFixed.magicCode ? typesFixed.magicCode : new MagicString(code),
         !!options.sourcemap,
-        "./" + (options.file && options.file !== "-" ? path.basename(options.file, ".d.ts") : "index"),
+        "./" + path.basename(chunk.fileName, ".d.ts"),
       );
 
       return relativeModuleDeclarationFixed.fix();
