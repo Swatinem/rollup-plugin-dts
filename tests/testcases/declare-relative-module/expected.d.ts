@@ -1,7 +1,7 @@
 interface Foo {
   someProp: boolean;
 }
-declare module "./index" {
+declare module "./expected.d" {
   interface Foo {
     anotherProp: string;
   }
