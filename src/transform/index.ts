@@ -1,12 +1,15 @@
 import * as path from "node:path";
-import type { Plugin } from "rollup";
+import type { Plugin, SourceMap } from "rollup";
+import remapping from "@jridgewell/remapping";
+import type { RawSourceMap } from "@jridgewell/remapping";
 import { NamespaceFixer } from "./NamespaceFixer.js";
 import { preProcess } from "./preprocess.js";
 import { convert } from "./Transformer.js";
 import { TypeOnlyFixer } from "./TypeOnlyFixer.js";
-import { parse, trimExtension, JSON_EXTENSIONS } from "../helpers.js";
+import { parse, trimExtension, JSON_EXTENSIONS, DTS_EXTENSIONS } from "../helpers.js";
 import { RelativeModuleDeclarationFixer } from "./ModuleDeclarationFixer.js";
 import MagicString from "magic-string";
+import { loadInputSourcemap, type InputSourceMap, type SourcemapInfo } from "./sourcemap.js";
 
 /**
  * This is the *transform* part of `rollup-plugin-dts`.
@@ -26,12 +29,22 @@ import MagicString from "magic-string";
  *    the postprocess convert any javascript code that was created for namespace
  *    exports into TypeScript namespaces. See `NamespaceFixer.ts`.
  */
+
 export const transform = () => {
   const allTypeReferences = new Map<string, Set<string>>();
   const allFileReferences = new Map<string, Set<string>>();
+  // Track pending sourcemaps to load lazily in generateBundle
+  const pendingSourcemaps = new Map<string, SourcemapInfo>();
 
   return {
     name: "dts-transform",
+
+    buildStart() {
+      // Clear state for watch mode rebuilds
+      allTypeReferences.clear();
+      allFileReferences.clear();
+      pendingSourcemaps.clear();
+    },
 
     options({ onLog, ...options }) {
       return {
@@ -96,7 +109,20 @@ export const transform = () => {
         console.log(JSON.stringify(converted.ast.body, undefined, 2));
       }
 
-      return { code, ast: converted.ast as any, map: preprocessed.code.generateMap() as any };
+      // Generate high-resolution sourcemap for line-by-line mappings (required for Go-to-Definition)
+      const map = preprocessed.code.generateMap({ hires: true, source: fileName });
+
+      // Store info for lazy sourcemap loading in generateBundle (avoids file I/O if sourcemaps disabled)
+      if (DTS_EXTENSIONS.test(fileName)) {
+        const sourceMapCommentRegex = /\/\/[#@]\s*sourceMappingURL\s*=\s*(\S+)\s*$/m;
+        const match = sourceMapCommentRegex.exec(code);
+        pendingSourcemaps.set(fileName, {
+          fileName,
+          sourceMappingUrl: match ? match[1]! : null,
+        });
+      }
+
+      return { code, ast: converted.ast as any, map: map as unknown as SourceMap };
     },
 
     renderChunk(inputCode, chunk, options) {
@@ -149,6 +175,123 @@ export const transform = () => {
       );
 
       return relativeModuleDeclarationFixed.fix();
+    },
+
+    async generateBundle(options, bundle) {
+      // Fix sourcemap sources to point to original .ts files
+      // When input .d.ts files have associated .d.ts.map files pointing to original .ts sources,
+      // we use sourcemap remapping to compose the transform's map with the input map
+      if (!options.sourcemap) return;
+
+      // Lazily load input sourcemaps in parallel now that we know sourcemaps are enabled
+      const inputSourcemaps = new Map<string, InputSourceMap>();
+      const entries = Array.from(pendingSourcemaps.entries());
+      const loadedMaps = await Promise.all(
+        entries.map(async ([fileName, info]) => ({
+          fileName,
+          inputMap: await loadInputSourcemap(info),
+        })),
+      );
+
+      for (const { fileName, inputMap } of loadedMaps) {
+        if (inputMap && inputMap.sources) {
+          const inputMapDir = path.dirname(fileName);
+          inputSourcemaps.set(fileName, {
+            version: inputMap.version || 3,
+            sources: inputMap.sources.map((source: string) =>
+              path.isAbsolute(source) ? source : path.resolve(inputMapDir, source),
+            ),
+            sourcesContent: inputMap.sourcesContent,
+            mappings: inputMap.mappings,
+            names: inputMap.names,
+          });
+        }
+      }
+
+      const outputDir = options.dir || (options.file ? path.dirname(options.file) : process.cwd());
+
+      for (const chunk of Object.values(bundle)) {
+        if (chunk.type !== "chunk" || !chunk.map) continue;
+
+        // Check if any sources have input sourcemaps that need to be composed
+        const sourcesToRemap: Map<string, InputSourceMap> = new Map();
+        for (const source of chunk.map.sources) {
+          if (!source) continue;
+          const absoluteSource = path.resolve(outputDir, source);
+          const inputMap = inputSourcemaps.get(absoluteSource);
+          if (inputMap) {
+            sourcesToRemap.set(absoluteSource, inputMap);
+          }
+        }
+
+        if (sourcesToRemap.size === 0) continue;
+
+        // For single-source cases where the input sourcemap also has a single source,
+        // just replace the source directly to preserve the transform's hires mappings
+        // This is important for Go-to-Definition to work line-by-line
+        const isSingleSource = chunk.map.sources.length === 1 && sourcesToRemap.size === 1;
+        const singleInputMap = isSingleSource ? Array.from(sourcesToRemap.values())[0] : null;
+        const canSimplyReplace = singleInputMap && singleInputMap.sources.length === 1;
+
+        let newSources: string[];
+        let newSourcesContent: (string | null)[];
+        let newMappings: string;
+        let newNames: string[];
+
+        if (canSimplyReplace && singleInputMap) {
+          // Simple replacement: keep transform's mappings, just swap the source
+          newSources = singleInputMap.sources.map((source) => {
+            const relative = path.isAbsolute(source) ? path.relative(outputDir, source) : source;
+            // Normalize to forward slashes for sourcemaps (URLs)
+            return relative.replaceAll("\\", "/");
+          });
+          newSourcesContent = singleInputMap.sourcesContent || [null];
+          newMappings = chunk.map.mappings;
+          newNames = chunk.map.names || [];
+        } else {
+          // Multi-source case: use remapping to compose the sourcemaps
+          const remapped = remapping(chunk.map as unknown as RawSourceMap, (file) => {
+            const absolutePath = path.resolve(outputDir, file);
+            const inputMap = sourcesToRemap.get(absolutePath);
+            if (inputMap) {
+              return inputMap as unknown as RawSourceMap;
+            }
+            return null;
+          });
+
+          newSources = remapped.sources
+            .map((source) => {
+              if (!source) return source as string;
+              const relative = path.isAbsolute(source) ? path.relative(outputDir, source) : source;
+              // Normalize to forward slashes for sourcemaps (URLs)
+              return relative.replaceAll("\\", "/");
+            })
+            .filter((s): s is string => s !== null);
+          newSourcesContent = (remapped.sourcesContent || []) as (string | null)[];
+          newMappings = typeof remapped.mappings === "string" ? remapped.mappings : "";
+          newNames = remapped.names || [];
+        }
+
+        // Update chunk.map
+        chunk.map.sources = newSources;
+        (chunk.map as any).sourcesContent = newSourcesContent;
+        chunk.map.mappings = newMappings;
+        chunk.map.names = newNames;
+
+        // Also update the sourcemap asset
+        const mapFileName = `${chunk.fileName}.map`;
+        const mapAsset = bundle[mapFileName];
+        if (mapAsset && mapAsset.type === "asset") {
+          mapAsset.source = JSON.stringify({
+            version: 3,
+            file: chunk.fileName,
+            sources: newSources,
+            sourcesContent: newSourcesContent,
+            mappings: newMappings,
+            names: newNames,
+          });
+        }
+      }
     },
   } satisfies Plugin;
 };

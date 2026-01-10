@@ -99,9 +99,10 @@ const plugin: PluginImpl<Options> = (options = {}) => {
   return {
     name: "dts",
 
-    // pass outputOptions & renderChunk hooks to the inner transform plugin
+    // pass outputOptions, renderChunk, and generateBundle hooks to the inner transform plugin
     outputOptions: transformPlugin.outputOptions,
     renderChunk: transformPlugin.renderChunk,
+    generateBundle: transformPlugin.generateBundle,
 
     options(options) {
       let { input = [] } = options;

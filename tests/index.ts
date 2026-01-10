@@ -1,4 +1,5 @@
 import preprocess from "./preprocess.js";
+import sourcemap from "./sourcemap.js";
 import testcases from "./testcases.js";
 import { Harness } from "./utils.js";
 
@@ -8,6 +9,7 @@ async function main() {
   const harness = new Harness();
 
   preprocess(harness);
+  sourcemap(harness);
   testcases(harness);
 
   const failures = await harness.run(process.argv);
