@@ -3,7 +3,7 @@ import type { RollupWatchOptions } from "rollup";
 import dts from "./src/index.js";
 
 const pkg = JSON.parse(fs.readFileSync("./package.json", { encoding: "utf-8" }));
-const external = ["node:module", "node:path", "typescript", "rollup", "@babel/code-frame", "magic-string"];
+const external = ["node:module", "node:path", "node:fs", "node:fs/promises", "typescript", "rollup", "@babel/code-frame", "magic-string", "@jridgewell/remapping", "@jridgewell/sourcemap-codec", "convert-source-map"];
 
 const config: Array<RollupWatchOptions> = [
   {
