@@ -1,12 +1,15 @@
 import * as path from "node:path";
-import type { Plugin } from "rollup";
+import type { Plugin, SourceMap } from "rollup";
+import remapping from "@jridgewell/remapping";
+import type { RawSourceMap } from "@jridgewell/remapping";
 import { NamespaceFixer } from "./NamespaceFixer.js";
 import { preProcess } from "./preprocess.js";
 import { convert } from "./Transformer.js";
 import { TypeOnlyFixer } from "./TypeOnlyFixer.js";
-import { parse, trimExtension, JSON_EXTENSIONS } from "../helpers.js";
+import { parse, trimExtension, JSON_EXTENSIONS, DTS_EXTENSIONS } from "../helpers.js";
 import { RelativeModuleDeclarationFixer } from "./ModuleDeclarationFixer.js";
 import MagicString from "magic-string";
+import { loadInputSourcemap, hydrateSourcemap, type InputSourceMap, type SourcemapInfo } from "./sourcemap.js";
 
 /**
  * This is the *transform* part of `rollup-plugin-dts`.
@@ -26,12 +29,22 @@ import MagicString from "magic-string";
  *    the postprocess convert any javascript code that was created for namespace
  *    exports into TypeScript namespaces. See `NamespaceFixer.ts`.
  */
+
 export const transform = () => {
   const allTypeReferences = new Map<string, Set<string>>();
   const allFileReferences = new Map<string, Set<string>>();
+  // Track pending sourcemaps to load lazily in generateBundle
+  const pendingSourcemaps = new Map<string, SourcemapInfo>();
 
   return {
     name: "dts-transform",
+
+    buildStart() {
+      // Clear state for watch mode rebuilds
+      allTypeReferences.clear();
+      allFileReferences.clear();
+      pendingSourcemaps.clear();
+    },
 
     options({ onLog, ...options }) {
       return {
@@ -96,7 +109,19 @@ export const transform = () => {
         console.log(JSON.stringify(converted.ast.body, undefined, 2));
       }
 
-      return { code, ast: converted.ast as any, map: preprocessed.code.generateMap() as any };
+      // hires:true generates per-character mappings instead of per-line.
+      // Without this, Go-to-Definition jumps to line starts instead of identifiers.
+      const map = preprocessed.code.generateMap({ hires: true, source: fileName });
+
+      // Store info for lazy sourcemap loading in generateBundle (avoids file I/O if sourcemaps disabled)
+      if (DTS_EXTENSIONS.test(fileName)) {
+        pendingSourcemaps.set(fileName, {
+          fileName,
+          originalCode: code,
+        });
+      }
+
+      return { code, ast: converted.ast as any, map: map as unknown as SourceMap };
     },
 
     renderChunk(inputCode, chunk, options) {
@@ -150,6 +175,167 @@ export const transform = () => {
 
       return relativeModuleDeclarationFixed.fix();
     },
+
+    async generateBundle(options, bundle) {
+      // Fix sourcemap sources to point to original .ts files
+      // When input .d.ts files have associated .d.ts.map files pointing to original .ts sources,
+      // we use sourcemap remapping to compose the transform's map with the input map
+      if (!options.sourcemap) return;
+
+      // Lazily load input sourcemaps in parallel now that we know sourcemaps are enabled
+      const inputSourcemaps = new Map<string, InputSourceMap>();
+      const entries = Array.from(pendingSourcemaps.entries());
+
+      const loadedMaps = await Promise.all(
+        entries.map(async ([fileName, info]) => ({
+          fileName,
+          inputMap: await loadInputSourcemap(info),
+        })),
+      );
+
+      // Helper to detect URL paths (http://, https://, file://, etc.)
+      // Requires :// to avoid matching Windows drive letters like C:\ or D:/
+      const isUrl = (p: string) => /^[a-z][a-z0-9+.-]*:\/\//i.test(p);
+
+      for (const { fileName, inputMap } of loadedMaps) {
+        if (inputMap && inputMap.sources) {
+          const inputMapDir = path.dirname(fileName);
+
+          // Resolve sourceRoot: preserve URLs verbatim, resolve filesystem paths
+          let sourceRoot: string;
+          if (inputMap.sourceRoot) {
+            sourceRoot = isUrl(inputMap.sourceRoot) ? inputMap.sourceRoot : path.resolve(inputMapDir, inputMap.sourceRoot);
+          } else {
+            sourceRoot = inputMapDir;
+          }
+          const sourceRootIsUrl = isUrl(sourceRoot);
+
+          inputSourcemaps.set(fileName, {
+            version: inputMap.version ?? 3,
+            sources: inputMap.sources.map((source) => {
+              if (source === null) return null;
+              // URL sources pass through unchanged
+              if (isUrl(source)) return source;
+              // URL sourceRoot: use URL constructor for proper path resolution (handles ../ segments)
+              if (sourceRootIsUrl) {
+                const base = sourceRoot.endsWith("/") ? sourceRoot : sourceRoot + "/";
+                return new URL(source, base).toString();
+              }
+              // Filesystem paths: use path.resolve
+              return path.isAbsolute(source) ? source : path.resolve(sourceRoot, source);
+            }),
+            // Note: sourcesContent intentionally not copied.
+            // TypeScript's declaration maps never include sourcesContent, and tsserver's
+            // getDocumentPositionMapper() rejects maps that have it (returns identity mapper).
+            // https://github.com/microsoft/TypeScript/blob/b19a9da2a3b8f2a720d314d01258dd2bdc110fef/src/services/sourcemaps.ts#L226
+            mappings: inputMap.mappings,
+            names: inputMap.names,
+          });
+        }
+      }
+
+      const outputDir = options.dir || (options.file ? path.dirname(options.file) : process.cwd());
+
+      for (const chunk of Object.values(bundle)) {
+        if (chunk.type !== "chunk" || !chunk.map) continue;
+
+        // Check if any sources have input sourcemaps that need to be composed
+        // Sources in chunk.map are relative to the chunk's output location, not the outputDir
+        const chunkDir = path.join(outputDir, path.dirname(chunk.fileName));
+
+        // Normalize path to relative forward-slash format for sourcemaps
+        // Must be relative to chunkDir since sourcemap paths are relative to the .map file location
+        // URL sources pass through unchanged (e.g., https://..., file://...)
+        const toRelativeSourcePath = (source: string) => {
+          if (isUrl(source)) return source;
+          const relative = path.isAbsolute(source) ? path.relative(chunkDir, source) : source;
+          return relative.replaceAll("\\", "/");
+        };
+        const toRelativeSourcePathOrNull = (source: string | null) =>
+          source === null ? null : toRelativeSourcePath(source);
+
+        const sourcesToRemap: Map<string, InputSourceMap> = new Map();
+        for (const source of chunk.map.sources) {
+          if (!source) continue;
+          // Skip URL sources - they can't be remapped via filesystem lookup
+          // and path.resolve would mangle them
+          if (isUrl(source)) continue;
+          const absoluteSource = path.resolve(chunkDir, source);
+          const inputMap = inputSourcemaps.get(absoluteSource);
+          if (inputMap) {
+            sourcesToRemap.set(absoluteSource, inputMap);
+          }
+        }
+
+        if (sourcesToRemap.size === 0) {
+          // Handle empty chunks (like "export {};") - Rollup produces empty sources
+          // but we want to preserve original source references from input map
+          if (chunk.map.sources.length === 0 && chunk.facadeModuleId) {
+            const inputMap = inputSourcemaps.get(chunk.facadeModuleId);
+            if (inputMap && inputMap.sources.length > 0) {
+              const newSources = inputMap.sources.map(toRelativeSourcePathOrNull);
+              (chunk.map as any).sources = newSources;
+              delete (chunk.map as any).sourcesContent;
+
+              updateSourcemapAsset(bundle as any, chunk.fileName, {
+                sources: newSources,
+                mappings: chunk.map.mappings,
+                names: chunk.map.names || [],
+              });
+            }
+          }
+          continue;
+        }
+
+        // For single-source cases where the input sourcemap also has a single source,
+        // just replace the source directly to preserve the transform's hires mappings
+        // This is important for Go-to-Definition to work line-by-line
+        const isSingleSource = chunk.map.sources.length === 1 && sourcesToRemap.size === 1;
+        const singleInputMap = isSingleSource ? Array.from(sourcesToRemap.values())[0] : null;
+        const canSimplyReplace = singleInputMap && singleInputMap.sources.length === 1;
+
+        let newSources: Array<string | null>;
+        let newMappings: string;
+        let newNames: string[];
+
+        if (canSimplyReplace && singleInputMap) {
+          // Sparse-Anchor Hydration: Rollup's output map is sparse (few segments per line)
+          // because the plugin uses a virtual AST that doesn't preserve token positions.
+          // Standard remapping via @jridgewell/remapping can only trace existing segments,
+          // not add new ones - so we'd lose the per-identifier mappings from the input map.
+          // Instead, we use Rollup's sparse segments as "anchors" to determine which source
+          // line each output line came from, then copy all detailed segments from that line.
+          newSources = singleInputMap.sources.map(toRelativeSourcePathOrNull);
+          newMappings = hydrateSourcemap(chunk.map.mappings, singleInputMap, chunk.code);
+          newNames = singleInputMap.names || [];
+        } else {
+          const remapped = remapping(chunk.map as unknown as RawSourceMap, (file) => {
+            // File paths from remapping are relative to the chunk's output location
+            const absolutePath = path.resolve(chunkDir, file);
+            const inputMap = sourcesToRemap.get(absolutePath);
+            if (inputMap) {
+              return inputMap as unknown as RawSourceMap;
+            }
+            return null;
+          });
+
+          newSources = remapped.sources.map(toRelativeSourcePathOrNull);
+          newMappings = typeof remapped.mappings === "string" ? remapped.mappings : "";
+          newNames = remapped.names || [];
+        }
+
+        (chunk.map as any).sources = newSources;
+        delete (chunk.map as any).sourcesContent;
+        chunk.map.mappings = newMappings;
+        chunk.map.names = newNames;
+
+        updateSourcemapAsset(bundle as any, chunk.fileName, {
+          sources: newSources,
+          mappings: newMappings,
+          names: newNames,
+        });
+      }
+    },
   } satisfies Plugin;
 };
 
@@ -158,4 +344,30 @@ function writeBlock(codes: Array<string>): string {
     return codes.join("\n") + "\n";
   }
   return "";
+}
+
+type SourcemapData = {
+  sources: Array<string | null>;
+  // sourcesContent intentionally omitted for TypeScript compatibility.
+  // tsserver rejects maps with sourcesContent, falling back to identity mapper (no mapping).
+  // https://github.com/microsoft/TypeScript/blob/b19a9da2a3b8f2a720d314d01258dd2bdc110fef/src/services/sourcemaps.ts#L226
+  mappings: string;
+  names: string[];
+};
+
+function updateSourcemapAsset(
+  bundle: Record<string, { type: string; source?: string }>,
+  chunkFileName: string,
+  data: SourcemapData,
+) {
+  const mapFileName = `${chunkFileName}.map`;
+  const mapAsset = bundle[mapFileName];
+  if (mapAsset && mapAsset.type === "asset") {
+    mapAsset.source = JSON.stringify({
+      version: 3,
+      // file should be just the basename since the .map is in the same directory
+      file: path.basename(chunkFileName),
+      ...data,
+    });
+  }
 }

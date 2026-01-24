@@ -1,0 +1,5 @@
+export type User = {
+    id: string;
+    name: string;
+};
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiaW5saW5lLWJhc2U2NC5kLnRzIiwic291cmNlUm9vdCI6IiIsInNvdXJjZXMiOlsiLi4vc3JjL2luZGV4LnRzIl0sIm5hbWVzIjpbXSwibWFwcGluZ3MiOiJBQUFBLE1BQU0sTUFBTSxJQUFJLEdBQUc7SUFDbEIsRUFBRSxFQUFFLE1BQU0sQ0FBQztJQUNYLElBQUksRUFBRSxNQUFNLENBQUM7Q0FDYixDQUFDIn0=
