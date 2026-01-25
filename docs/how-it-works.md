@@ -95,35 +95,19 @@ With that, we have all the tools to create roll-upd `.d.ts` files.
 
 ## Sourcemap challenges
 
-The virtual AST trick creates an interesting problem for sourcemaps.
-
-We use existing libraries for the heavy lifting:
-- [`convert-source-map`](https://github.com/thlorenz/convert-source-map) loads input sourcemaps (inline base64, URL-encoded, file references)
-- [`@jridgewell/sourcemap-codec`](https://github.com/jridgewell/sourcemap-codec) decodes/encodes VLQ mappings
-- [`@jridgewell/remapping`](https://github.com/jridgewell/remapping) composes sourcemaps for multi-source cases
-
-The custom logic (~60 lines in `hydrateSourcemap`) exists because Rollup's bundling produces sparse maps regardless of how detailed the input maps are.
+The virtual AST trick creates a problem for sourcemaps: **[Go to Definition](https://code.visualstudio.com/docs/languages/typescript#_code-navigation) breaks**.
 
 TypeScript's declaration maps (`.d.ts.map`) have [per-token granularity](https://github.com/microsoft/TypeScript/blob/b19a9da2a3b8f2a720d314d01258dd2bdc110fef/src/compiler/emitter.ts#L6234-L6240)—each identifier like `User`, `id`, `name` gets its own mapping. This enables "Go to Definition" to jump to the exact identifier, not just the line.
 
-But Rollup's bundle sourcemap is **sparse**. It only has mappings at declaration boundaries, not per-identifier. Why? Because our virtual AST only has `FunctionDeclaration` nodes with `start`/`end` markers—there's no token-level detail for Rollup to preserve. Rollup [generates the bundle map](https://github.com/rollup/rollup/blob/7af842b3af052d1c305e90ac1fbf0cfb8c9fa359/src/utils/renderChunks.ts#L161) with `hires: false` (the default), producing coarse mappings.
+But Rollup's bundle sourcemap is **sparse**. It only has mappings at declaration boundaries, not per-identifier. Why? Our virtual AST only has `FunctionDeclaration` nodes with `start`/`end` markers—no token-level detail for Rollup to preserve.
 
 ### Why can't MagicString/Rollup handle this?
 
-They actually do—but the granularity bottleneck is in Rollup's bundle map generation, not the composition.
+They do handle sourcemaps properly—the bottleneck is in Rollup's bundle map generation.
 
-Here's the sourcemap pipeline (segment counts are illustrative):
+MagicString works fine; we use `hires: true` in our transform hook. Rollup properly [composes the chain](https://github.com/rollup/rollup/blob/7af842b3af052d1c305e90ac1fbf0cfb8c9fa359/src/utils/collapseSourcemaps.ts) via `collapseSourcemaps`. The problem is that Rollup [generates the bundle map](https://github.com/rollup/rollup/blob/7af842b3af052d1c305e90ac1fbf0cfb8c9fa359/src/utils/renderChunks.ts#L161) with `hires: false` by default, and there's no output option to change this.
 
-```
-[1] Input .d.ts.map        →  ~17 segments (per-identifier, from tsc)
-[2] Transform map          →  detailed (MagicString with hires:true)
-[3] Bundle map             →  ~6 segments (Rollup's internal, hires:false)
-[4] Composed output        →  ~3 segments (minimum of the chain)
-```
-
-MagicString handles sourcemaps properly—we use `hires: true` in our transform hook. Rollup properly [composes the chain](https://github.com/rollup/rollup/blob/7af842b3af052d1c305e90ac1fbf0cfb8c9fa359/src/utils/collapseSourcemaps.ts) via `collapseSourcemaps`. The problem is step [3]: Rollup [generates the bundle map](https://github.com/rollup/rollup/blob/7af842b3af052d1c305e90ac1fbf0cfb8c9fa359/src/utils/renderChunks.ts#L161) with `generateDecodedMap({})` (no options), so `hires` defaults to `false`. There's no `sourcemapHires` output option in Rollup to change this.
-
-And even if Rollup did support `hires: true`, it wouldn't help much here—our virtual AST doesn't have real token positions, just `FunctionDeclaration` boundaries.
+Even if Rollup supported `hires: true`, it wouldn't help—our virtual AST doesn't have real token positions, just `FunctionDeclaration` boundaries.
 
 ### Why standard remapping fails
 
@@ -153,20 +137,33 @@ For each output line:
 
 This works because TypeScript preserves line structure—declarations stay on their original lines through bundling. The anchor tells us "this output line came from source line N", and we know the input map has detailed per-identifier mappings for line N.
 
-Why `generateBundle` instead of `transform`? Even if we composed maps in `transform`, Rollup's bundling would still produce a sparse output map. Plus, `options.sourcemap` is an output option—not available in `transform`. By deferring to `generateBundle`, we skip loading input sourcemaps entirely when sourcemaps are disabled.
+We defer sourcemap processing to `generateBundle` rather than `transform`. Even if we composed maps in `transform`, Rollup's bundling would still produce a sparse output map. Plus, `options.sourcemap` is an output option—not available in `transform`. By deferring, we also skip loading input sourcemaps entirely when sourcemaps are disabled.
 
-### TypeScript's sourcesContent rejection
+### Input paths
 
-Here's a fun quirk: tsserver **rejects** sourcemaps that contain `sourcesContent`. TypeScript's declaration maps never include it, and the [source mapper explicitly checks](https://github.com/microsoft/TypeScript/blob/b19a9da2a3b8f2a720d314d01258dd2bdc110fef/src/services/sourcemaps.ts#L226):
+When `dts({ sourcemap: true })` is set, the plugin handles two input types:
+
+- **`.d.ts` files**: External `.d.ts.map` files are loaded from disk
+- **`.ts` files**: TypeScript's in-memory declaration map is captured during `program.emit()`
+
+Without this option, sourcemaps remain sparse (basic line-level mappings from MagicString).
+
+For `.ts` inputs, we strip `//# sourceMappingURL` comments from emitted declarations. TypeScript emits external map references, but we pass the map directly via `inputMapText`. Without stripping, Rollup would double-process the sourcemap.
+
+### Implementation quirks
+
+**sourcesContent rejection**: tsserver [rejects](https://github.com/microsoft/TypeScript/blob/b19a9da2a3b8f2a720d314d01258dd2bdc110fef/src/services/sourcemaps.ts#L226) sourcemaps containing `sourcesContent`, silently falling back to no mapping:
 
 ```typescript
 if (map.sourcesContent && map.sourcesContent.some(isString)) return undefined;
 ```
 
-If your bundled `.d.ts.map` has `sourcesContent`, Go to Definition silently falls back to the identity mapper (no mapping at all). We strip `sourcesContent` entirely from output maps to stay compatible.
+We strip `sourcesContent` entirely from output maps to stay compatible.
 
-### URL sourceRoot handling
+**URL sourceRoot**: TypeScript's `sourceRoot` can be a URL like `https://github.com/org/repo/blob/main/src/`. We detect URLs via the `://` pattern (not just `:`, which would match Windows drive letters) and use the [`URL` constructor](https://developer.mozilla.org/en-US/docs/Web/API/URL/URL) for proper path resolution—`new URL("../../src/index.ts", "https://example.com/dist/types/")` correctly produces `https://example.com/src/index.ts`.
 
-TypeScript's `sourceRoot` can be a URL like `https://github.com/org/repo/blob/main/src/`. We detect URLs via the `://` pattern (not just `:`, which would match Windows drive letters like `C:\`) and preserve them verbatim instead of mangling them with `path.resolve()`.
+### Libraries
 
-For URL paths with `../` segments, we use the [`URL` constructor](https://developer.mozilla.org/en-US/docs/Web/API/URL/URL) for proper resolution—`new URL("../../src/index.ts", "https://example.com/dist/types/")` correctly produces `https://example.com/src/index.ts`.
+- [`convert-source-map`](https://github.com/thlorenz/convert-source-map) — loads input sourcemaps (inline base64, URL-encoded, file references)
+- [`@jridgewell/sourcemap-codec`](https://github.com/jridgewell/sourcemap-codec) — decodes/encodes VLQ mappings
+- [`@jridgewell/remapping`](https://github.com/jridgewell/remapping) — composes sourcemaps for multi-source cases

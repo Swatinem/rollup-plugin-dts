@@ -22,6 +22,13 @@ export interface Options {
    * Path to tsconfig.json, by default, will try to load 'tsconfig.json'
    */
   tsconfig?: string;
+  /**
+   * Enable detailed sourcemaps for Go-to-Definition support.
+   * When true: loads `.d.ts.map` files for `.d.ts` inputs and captures
+   * TypeScript's `declarationMap` for `.ts` inputs, enabling navigation
+   * to original source files.
+   */
+  sourcemap?: boolean;
 }
 
 export function resolveDefaultOptions(options: Options) {
@@ -30,6 +37,7 @@ export function resolveDefaultOptions(options: Options) {
     compilerOptions: options.compilerOptions ?? {},
     respectExternal: options.respectExternal ?? false,
     includeExternal: options.includeExternal ?? [],
+    sourcemap: options.sourcemap ?? false,
   };
 }
 

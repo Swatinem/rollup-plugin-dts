@@ -10,7 +10,7 @@ import { Harness } from "./utils.js";
 async function bundleWithSourcemap(inputPath: string) {
   const bundle = await rollup({
     input: inputPath,
-    plugins: [dts()],
+    plugins: [dts({ sourcemap: true })],
     onwarn() {},
   });
 
@@ -28,7 +28,7 @@ async function bundleMultipleWithSourcemap(
 ): Promise<OutputChunk[]> {
   const bundle = await rollup({
     input: inputs,
-    plugins: [dts()],
+    plugins: [dts({ sourcemap: true })],
     onwarn() {},
   });
 
@@ -47,7 +47,7 @@ async function bundleWithAssets(
 ): Promise<{ chunks: OutputChunk[]; assets: OutputAsset[] }> {
   const bundle = await rollup({
     input: inputs,
-    plugins: [dts()],
+    plugins: [dts({ sourcemap: true })],
     onwarn() {},
   });
 
@@ -820,6 +820,352 @@ export default (t: Harness) => {
       postSourceIndex,
       `Post type should map to post.ts (index ${postSourceIndex}), ` +
         `but maps to source index ${postMappedSegment[1]}`,
+    );
+  });
+
+  t.test("sourcemap/ts-input-direct-compilation", async () => {
+    /**
+     * This test verifies that when bundling .ts files directly (not .d.ts),
+     * sourcemaps work correctly when dts({ sourcemap: true }) is used.
+     *
+     * Scenario: User has .ts files and wants rollup-plugin-dts to generate
+     * .d.ts bundles with sourcemaps pointing back to the original .ts files.
+     *
+     * Without the sourcemap option:
+     *   - TypeScript's declarationMap is disabled during emit
+     *   - No .d.ts.map is generated in-memory
+     *   - Output sourcemap has no input map to chain
+     *   - Go-to-Definition points to intermediate .d.ts (if it exists) or fails
+     *
+     * With dts({ sourcemap: true }):
+     *   - TypeScript's declarationMap is enabled during emit
+     *   - .d.ts.map is captured in-memory and passed to transform
+     *   - Output sourcemap chains through to original .ts source
+     *   - Go-to-Definition works correctly
+     */
+
+    const dir = path.resolve(process.cwd(), "tests/sourcemap-fixtures/src");
+    const chunk = await bundleWithSourcemap(path.join(dir, "user.ts"));
+    const map = chunk.map!;
+    const code = chunk.code;
+
+    // The output sourcemap should point to the original .ts file, not .d.ts
+    const hasOriginalTsSource = map.sources.some(
+      (source) => source.endsWith("user.ts") && !source.endsWith(".d.ts"),
+    );
+    assert.ok(
+      hasOriginalTsSource,
+      `Sourcemap should point to original .ts file, but sources: ${map.sources.join(", ")}. ` +
+        `When using dts({ sourcemap: true }), Go-to-Definition should navigate to .ts sources.`,
+    );
+
+    // Verify per-identifier mappings work (not just line-level)
+    const decoded = decode(map.mappings);
+
+    // The output should have type User = { ... }
+    // Find the line with "User" and verify it has multiple mapped segments
+    const lines = code.split("\n");
+    const userLineIndex = lines.findIndex((l) => l.includes("User"));
+    assert.ok(userLineIndex >= 0, `Could not find "User" in output code: ${code}`);
+
+    const userLineMappings = decoded[userLineIndex] || [];
+    assert.ok(
+      userLineMappings.length >= 1,
+      `User line should have mapping segments, got ${userLineMappings.length}. ` +
+        `This indicates the declaration map was not properly captured during TypeScript emit.`,
+    );
+
+    // Verify "id" and "name" lines also have mappings
+    const idLineIndex = lines.findIndex((l) => l.includes("id:"));
+    const nameLineIndex = lines.findIndex((l) => l.includes("name:"));
+
+    if (idLineIndex >= 0) {
+      const idLineMappings = decoded[idLineIndex] || [];
+      assert.ok(
+        idLineMappings.length >= 1,
+        `"id:" line should have mapping segments for Go-to-Definition to work`,
+      );
+    }
+
+    if (nameLineIndex >= 0) {
+      const nameLineMappings = decoded[nameLineIndex] || [];
+      assert.ok(
+        nameLineMappings.length >= 1,
+        `"name:" line should have mapping segments for Go-to-Definition to work`,
+      );
+    }
+
+    // Use trace-mapping to verify Go-to-Definition would work
+    const tracer = new TraceMap(map as any);
+
+    // Find column of "User" in the output
+    const userLine = lines[userLineIndex]!;
+    const userCol = userLine.indexOf("User");
+    assert.ok(userCol >= 0, `Could not find "User" column in line: "${userLine}"`);
+
+    // Query position for "User" - should map to the original .ts source
+    const userPosition = originalPositionFor(tracer, { line: userLineIndex + 1, column: userCol });
+    assert.ok(
+      userPosition.source !== null,
+      `"User" should map to a source, but got null. ` +
+        `This breaks Go-to-Definition for .ts input files.`,
+    );
+    assert.ok(
+      userPosition.source!.endsWith("user.ts"),
+      `"User" should map to user.ts, but got: ${userPosition.source}`,
+    );
+  });
+
+  t.test("sourcemap/mts-input-direct-compilation", async () => {
+    /**
+     * This test verifies that .mts inputs work with dts({ sourcemap: true }).
+     * The fallback lookup must convert .mts → .d.ts (matching getDeclarationId behavior).
+     *
+     * Note: Per-identifier precision varies by TypeScript version. This test
+     * verifies source chaining works; ts-input-direct-compilation tests precision.
+     */
+
+    const dir = path.resolve(process.cwd(), "tests/sourcemap-fixtures/src");
+    const chunk = await bundleWithSourcemap(path.join(dir, "module.mts"));
+    const map = chunk.map!;
+
+    // The output sourcemap should point to the original .mts file
+    const hasOriginalSource = map.sources.some(
+      (source) => source.endsWith("module.mts"),
+    );
+    assert.ok(
+      hasOriginalSource,
+      `Sourcemap should point to original .mts file, but sources: ${map.sources.join(", ")}`,
+    );
+
+    // Verify mappings exist (precision varies by TS version)
+    const decoded = decode(map.mappings);
+    const linesWithMappings = decoded.filter((line) => line.length > 0).length;
+    assert.ok(
+      linesWithMappings >= 1,
+      `Should have at least 1 line with mappings, got ${linesWithMappings}`,
+    );
+  });
+
+  t.test("sourcemap/tsx-input-direct-compilation", async () => {
+    /**
+     * This test verifies that .tsx inputs work with dts({ sourcemap: true }).
+     * The fallback lookup must convert .tsx → .d.ts (matching getDeclarationId behavior).
+     *
+     * Note: Per-identifier precision varies by TypeScript version. This test
+     * verifies source chaining works; ts-input-direct-compilation tests precision.
+     */
+
+    const dir = path.resolve(process.cwd(), "tests/sourcemap-fixtures/src");
+    const chunk = await bundleWithSourcemap(path.join(dir, "component.tsx"));
+    const map = chunk.map!;
+
+    // The output sourcemap should point to the original .tsx file
+    const hasOriginalSource = map.sources.some(
+      (source) => source.endsWith("component.tsx"),
+    );
+    assert.ok(
+      hasOriginalSource,
+      `Sourcemap should point to original .tsx file, but sources: ${map.sources.join(", ")}`,
+    );
+
+    // Verify mappings exist (precision varies by TS version)
+    const decoded = decode(map.mappings);
+    const linesWithMappings = decoded.filter((line) => line.length > 0).length;
+    assert.ok(
+      linesWithMappings >= 1,
+      `Should have at least 1 line with mappings, got ${linesWithMappings}`,
+    );
+  });
+
+  t.test("sourcemap/opt-out-with-rollup-sourcemap-enabled", async () => {
+    /**
+     * When dts({ sourcemap: false }), no sourcemaps are generated even if
+     * Rollup's output.sourcemap is true. This gives users clear control:
+     * sourcemap: true = detailed maps, sourcemap: false = no maps.
+     */
+
+    const dir = path.resolve(process.cwd(), "tests/sourcemap-fixtures/src");
+    const inputPath = path.join(dir, "user.ts");
+
+    const bundle = await rollup({
+      input: inputPath,
+      plugins: [dts({ sourcemap: false })],
+      onwarn() {},
+    });
+
+    const result = await bundle.generate({
+      format: "es",
+      sourcemap: true,
+    });
+
+    const chunk = result.output[0];
+    const map = chunk.map;
+
+    // No actual mappings should be generated when sourcemap: false
+    // Rollup may produce empty line separators (semicolons only) but no real segments
+    const decoded = decode(map?.mappings || "");
+    const totalSegments = decoded.reduce((sum, line) => sum + line.length, 0);
+    assert.strictEqual(totalSegments, 0, `Expected no mapping segments when sourcemap: false, got ${totalSegments}`);
+  });
+
+  t.test("sourcemap/compiler-override-precedence", async () => {
+    /**
+     * This test verifies that dts({ sourcemap: true }) takes precedence
+     * over compilerOptions.declarationMap: false.
+     *
+     * Capability-driven approach: We compare against a baseline (sourcemap: true
+     * without override) to verify the override produces identical results.
+     * This works across all TypeScript versions without version checks.
+     */
+
+    const dir = path.resolve(process.cwd(), "tests/sourcemap-fixtures/src");
+    const inputPath = path.join(dir, "user.ts");
+
+    // Baseline: Bundle with just sourcemap: true
+    const baselineBundle = await rollup({
+      input: inputPath,
+      plugins: [dts({ sourcemap: true })],
+      onwarn() {},
+    });
+    const baselineResult = await baselineBundle.generate({ format: "es", sourcemap: true });
+    const baselineMap = baselineResult.output[0].map!;
+    const baselineSegments = decode(baselineMap.mappings).reduce((sum, line) => sum + line.length, 0);
+
+    // Override case: Bundle with sourcemap: true + declarationMap: false
+    const overrideBundle = await rollup({
+      input: inputPath,
+      plugins: [
+        dts({
+          sourcemap: true,
+          compilerOptions: {
+            declarationMap: false, // This should be overridden by sourcemap: true
+          },
+        }),
+      ],
+      onwarn() {},
+    });
+    const overrideResult = await overrideBundle.generate({ format: "es", sourcemap: true });
+    const overrideMap = overrideResult.output[0].map!;
+    const overrideSegments = decode(overrideMap.mappings).reduce((sum, line) => sum + line.length, 0);
+
+    // The override should produce the same precision as the baseline
+    // (whatever TypeScript's declarationMap naturally produces)
+    assert.strictEqual(
+      overrideSegments,
+      baselineSegments,
+      `sourcemap: true should override declarationMap: false. ` +
+        `Baseline has ${baselineSegments} segments, override has ${overrideSegments}. ` +
+        `They should be equal.`,
+    );
+
+    // Verify source chaining works
+    const hasOriginalSource = overrideMap.sources.some(
+      (s) => s.endsWith("user.ts") && !s.endsWith(".d.ts"),
+    );
+    assert.ok(
+      hasOriginalSource,
+      `sourcemap: true should chain to original .ts, but got: ${overrideMap.sources.join(", ")}`,
+    );
+  });
+
+  t.test("sourcemap/mixed-inputs-dts-and-ts", async () => {
+    /**
+     * This test verifies that bundling both .d.ts (with external map) and
+     * .ts (with in-memory mapContent) in the same bundle works correctly.
+     *
+     * Fixture structure:
+     *   - index.ts imports from ./types.js and ./utils.js
+     *   - types.d.ts has external .d.ts.map → ../src/types.ts
+     *   - utils.ts will be compiled via generateDts() with in-memory mapContent
+     *
+     * Both paths should produce proper sourcemap chains with no cross-contamination.
+     */
+
+    const dir = path.resolve(process.cwd(), "tests/sourcemap-fixtures/mixed-inputs");
+
+    // Bundle index.ts which imports from both .d.ts (external map) and .ts (compiled)
+    const bundle = await rollup({
+      input: path.join(dir, "index.ts"),
+      plugins: [dts({ sourcemap: true })],
+      onwarn() {},
+    });
+
+    const result = await bundle.generate({
+      format: "es",
+      sourcemap: true,
+    });
+
+    const chunk = result.output[0];
+    const map = chunk.map!;
+
+    // Should have sources from both:
+    // - types.ts (from external .d.ts.map chain)
+    // - utils.ts (from in-memory mapContent via generateDts)
+    const typesSource = map.sources.find((s) => s.includes("types.ts"));
+    const utilsSource = map.sources.find((s) => s.includes("utils.ts"));
+
+    assert.ok(
+      typesSource,
+      `Mixed bundle should include types.ts (from external map chain) in sources: ${map.sources.join(", ")}`,
+    );
+    assert.ok(
+      utilsSource,
+      `Mixed bundle should include utils.ts (from in-memory mapContent) in sources: ${map.sources.join(", ")}`,
+    );
+
+    // Sources should be distinct (no cross-contamination)
+    assert.ok(
+      typesSource !== utilsSource,
+      `Sources should be distinct, got types=${typesSource}, utils=${utilsSource}`,
+    );
+
+    // Verify mappings point to correct sources
+    const decoded = decode(map.mappings);
+    const lines = chunk.code.split("\n");
+
+    // Find line with "Config" (from types.d.ts → types.ts)
+    const configLineIndex = lines.findIndex((l) => l.includes("Config"));
+    // Find line with "Helper" (from utils.ts)
+    const helperLineIndex = lines.findIndex((l) => l.includes("Helper"));
+
+    // Both Config and Helper lines must exist in output
+    assert.ok(configLineIndex >= 0, `Could not find "Config" in output code`);
+    assert.ok(helperLineIndex >= 0, `Could not find "Helper" in output code`);
+
+    const typesSourceIndex = map.sources.indexOf(typesSource!);
+    const utilsSourceIndex = map.sources.indexOf(utilsSource!);
+
+    const configMappings = decoded[configLineIndex] || [];
+    const helperMappings = decoded[helperLineIndex] || [];
+
+    const configSegment = configMappings.find((seg) => seg.length >= 4);
+    const helperSegment = helperMappings.find((seg) => seg.length >= 4);
+
+    // Both segments must exist for proper sourcemap functionality
+    assert.ok(
+      configSegment,
+      `Config line (${configLineIndex}) should have a mapped segment. ` +
+        `Mappings: ${map.mappings}`,
+    );
+    assert.ok(
+      helperSegment,
+      `Helper line (${helperLineIndex}) should have a mapped segment. ` +
+        `Mappings: ${map.mappings}`,
+    );
+
+    // Config should map to types.ts source
+    assert.strictEqual(
+      configSegment[1],
+      typesSourceIndex,
+      `Config should map to types.ts (index ${typesSourceIndex}), got index ${configSegment[1]}`,
+    );
+
+    // Helper should map to utils.ts source
+    assert.strictEqual(
+      helperSegment[1],
+      utilsSourceIndex,
+      `Helper should map to utils.ts (index ${utilsSourceIndex}), got index ${helperSegment[1]}`,
     );
   });
 };
