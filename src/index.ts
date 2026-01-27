@@ -77,7 +77,7 @@ function getModule(
         return { code };
       }
     }
-    const newProgram = createProgram(fileName, compilerOptions, tsconfig);
+    const newProgram = createProgram(fileName, compilerOptions, tsconfig, resolvedOptions.sourcemap);
     programs.push(newProgram);
     // we created hte program from this fileName, so the source file must exist :P
     const source = newProgram.getSourceFile(fileName)!;
@@ -93,8 +93,8 @@ function getModule(
 }
 
 const plugin: PluginImpl<Options> = (options = {}) => {
-  const transformPlugin = transform();
   const ctx: DtsPluginContext = { entries: [], programs: [], resolvedOptions: resolveDefaultOptions(options) };
+  const transformPlugin = transform(ctx.resolvedOptions.sourcemap);
 
   return {
     name: "dts",
@@ -127,6 +127,7 @@ const plugin: PluginImpl<Options> = (options = {}) => {
         Object.values(input),
         ctx.resolvedOptions.compilerOptions,
         ctx.resolvedOptions.tsconfig,
+        ctx.resolvedOptions.sourcemap,
       );
 
       return transformPlugin.options.call(this, options);
@@ -174,11 +175,19 @@ const plugin: PluginImpl<Options> = (options = {}) => {
 
         const declarationId = getDeclarationId(id);
 
-        let generated!: ReturnType<typeof transformPlugin.transform>;
+        // Capture both .d.ts and .d.ts.map from TypeScript emit
+        // Emit order: .d.ts.map first, .d.ts second (verified via experiments/ts-emit-test.ts)
+        let declarationText: string | undefined;
+        let declarationMapText: string | undefined;
+
         const { emitSkipped, diagnostics } = module.program.emit(
           module.source,
-          (_, declarationText) => {
-            generated = transformPlugin.transform.call(this, declarationText, declarationId);
+          (emitFileName, text) => {
+            if (emitFileName.endsWith(".map")) {
+              declarationMapText = text;
+            } else {
+              declarationText = text;
+            }
           },
           undefined, // cancellationToken
           true, // emitOnlyDtsFiles
@@ -193,7 +202,17 @@ const plugin: PluginImpl<Options> = (options = {}) => {
             this.error("Failed to compile. Check the logs above.");
           }
         }
-        return generated;
+
+        if (!declarationText) return null;
+
+        // Strip //# sourceMappingURL comment from declaration text since we handle the map via inputMapText
+        // Otherwise Rollup would double-process: once from the comment, once from our transform map
+        // Note: TypeScript's emit only produces external maps (never inline), so this is safe.
+        // If a custom transformer were to inject an inline map, it would also be stripped.
+        const cleanDeclarationText = declarationText.replace(/\n?\/\/# sourceMappingURL=[^\n]+/, "");
+
+        // Pass declaration map text to transform for sourcemap hydration
+        return transformPlugin.transform.call(this, cleanDeclarationText, declarationId, declarationMapText);
       };
 
       // if it's a .d.ts file, handle it as-is
@@ -231,6 +250,7 @@ const plugin: PluginImpl<Options> = (options = {}) => {
           resolvedSource,
           ctx.resolvedOptions.compilerOptions,
           ctx.resolvedOptions.tsconfig,
+          ctx.resolvedOptions.sourcemap,
         ).compilerOptions;
       }
 

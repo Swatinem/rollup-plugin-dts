@@ -39,6 +39,30 @@ And then instruct typescript where to find your definitions inside your `package
 **NOTE** that the plugin will automatically mark any external library
 (`@types` for example) as `external`, so those will be excluded from bundling.
 
+## Options
+
+```js
+plugins: [dts({
+  // Enable detailed sourcemaps for Go-to-Definition support.
+  // When true: loads .d.ts.map files and captures TypeScript's declarationMap
+  // for .ts inputs, enabling navigation to original source files.
+  // NOTE: Also requires `output.sourcemap: true` in your Rollup config.
+  sourcemap: true,
+
+  // Path to tsconfig.json (default: finds nearest tsconfig.json)
+  tsconfig: "./tsconfig.json",
+
+  // TypeScript compiler options (e.g., for path mapping)
+  compilerOptions: { baseUrl: ".", paths: { "~/*": ["src/*"] } },
+
+  // Don't auto-externalize node_modules (default: false)
+  respectExternal: true,
+
+  // Bundle types from specific external packages (default: [])
+  includeExternal: ["some-package"],
+})]
+```
+
 ## Maintenance Mode
 
 This project is in _maintenance mode_. That means there will be no more active feature development.

@@ -32,5 +32,5 @@
     "outDir": ".build"
   },
   "include": ["src", "tests", "rollup.config.ts"],
-  "exclude": ["tests/testcases", "tests/preprocess", "tests/oom-reproduction"]
+  "exclude": ["tests/testcases", "tests/preprocess", "tests/oom-reproduction", "tests/sourcemap-fixtures"]
 }
