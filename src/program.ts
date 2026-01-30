@@ -56,8 +56,16 @@ export function getCompilerOptions(
   input: string,
   overrideOptions: ts.CompilerOptions,
   overrideConfigPath?: string,
+  enableDeclarationMap?: boolean,
 ): { dtsFiles: Array<string>; dirName: string; compilerOptions: ts.CompilerOptions } {
-  const compilerOptions = { ...DEFAULT_OPTIONS, ...overrideOptions };
+  const compilerOptions = {
+    ...DEFAULT_OPTIONS,
+    ...overrideOptions,
+    // When plugin's sourcemap option is explicitly true, force declarationMap
+    // regardless of user's compilerOptions setting.
+    // When sourcemap is false/undefined, respect user's compilerOptions.declarationMap.
+    ...(enableDeclarationMap === true && { declarationMap: true }),
+  };
   let dirName = path.dirname(input);
   let dtsFiles: Array<string> = [];
 
@@ -107,8 +115,13 @@ export function getCompilerOptions(
   };
 }
 
-export function createProgram(fileName: string, overrideOptions: ts.CompilerOptions, tsconfig?: string) {
-  const { dtsFiles, compilerOptions } = getCompilerOptions(fileName, overrideOptions, tsconfig);
+export function createProgram(
+  fileName: string,
+  overrideOptions: ts.CompilerOptions,
+  tsconfig?: string,
+  enableDeclarationMap?: boolean,
+) {
+  const { dtsFiles, compilerOptions } = getCompilerOptions(fileName, overrideOptions, tsconfig, enableDeclarationMap);
   return ts.createProgram(
     [fileName].concat(Array.from(dtsFiles)),
     compilerOptions,
@@ -116,7 +129,12 @@ export function createProgram(fileName: string, overrideOptions: ts.CompilerOpti
   );
 }
 
-export function createPrograms(input: Array<string>, overrideOptions: ts.CompilerOptions, tsconfig?: string) {
+export function createPrograms(
+  input: Array<string>,
+  overrideOptions: ts.CompilerOptions,
+  tsconfig?: string,
+  enableDeclarationMap?: boolean,
+) {
   const programs = [];
   const dtsFiles: Set<string> = new Set();
   let inputs: Array<string> = [];
@@ -129,7 +147,7 @@ export function createPrograms(input: Array<string>, overrideOptions: ts.Compile
     }
 
     main = path.resolve(main);
-    const options = getCompilerOptions(main, overrideOptions, tsconfig);
+    const options = getCompilerOptions(main, overrideOptions, tsconfig, enableDeclarationMap);
     options.dtsFiles.forEach(dtsFiles.add, dtsFiles);
 
     if (!inputs.length) {

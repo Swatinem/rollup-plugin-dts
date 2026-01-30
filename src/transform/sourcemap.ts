@@ -100,11 +100,21 @@ export function hydrateSourcemap(
 export type SourcemapInfo = {
   fileName: string;
   originalCode: string; // Original code for convert-source-map to parse
+  inputMapText?: string; // Pre-loaded map text (from TypeScript emit of .ts files)
 };
 
 // Load sourcemap from inline data URL, file reference, or external .map file
 export async function loadInputSourcemap(info: SourcemapInfo): Promise<InputSourceMap | null> {
-  const { fileName, originalCode } = info;
+  const { fileName, originalCode, inputMapText } = info;
+
+  // Use pre-loaded map if available (from TypeScript emit of .ts files)
+  if (inputMapText) {
+    try {
+      return JSON.parse(inputMapText);
+    } catch {
+      return null;
+    }
+  }
 
   // Try inline sourcemap (base64 or url-encoded data URL)
   // Note: TypeScript never emits inline declaration maps, but other tools might.
