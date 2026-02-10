@@ -133,7 +133,7 @@ class Transformer {
 
     const scope = this.createDeclaration(node, node.name);
     scope.pushIdentifierReference(node.name);
-    scope.convertNamespace(node);
+    scope.convertNamespace(node, true);
   }
 
   convertEnumDeclaration(node: ts.EnumDeclaration) {
