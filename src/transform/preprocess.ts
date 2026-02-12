@@ -18,13 +18,21 @@ interface PreProcessOutput {
   fileReferences: Set<string>;
 }
 
-function preProcessNamespaceBody(body: ts.ModuleBlock, code: MagicString, sourceFile: ts.SourceFile) {
+function preProcessNamespaceBody(body: ts.ModuleBlock | ts.ModuleDeclaration, code: MagicString, sourceFile: ts.SourceFile) {
+  // Recurse through dotted namespace chain (e.g. `namespace A.B.C {}`)
+  if (ts.isModuleDeclaration(body)) {
+    if (body.body && (ts.isModuleBlock(body.body) || ts.isModuleDeclaration(body.body))) {
+      preProcessNamespaceBody(body.body, code, sourceFile);
+    }
+    return;
+  }
+
   for (const stmt of body.statements) {
     // Safely call the new context-aware function on all children
     fixModifiers(code, stmt);
 
     // Recurse for nested namespaces
-    if (ts.isModuleDeclaration(stmt) && stmt.body && ts.isModuleBlock(stmt.body)) {
+    if (ts.isModuleDeclaration(stmt) && stmt.body && (ts.isModuleBlock(stmt.body) || ts.isModuleDeclaration(stmt.body))) {
       preProcessNamespaceBody(stmt.body, code, sourceFile);
     }
   }
@@ -126,7 +134,7 @@ export function preProcess({ sourceFile, isEntry, isJSON }: PreProcessInput): Pr
 
       // duplicate exports of namespaces
       if (ts.isModuleDeclaration(node)) {
-        if (node.body && ts.isModuleBlock(node.body)) {
+        if (node.body && (ts.isModuleBlock(node.body) || ts.isModuleDeclaration(node.body))) {
           preProcessNamespaceBody(node.body, code, sourceFile);
         }
 
@@ -594,7 +602,15 @@ function fixModifiers(code: MagicString, node: ts.Node) {
 }
 
 function duplicateExports(code: MagicString, module: ts.ModuleDeclaration) {
-  if (!module.body || !ts.isModuleBlock(module.body)) {
+  if (!module.body) {
+    return;
+  }
+  // Recurse through dotted namespace chain
+  if (ts.isModuleDeclaration(module.body)) {
+    duplicateExports(code, module.body);
+    return;
+  }
+  if (!ts.isModuleBlock(module.body)) {
     return;
   }
   for (const node of module.body.statements) {

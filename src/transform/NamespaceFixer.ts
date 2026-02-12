@@ -91,8 +91,16 @@ export class NamespaceFixer {
 
       // Remove redundant `{ Foo as Foo }` exports from a namespace which we
       // added in pre-processing to fix up broken renaming
-      if (ts.isModuleDeclaration(node) && node.body && ts.isModuleBlock(node.body)) {
-        for (const stmt of node.body.statements) {
+      if (ts.isModuleDeclaration(node) && node.body) {
+        let body: ts.Node = node.body;
+        // Traverse dotted namespace chain (e.g. `namespace A.B.C {}`)
+        while (ts.isModuleDeclaration(body) && body.body) {
+          body = body.body;
+        }
+        if (!ts.isModuleBlock(body)) {
+          continue;
+        }
+        for (const stmt of body.statements) {
           if (ts.isExportDeclaration(stmt) && stmt.exportClause) {
             if (ts.isNamespaceExport(stmt.exportClause)) {
               continue;
