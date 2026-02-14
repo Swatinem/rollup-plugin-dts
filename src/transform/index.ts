@@ -7,7 +7,7 @@ import { preProcess } from "./preprocess.js";
 import { convert } from "./Transformer.js";
 import { TypeOnlyFixer } from "./TypeOnlyFixer.js";
 import { parse, trimExtension, JSON_EXTENSIONS, DTS_EXTENSIONS } from "../helpers.js";
-import { RelativeModuleDeclarationFixer } from "./ModuleDeclarationFixer.js";
+import { ModuleDeclarationFixer } from "./ModuleDeclarationFixer.js";
 import MagicString from "magic-string";
 import { loadInputSourcemap, hydrateSourcemap, type InputSourceMap, type SourcemapInfo } from "./sourcemap.js";
 
@@ -131,7 +131,7 @@ export const transform = (enableSourcemap: boolean) => {
       return { code, ast: converted.ast as any, map: map as unknown as SourceMap };
     },
 
-    renderChunk(inputCode, chunk, options) {
+    renderChunk(inputCode, chunk, options, meta) {
       const source = parse(chunk.fileName, inputCode);
       const fixer = new NamespaceFixer(source);
 
@@ -173,14 +173,22 @@ export const transform = (enableSourcemap: boolean) => {
 
       const typesFixed = typeOnlyFixer.fix();
 
-      const relativeModuleDeclarationFixed = new RelativeModuleDeclarationFixer(
-        chunk.fileName,
+      // Build mapping from module paths to chunk filenames
+      const moduleToChunk = new Map<string, string>();
+      for (const [chunkFileName, chunkInfo] of Object.entries(meta.chunks)) {
+        for (const moduleId of Object.keys(chunkInfo.modules)) {
+          moduleToChunk.set(moduleId.split("\\").join("/"), chunkFileName);
+        }
+      }
+
+      const moduleDeclarationFixer = new ModuleDeclarationFixer(
+        chunk,
         "magicCode" in typesFixed && typesFixed.magicCode ? typesFixed.magicCode : new MagicString(code),
         !!options.sourcemap,
-        "./" + path.basename(chunk.fileName, ".d.ts"),
+        moduleToChunk,
       );
 
-      return relativeModuleDeclarationFixed.fix();
+      return moduleDeclarationFixer.fix();
     },
 
     async generateBundle(options, bundle) {
