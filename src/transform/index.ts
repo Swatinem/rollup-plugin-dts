@@ -92,6 +92,9 @@ export const transform = (enableSourcemap: boolean) => {
       const isEntry = Boolean(moduleId && this.getModuleInfo(moduleId)?.isEntry);
       const isJSON = Boolean(moduleId && JSON_EXTENSIONS.test(moduleId));
 
+      // Preserve original code for loadInputSourcemap() before preProcess strips sourceMappingURL
+      const rawCode = code;
+
       let sourceFile = parse(fileName, code);
       const preprocessed = preProcess({ sourceFile, isEntry, isJSON });
       // `sourceFile.fileName` here uses forward slashes
@@ -123,7 +126,7 @@ export const transform = (enableSourcemap: boolean) => {
       if (DTS_EXTENSIONS.test(fileName)) {
         pendingSourcemaps.set(fileName, {
           fileName,
-          originalCode: code,
+          originalCode: rawCode,
           inputMapText,
         });
       }

@@ -344,6 +344,31 @@ export function preProcess({ sourceFile, isEntry, isJSON }: PreProcessInput): Pr
     code.remove(start, end);
   }
 
+  // Strip trailing sourceMappingURL comments so they don't leak into bundled output
+  const fullText = sourceFile.getFullText();
+
+  // Check EOF token's leading trivia (comment on its own line after last statement)
+  // and last statement's trailing trivia (comment on same line as last statement)
+  const eofTrivia = ts.getLeadingCommentRanges(fullText, sourceFile.endOfFileToken.getFullStart());
+  const lastStatement = sourceFile.statements[sourceFile.statements.length - 1];
+  const trailingTrivia = lastStatement
+    ? ts.getTrailingCommentRanges(fullText, lastStatement.getEnd())
+    : undefined;
+
+  for (const comment of [...(eofTrivia ?? []), ...(trailingTrivia ?? [])]) {
+    // Skip block comments — sourceMappingURL text inside /** */ must not be stripped
+    if (comment.kind !== ts.SyntaxKind.SingleLineCommentTrivia) continue;
+    const text = fullText.slice(comment.pos, comment.end);
+    if (!/\/\/[#@]\s*sourceMappingURL=/.test(text)) continue;
+
+    let start = comment.pos;
+    if (start > 0 && fullText[start - 1] === "\n") {
+      start -= 1;
+    }
+    code.remove(start, comment.end);
+    break;
+  }
+
   return {
     code,
     typeReferences,
