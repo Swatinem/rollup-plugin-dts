@@ -186,6 +186,7 @@ export const transform = (enableSourcemap: boolean) => {
         "magicCode" in typesFixed && typesFixed.magicCode ? typesFixed.magicCode : new MagicString(code),
         !!options.sourcemap,
         moduleToChunk,
+        (message) => this.warn(message),
       );
 
       return moduleDeclarationFixer.fix();

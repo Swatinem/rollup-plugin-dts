@@ -30,18 +30,24 @@ function normalizePath(p: string) {
 export class ModuleDeclarationFixer {
   private code: MagicString;
   private sourcemap: boolean;
-  private DEBUG: boolean;
   private source: ts.SourceFile;
   private chunkFileName: string;
   private moduleToChunk: Map<string, string>;
+  private warn: (message: string) => void;
 
-  constructor(chunk: RenderedChunk, code: MagicString, sourcemap: boolean, moduleToChunk: Map<string, string>) {
+  constructor(
+    chunk: RenderedChunk,
+    code: MagicString,
+    sourcemap: boolean,
+    moduleToChunk: Map<string, string>,
+    warn: (message: string) => void,
+  ) {
     this.code = code;
     this.sourcemap = sourcemap;
-    this.DEBUG = !!process.env.DTS_EXPORTS_FIXER_DEBUG;
     this.source = parse(chunk.fileName, code.toString());
     this.chunkFileName = chunk.fileName;
     this.moduleToChunk = moduleToChunk;
+    this.warn = warn;
   }
 
   fix() {
@@ -61,10 +67,6 @@ export class ModuleDeclarationFixer {
       }
 
       const targetChunkName = this.getTargetChunkName(absolutePath);
-
-      if (this.DEBUG) {
-        console.log(`Module declaration ${absolutePath} -> ${targetChunkName}`);
-      }
 
       const quote =
         node.name.kind === ts.SyntaxKind.StringLiteral && "singleQuote" in node.name && node.name.singleQuote
@@ -108,9 +110,9 @@ export class ModuleDeclarationFixer {
     }
 
     // Module is not found in any chunk, keep the current chunk name as a fallback
-    if (this.DEBUG) {
-      console.log(`Module ${absolutePath} not found in any chunk, using current chunk name`);
-    }
+    this.warn(
+      `declare module "${absolutePath}" could not be resolved to any output chunk, falling back to current chunk "${this.chunkFileName}"`,
+    );
 
     return this.formatChunkReference(this.chunkFileName, jsExtMatch?.[0]);
   }
