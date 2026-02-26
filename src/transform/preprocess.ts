@@ -1,8 +1,10 @@
+import * as path from "node:path";
 import MagicString from "magic-string";
 import ts from "typescript";
 import { matchesModifier } from "./astHelpers.js";
 import { UnsupportedSyntaxError } from "./errors.js";
 import { createTypeOnlyName, createTypeOnlyReExportName } from './TypeOnlyFixer.js'
+import { encodeResolvedModule } from "./ModuleDeclarationFixer.js";
 
 type Range = [start: number, end: number];
 
@@ -345,6 +347,23 @@ export function preProcess({ sourceFile, isEntry, isJSON }: PreProcessInput): Pr
     }
 
     code.remove(start, end);
+  }
+
+  // Resolve relative module declarations to absolute paths
+  // This allows correct chunk resolution later even when files from different
+  // directories are bundled together
+  const sourceDir = path.dirname(sourceFile.fileName);
+  for (const node of sourceFile.statements) {
+    if (
+      ts.isModuleDeclaration(node) &&
+      node.body &&
+      ts.isModuleBlock(node.body) &&
+      ts.isStringLiteral(node.name) &&
+      /^\.\.?\//.test(node.name.text)
+    ) {
+      const resolvedPath = path.resolve(sourceDir, node.name.text);
+      code.appendRight(node.name.getEnd(), encodeResolvedModule(resolvedPath));
+    }
   }
 
   return {

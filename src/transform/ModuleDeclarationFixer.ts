@@ -1,56 +1,139 @@
+import * as path from "node:path";
 import ts from "typescript";
 import MagicString from "magic-string";
+import type { RenderedChunk } from "rollup";
 import { parse } from "../helpers.js";
 
-export class RelativeModuleDeclarationFixer {
+const RESOLVED_MODULE_PREFIX = "dts-resolved:";
+const RESOLVED_MODULE_COMMENT = new RegExp(`\\/\\*${RESOLVED_MODULE_PREFIX}(.+?)\\*\\/`);
+
+/** Encode a resolved absolute path as a marker comment for later chunk resolution. */
+export function encodeResolvedModule(absolutePath: string) {
+  return `/*${RESOLVED_MODULE_PREFIX}${absolutePath}*/`;
+}
+
+/** Decode a resolved module marker comment from text. Returns the absolute path, or null if not found. */
+function decodeResolvedModule(text: string) {
+  return text.match(RESOLVED_MODULE_COMMENT)?.[1] ?? null;
+}
+
+/** Strip the resolved module marker comment. */
+function stripResolvedModuleComment(text: string) {
+  return text.replace(RESOLVED_MODULE_COMMENT, "");
+}
+
+/** Normalize paths for comparison (handle Windows backslashes) */
+function normalizePath(p: string) {
+  return p.split("\\").join("/");
+}
+
+export class ModuleDeclarationFixer {
+  private code: MagicString;
   private sourcemap: boolean;
   private DEBUG: boolean;
-  private relativeModuleDeclarations: ts.ModuleDeclaration[];
   private source: ts.SourceFile;
-  private code: MagicString;
-  private name: string;
+  private chunkFileName: string;
+  private moduleToChunk: Map<string, string>;
 
-  constructor(fileName: string, code: MagicString, sourcemap: boolean, name?: string) {
+  constructor(chunk: RenderedChunk, code: MagicString, sourcemap: boolean, moduleToChunk: Map<string, string>) {
+    this.code = code;
     this.sourcemap = sourcemap;
     this.DEBUG = !!process.env.DTS_EXPORTS_FIXER_DEBUG;
-    this.relativeModuleDeclarations = [];
-    this.source = parse(fileName, code.toString());
-    this.code = code;
-    this.name = name || "./index";
+    this.source = parse(chunk.fileName, code.toString());
+    this.chunkFileName = chunk.fileName;
+    this.moduleToChunk = moduleToChunk;
   }
 
   fix() {
-    this.analyze(this.source.statements);
+    let modified = false;
 
-    for (const node of this.relativeModuleDeclarations) {
-      const start = node.getStart();
-      const end = node.getEnd();
+    for (const node of this.source.statements) {
+      if (!ts.isModuleDeclaration(node) || !node.body || !ts.isModuleBlock(node.body)) {
+        continue;
+      }
+
+      const sourceText = this.source.getFullText();
+      const textBetween = sourceText.slice(node.name.getEnd(), node.body.getStart());
+      const absolutePath = decodeResolvedModule(textBetween);
+
+      if (!absolutePath) {
+        continue;
+      }
+
+      const targetChunkName = this.getTargetChunkName(absolutePath);
+
+      if (this.DEBUG) {
+        console.log(`Module declaration ${absolutePath} -> ${targetChunkName}`);
+      }
 
       const quote =
         node.name.kind === ts.SyntaxKind.StringLiteral && "singleQuote" in node.name && node.name.singleQuote
           ? "'"
           : '"';
 
-      const code = `declare module ${quote}${this.name}${quote} ${node.body!.getText()}`;
+      const cleanedBetween = stripResolvedModuleComment(textBetween);
 
-      this.code.overwrite(start, end, code);
+      this.code.overwrite(
+        node.name.getStart(),
+        node.body.getStart(),
+        `${quote}${targetChunkName}${quote}${cleanedBetween}`,
+      );
+      modified = true;
     }
 
     return {
       code: this.code.toString(),
-      map: this.relativeModuleDeclarations.length && this.sourcemap ? this.code.generateMap() : null,
+      map: modified && this.sourcemap ? this.code.generateMap() : null,
     };
   }
 
-  analyze(nodes: ts.NodeArray<ts.Statement>) {
-    for (const node of nodes) {
-      if (ts.isModuleDeclaration(node) && node.body && ts.isModuleBlock(node.body) && /^\.\.?\//.test(node.name.text)) {
-        if (this.DEBUG) {
-          console.log(`Found relative module declaration: ${node.name.text} in ${this.source.fileName}`);
-        }
+  /**
+   * Get the output chunk name for an absolute module path.
+   */
+  private getTargetChunkName(absolutePath: string): string {
+    // Detect JS extension from the resolved path (present when the source uses ESM-style specifiers)
+    const jsExtMatch = absolutePath.match(/\.[cm]?js$/);
+    const basePath = jsExtMatch ? absolutePath.slice(0, -jsExtMatch[0].length) : absolutePath;
 
-        this.relativeModuleDeclarations.push(node);
+    // Try all file extensions that could appear as module IDs in Rollup's chunk metadata
+    const extensions = ["", ".d.ts", ".d.mts", ".d.cts", ".ts", ".mts", ".cts", ".js", ".mjs", ".cjs"];
+    const possiblePaths = extensions.map((ext) => basePath + ext);
+
+    // Find which chunk contains this module
+    for (const possiblePath of possiblePaths) {
+      const chunkFileName = this.moduleToChunk.get(normalizePath(possiblePath));
+      if (chunkFileName) {
+        return this.formatChunkReference(chunkFileName, jsExtMatch?.[0]);
       }
     }
+
+    // Module is not found in any chunk, keep the current chunk name as a fallback
+    if (this.DEBUG) {
+      console.log(`Module ${absolutePath} not found in any chunk, using current chunk name`);
+    }
+
+    return this.formatChunkReference(this.chunkFileName, jsExtMatch?.[0]);
+  }
+
+  /**
+   * Format a chunk filename as a relative path from the current chunk.
+   */
+  private formatChunkReference(chunkFileName: string, jsExt?: string): string {
+    // Compute the relative path from the current chunk's directory to the target chunk
+    const chunkDir = path.dirname(this.chunkFileName);
+    let relativePath = normalizePath(path.relative(chunkDir, chunkFileName));
+
+    // Strip declaration extension and apply JS extension if the source used one
+    relativePath = relativePath.replace(/\.d\.[cm]?tsx?$/, "");
+    if (jsExt) {
+      relativePath += jsExt;
+    }
+
+    // Ensure it starts with "./"
+    if (!relativePath.startsWith(".")) {
+      relativePath = "./" + relativePath;
+    }
+
+    return relativePath;
   }
 }
