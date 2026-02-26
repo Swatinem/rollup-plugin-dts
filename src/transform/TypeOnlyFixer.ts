@@ -7,7 +7,6 @@ type ImportDeclarationWithClause = ts.ImportDeclaration & Required<Pick<ts.Impor
 type ExportDeclarationWithClause = ts.ExportDeclaration & Required<Pick<ts.ExportDeclaration, 'exportClause'>>;
 
 export class TypeOnlyFixer {
-  private readonly DEBUG = !!process.env.DTS_EXPORTS_FIXER_DEBUG;
   private readonly rawCode: string;
   private readonly code: MagicString;
   private readonly source: ts.SourceFile;
@@ -172,8 +171,6 @@ export class TypeOnlyFixer {
 
   private analyze(nodes: Iterable<ts.Node>) {
     for (const node of nodes) {
-      this.DEBUG && console.log(node.getText(), node.kind);
-
       if(ts.isImportDeclaration(node) && node.importClause) {
         this.importNodes.push(node as ImportDeclarationWithClause);
         continue;
@@ -185,14 +182,12 @@ export class TypeOnlyFixer {
       }
 
       if (ts.isInterfaceDeclaration(node)) {
-        this.DEBUG && console.log(`${node.name.getFullText()} is a type`);
         this.types.add(node.name.text);
         continue;
       }
 
       if(ts.isTypeAliasDeclaration(node)) {
         const alias = node.name.text;
-        this.DEBUG && console.log(`${node.name.getFullText()} is a type`);
         this.types.add(alias);
 
         /**
@@ -230,13 +225,11 @@ export class TypeOnlyFixer {
         if (ts.isVariableStatement(node)) {
           for (const declaration of node.declarationList.declarations) {
             if (ts.isIdentifier(declaration.name)) {
-              this.DEBUG && console.log(`${declaration.name.getFullText()} is a value (from var statement)`);
               this.values.add(declaration.name.text);
             }
           }
         } else {
           if (node.name) {
-            this.DEBUG && console.log(`${node.name.getFullText()} is a value (from declaration)`);
             this.values.add(node.name.text);
           }
         }
@@ -250,14 +243,12 @@ export class TypeOnlyFixer {
 
       if (ts.isModuleDeclaration(node)) {
         if (node.name && ts.isIdentifier(node.name)) {
-          this.DEBUG && console.log(`${node.name.getFullText()} is a value (from module declaration)`);
           this.values.add(node.name.text);
         }
         this.analyze(node.getChildren());
         continue;
       }
 
-      this.DEBUG && console.log("unhandled statement", node.getFullText(), node.kind);
     }
   }
 
