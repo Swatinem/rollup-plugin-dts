@@ -255,7 +255,13 @@ const plugin: PluginImpl<Options> = (options = {}) => {
       }
 
       // resolve this via typescript
-      const { resolvedModule } = ts.resolveModuleName(source, importer, resolvedCompilerOptions, ts.sys);
+      const { resolvedModule } = ts.resolveModuleName(source, importer, {
+        // Default moduleResolution to node10 if not explicitly set. TS6 changed
+        // the default from node10 to bundler, and bundler resolution picks .js
+        // files over directories with .d.ts index files, breaking .d.ts bundling.
+        moduleResolution: ts.ModuleResolutionKind.Node10,
+        ...resolvedCompilerOptions,
+      }, ts.sys);
       if (!resolvedModule) {
         return;
       }
