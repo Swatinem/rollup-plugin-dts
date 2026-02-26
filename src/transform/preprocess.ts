@@ -381,7 +381,7 @@ export function preProcess({ sourceFile, isEntry, isJSON }: PreProcessInput): Pr
     // Skip block comments — sourceMappingURL text inside /** */ must not be stripped
     if (comment.kind !== ts.SyntaxKind.SingleLineCommentTrivia) continue;
     const text = fullText.slice(comment.pos, comment.end);
-    if (!/\/\/[#@]\s*sourceMappingURL=/.test(text)) continue;
+    if (!/^\/\/[#@]\s*sourceMappingURL=/.test(text)) continue;
 
     let start = comment.pos;
     if (start > 0 && fullText[start - 1] === "\n") {
