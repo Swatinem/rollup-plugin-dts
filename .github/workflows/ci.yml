@@ -32,3 +32,6 @@ jobs:
       - run: npm install typescript@4.5 rollup@3.0
       # aka `npm test` without the `pretest/build`
       - run: node .build/tests/index.js
+      # test TypeScript 6 beta
+      - run: npm install typescript@beta
+      - run: node .build/tests/index.js
