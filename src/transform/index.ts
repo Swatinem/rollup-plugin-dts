@@ -82,7 +82,7 @@ export const transform = (enableSourcemap: boolean) => {
       };
     },
 
-    transform(code, fileName, inputMapText?: string) {
+    transform(code, fileName, inputMapTextOrOptions?: string | {}) {
       // `fileName` may not match the name in the moduleIds,
       // as we generate the `fileName` manually in the previews step,
       // so we need to find the correct moduleId.
@@ -91,6 +91,7 @@ export const transform = (enableSourcemap: boolean) => {
       const moduleId = Array.from(moduleIds).find((id) => trimExtension(id) === name);
       const isEntry = Boolean(moduleId && this.getModuleInfo(moduleId)?.isEntry);
       const isJSON = Boolean(moduleId && JSON_EXTENSIONS.test(moduleId));
+      const inputMapText = typeof inputMapTextOrOptions === 'string' ? inputMapTextOrOptions : undefined
 
       // Preserve original code for loadInputSourcemap() before preProcess strips sourceMappingURL
       const rawCode = code;
