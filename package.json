@@ -54,7 +54,7 @@
     "@types/convert-source-map": "^2.0.3",
     "@types/d3-drag": "^3.0.7",
     "@types/estree": "1.0.8",
-    "@types/node": "^24.10.14",
+    "@types/node": "^24.11.0",
     "@types/react": "^19.2.14",
     "c8": "^10.1.3",
     "rollup": "4.55.1",
