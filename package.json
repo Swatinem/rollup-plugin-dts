@@ -72,5 +72,10 @@
     "@jridgewell/sourcemap-codec": "^1.5.5",
     "convert-source-map": "^2.0.0",
     "magic-string": "^0.30.21"
+  },
+  "overrides": {
+    "c8": {
+      "yargs": "^18.0.0"
+    }
   }
 }
