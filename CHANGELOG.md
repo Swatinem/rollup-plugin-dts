@@ -1,5 +1,26 @@
 # Changelog
 
+## 6.4.0
+
+**Features**:
+
+- Implement proper SourceMap support with goto-definition granularity
+- Support dotted namespace syntax
+
+**Fixes**:
+
+- Better naming for `declare module` paths
+- Add compatibility with TS6
+
+**Thank you**:
+
+Features, fixes and improvements in this release have been contributed by:
+
+- [@schoel-bis](https://github.com/schoel-bis)
+- [@ZhangYiJiang](https://github.com/ZhangYiJiang)
+- [@igordanchenko](https://github.com/igordanchenko)
+- [@privatenumber](https://github.com/privatenumber)
+
 ## 6.3.0
 
 **Features**:
