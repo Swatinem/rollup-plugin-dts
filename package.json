@@ -57,7 +57,7 @@
     "@types/node": "^25.5.0",
     "@types/react": "^19.2.14",
     "c8": "^11.0.0",
-    "rollup": "4.59.1",
+    "rollup": "4.60.0",
     "typescript": "5.9.3"
   },
   "peerDependencies": {
