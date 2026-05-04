@@ -145,7 +145,7 @@ export class TypeOnlyFixer {
           : this.isTypeOnly(name);
         if(isType) {
           // export { A as B } from 'a';   ->   export type { A as B } from 'a';
-          typeNames.push(element.getText())
+          typeNames.push(getExportSpecifierBinding(element))
         } else {
           // export { A as B };   ->   export { A as B };
           valueNames.push(element.getText())
@@ -277,6 +277,14 @@ export class TypeOnlyFixer {
 function getNodeIndent(node: ts.Node) {
   const match = node.getFullText().match(/^(?:\n*)([ ]*)/)
   return ' '.repeat(match?.[1]?.length || 0);
+}
+
+function getExportSpecifierBinding(element: ts.ExportSpecifier) {
+  if(element.propertyName) {
+    return `${element.propertyName.getText()} as ${element.name.getText()}`;
+  }
+
+  return element.name.getText();
 }
 
 let typeOnlyHintIds = 0;
