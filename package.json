@@ -54,10 +54,10 @@
     "@types/convert-source-map": "^2.0.3",
     "@types/d3-drag": "^3.0.7",
     "@types/estree": "1.0.9",
-    "@types/node": "^25.6.2",
+    "@types/node": "^25.8.0",
     "@types/react": "^19.2.14",
     "c8": "^11.0.0",
-    "rollup": "4.60.3",
+    "rollup": "4.60.4",
     "typescript": "5.9.3"
   },
   "peerDependencies": {
