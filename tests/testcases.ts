@@ -1,97 +1,40 @@
 import * as assert from "assert";
 import fs from "fs/promises";
 import * as path from "path";
-import {
-  type InputOption,
-  type InputOptions,
-  rollup,
-  type RollupOptions,
-  type RollupOutput,
-  VERSION as rollupVersionMajorMinorPatch,
-} from "rollup";
-import ts from "typescript";
-import dts, { type Options } from "../src/index.js";
+import type { RollupOutput } from "rollup";
+import { createBundle, isFixtureSupported, loadFixtureMeta, type Meta, withInput } from "./fixture-helpers.js";
 import { exists, forEachFixture, Harness } from "./utils.js";
 
 export default (t: Harness) => {
   forEachFixture("testcases", (name, dir) => {
     t.test(`testcases/${name}`, async (bless) => {
-      const rollupOptions: InputOptions = {
-        input: (await exists(path.join(dir, "index.d.ts"))) ? "index.d.ts" : "index.ts",
-      };
-      const meta: Meta = {
-        options: {},
-        skip: false,
-        rollupOptions,
-      };
-      try {
-        Object.assign(meta, (await import("file://" + path.join(dir, "meta.js"))).default);
-        meta.rollupOptions = Object.assign(rollupOptions, meta.rollupOptions);
-      } catch {}
+      const meta = await loadFixtureMeta(dir);
 
-      if (meta.tsVersion) {
-        const [major, minor] = ts.versionMajorMinor.split(".").map(Number) as [number, number];
-        const [reqMajor, reqMinor] = meta.tsVersion.split(".").map(Number) as [number, number];
-        if (major < reqMajor || (major === reqMajor && minor < reqMinor)) {
-          // skip unsupported version
-          return;
-        }
-      }
-      if (meta.rollupVersion) {
-        const [major, minor, patch] = rollupVersionMajorMinorPatch.split(".").map(Number) as [number, number, number];
-        const [reqMajor, reqMinor, reqPatch] = meta.rollupVersion.split(".").map(Number) as [number, number, number];
-        if (
-          major < reqMajor ||
-          (major === reqMajor && minor < reqMinor) ||
-          (major === reqMajor && minor === reqMinor && patch < reqPatch)
-        ) {
-          // skip unsupported version
-          return;
-        }
+      if (meta.skip || !isFixtureSupported(meta)) {
+        return;
       }
 
-      if (!meta.skip) {
-        return assertTestcase(dir, meta, bless);
-      }
+      return assertTestcase(dir, meta, bless);
     });
   });
 };
 
-export interface Meta {
-  options: Options;
-  rollupOptions: RollupOptions;
-  skip?: boolean;
-  expectedError?: string;
-  tsVersion?: string;
-  rollupVersion?: string;
-}
-
-async function createBundle(options: Options, rollupOptions: RollupOptions) {
-  const bundle = await rollup({
-    ...rollupOptions,
-    plugins: [dts(options)],
-    onwarn() {},
+/**
+ * Replace Rollup's content hashes in chunk filenames with stable sequential
+ * placeholders so snapshot assertions work across Rollup versions.
+ *
+ * e.g. `shared.d-BwjD5eaf.js` → `shared.d-HASH1.js`
+ */
+function normalizeChunkHashes(code: string): string {
+  const seen = new Map<string, string>();
+  return code.replace(/-[A-Za-z0-9_-]{8}\./g, (match) => {
+    let placeholder = seen.get(match);
+    if (!placeholder) {
+      placeholder = `-HASH${seen.size + 1}.`;
+      seen.set(match, placeholder);
+    }
+    return placeholder;
   });
-  return bundle.generate({
-    ...rollupOptions.output,
-    format: "es",
-    sourcemap: false,
-    sourcemapExcludeSources: true,
-  });
-}
-
-function withInput(dir: string, { input }: InputOptions): InputOption {
-  if (typeof input === "string") {
-    return path.join(dir, input);
-  }
-  if (Array.isArray(input)) {
-    return input.map((input) => path.join(dir, input));
-  }
-  const mapped: { [alias: string]: string } = {};
-  for (const alias of Object.keys(input!)) {
-    mapped[alias] = path.join(dir, input![alias]!);
-  }
-  return mapped;
 }
 
 function clean(code: string = "") {
@@ -104,15 +47,16 @@ function clean(code: string = "") {
 }
 
 async function assertTestcase(dir: string, meta: Meta, bless: boolean) {
-  const { expectedError, options, rollupOptions } = meta;
+  const { expectedError, expectedWarnings, options, rollupOptions } = meta;
 
   const input = withInput(dir, rollupOptions);
   const creator = createBundle(options, { ...rollupOptions, input });
   let output!: RollupOutput["output"];
+  let warnings!: string[];
   let error!: Error;
 
   try {
-    ({ output } = await creator);
+    ({ output, warnings } = await creator);
   } catch (e) {
     error = e as any;
     if (!expectedError) {
@@ -122,6 +66,10 @@ async function assertTestcase(dir: string, meta: Meta, bless: boolean) {
   if (expectedError) {
     assert.strictEqual(error.message, expectedError);
     return;
+  }
+
+  if (expectedWarnings) {
+    assert.deepStrictEqual([...warnings].sort(), [...expectedWarnings].sort());
   }
 
   const hasMultipleOutputs = output.length > 1;
@@ -144,7 +92,7 @@ async function assertTestcase(dir: string, meta: Meta, bless: boolean) {
   }
 
   const expectedCode = await fs.readFile(expectedDts, "utf-8");
-  assert.strictEqual(code, expectedCode);
+  assert.strictEqual(normalizeChunkHashes(code), normalizeChunkHashes(expectedCode));
   // expect(String(map)).toEqual(await fsExtra.readFile(expectedMap, "utf-8"));
 
   if (hasExpected && !hasMultipleOutputs) {
@@ -153,6 +101,7 @@ async function assertTestcase(dir: string, meta: Meta, bless: boolean) {
     } = await createBundle(options, { ...rollupOptions, input: expectedDts });
 
     // typescript `.d.ts` output compresses whitespace, so make sure we ignore that
-    assert.strictEqual(clean(sanityCheck.code), expectedCode);
+    assert.strictEqual(normalizeChunkHashes(clean(sanityCheck.code)), normalizeChunkHashes(expectedCode));
   }
+
 }

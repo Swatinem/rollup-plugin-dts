@@ -1,5 +1,5 @@
 import * as path from "node:path";
-import type { Plugin, SourceMap } from "rollup";
+import type { OutputBundle, Plugin, SourceMap } from "rollup";
 import remapping from "@jridgewell/remapping";
 import type { RawSourceMap } from "@jridgewell/remapping";
 import { NamespaceFixer } from "./NamespaceFixer.js";
@@ -10,6 +10,7 @@ import { parse, trimExtension, JSON_EXTENSIONS, DTS_EXTENSIONS } from "../helper
 import { ModuleDeclarationFixer } from "./ModuleDeclarationFixer.js";
 import MagicString from "magic-string";
 import { loadInputSourcemap, hydrateSourcemap, type InputSourceMap, type SourcemapInfo } from "./sourcemap.js";
+import { rewritePortableSharedChunkImportsInBundle } from "./sharedChunkPortability.js";
 
 /**
  * This is the *transform* part of `rollup-plugin-dts`.
@@ -197,6 +198,11 @@ export const transform = (enableSourcemap: boolean) => {
     },
 
     async generateBundle(options, bundle) {
+      rewritePortableSharedChunkImportsInBundle(
+        bundle,
+        (message) => this.warn(message),
+      );
+
       // Fix sourcemap sources to point to original .ts files
       // When input .d.ts files have associated .d.ts.map files pointing to original .ts sources,
       // we use sourcemap remapping to compose the transform's map with the input map
@@ -402,7 +408,7 @@ type SourcemapData = {
 };
 
 function updateSourcemapAsset(
-  bundle: Record<string, { type: string; source?: string }>,
+  bundle: OutputBundle,
   chunkFileName: string,
   data: SourcemapData,
 ) {
