@@ -41,7 +41,7 @@ export function createIdentifier(node: ts.Identifier | ts.StringLiteral): ESTree
   return withStartEnd(
     {
       type: "Identifier",
-      name: node.getText(),
+      name: node.text,
     },
     node,
   );
