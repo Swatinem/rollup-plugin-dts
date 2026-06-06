@@ -127,6 +127,7 @@ async function assertTestcase(dir: string, meta: Meta, bless: boolean) {
   const hasMultipleOutputs = output.length > 1;
   let code = clean(output[0].code);
   if (hasMultipleOutputs) {
+    output.sort((a, b) => a.fileName.localeCompare(b.fileName));
     code = "";
     for (const file of output) {
       if (file.type === "chunk") {
