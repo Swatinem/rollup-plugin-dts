@@ -1,8 +1,3 @@
-// main-foo.d.ts
-interface Foo {
-  foo: string;
-}
-export type { Foo };
 // main-bar.d.ts
 interface FooBar {
   foobar: string;
@@ -39,3 +34,8 @@ interface Baz {
   baz: string;
 }
 export type { Baz };
+// main-foo.d.ts
+interface Foo {
+  foo: string;
+}
+export type { Foo };

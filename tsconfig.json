@@ -2,14 +2,15 @@
   "compilerOptions": {
     "noEmitOnError": false,
     "diagnostics": true,
-    "lib": ["esnext"],
+    "lib": ["es2023"],
+    "types": ["node"],
 
-    "target": "es2020",
+    "target": "es2023",
 
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
     "moduleResolution": "NodeNext",
-    "module": "NodeNext",
+    "module": "node20",
 
     "jsx": "react",
 
