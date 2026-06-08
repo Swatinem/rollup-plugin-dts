@@ -1,3 +1,4 @@
+import downstream from "./downstream.js";
 import preprocess from "./preprocess.js";
 import sourcemap from "./sourcemap.js";
 import testcases from "./testcases.js";
@@ -8,6 +9,7 @@ main();
 async function main() {
   const harness = new Harness();
 
+  downstream(harness);
   preprocess(harness);
   sourcemap(harness);
   testcases(harness);

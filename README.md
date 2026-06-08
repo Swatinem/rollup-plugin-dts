@@ -87,6 +87,27 @@ bundling. This can be overridden using the `respectExternal` setting, but it is
 generally not recommended. While rollup of external `@types` generally works,
 it is not recommended.
 
+### TS2742 and shared declaration chunks
+
+When a bundled entry exposes a type that originally came from a private shared
+chunk, downstream `tsc --declaration` runs can fail with `TS2742`.
+
+This is part of a broader TypeScript declaration portability problem. For
+upstream context, see
+[`./*.d.ts` required in `exports` to avoid `...not portable...`](https://github.com/microsoft/TypeScript/issues/60913)
+for one shape of the bug, and
+[`Elaborate on non-portable types`](https://github.com/microsoft/TypeScript/issues/53764)
+for the related error-message discussion.
+
+This plugin will try to rewrite that path through an entry that already
+re-exports the type publicly. That keeps the existing public API and can make
+the bundled declarations portable for downstream consumers.
+
+The plugin does **not** invent new public exports. If no public entry re-exports
+the shared type, the bundled package can still trigger `TS2742`. In that case,
+the plugin emits a warning and the package should re-export the type from a
+public entry explicitly.
+
 ## Why?
 
 Well, ideally TypeScript should just do all this itself, and it even has a
