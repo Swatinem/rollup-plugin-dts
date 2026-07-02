@@ -68,18 +68,25 @@ export class ModuleDeclarationFixer {
 
       const targetChunkName = this.getTargetChunkName(absolutePath);
 
-      const quote =
-        node.name.kind === ts.SyntaxKind.StringLiteral && "singleQuote" in node.name && node.name.singleQuote
-          ? "'"
-          : '"';
+      let specifier = node.name.getText();
+      if (targetChunkName === null) {
+        // Keep the original specifier; consumers resolve it relative to the emitted
+        // chunk, where it will typically dangle (a no-op augmentation) rather than
+        // merge into the wrong module the way a current-chunk rewrite would
+        this.warn(
+          `declare module ${specifier} (${absolutePath}) could not be resolved to any output chunk, keeping the original specifier`,
+        );
+      } else {
+        const quote =
+          node.name.kind === ts.SyntaxKind.StringLiteral && "singleQuote" in node.name && node.name.singleQuote
+            ? "'"
+            : '"';
+        specifier = `${quote}${targetChunkName}${quote}`;
+      }
 
       const cleanedBetween = stripResolvedModuleComment(textBetween);
 
-      this.code.overwrite(
-        node.name.getStart(),
-        node.body.getStart(),
-        `${quote}${targetChunkName}${quote}${cleanedBetween}`,
-      );
+      this.code.overwrite(node.name.getStart(), node.body.getStart(), specifier + cleanedBetween);
       modified = true;
     }
 
@@ -91,8 +98,9 @@ export class ModuleDeclarationFixer {
 
   /**
    * Get the output chunk name for an absolute module path.
+   * Returns null when the module is not part of any output chunk.
    */
-  private getTargetChunkName(absolutePath: string): string {
+  private getTargetChunkName(absolutePath: string): string | null {
     // Detect JS extension from the resolved path (present when the source uses ESM-style specifiers)
     const jsExtMatch = absolutePath.match(/\.[cm]?js$/);
     const basePath = jsExtMatch ? absolutePath.slice(0, -jsExtMatch[0].length) : absolutePath;
@@ -109,12 +117,7 @@ export class ModuleDeclarationFixer {
       }
     }
 
-    // Module is not found in any chunk, keep the current chunk name as a fallback
-    this.warn(
-      `declare module "${absolutePath}" could not be resolved to any output chunk, falling back to current chunk "${this.chunkFileName}"`,
-    );
-
-    return this.formatChunkReference(this.chunkFileName, jsExtMatch?.[0]);
+    return null;
   }
 
   /**
