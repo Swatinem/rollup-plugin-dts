@@ -10,4 +10,11 @@ export default {
     // and the rewritten specifier reads `./index`
     input: { index: "index.d.ts" },
   },
+  downstream: [
+    {
+      consumer: "consumer.ts",
+      expectedDts: "expected-consumer.d.ts",
+      compilerOptions: { module: "ESNext", moduleResolution: "Bundler" },
+    },
+  ],
 };
