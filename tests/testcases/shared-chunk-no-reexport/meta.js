@@ -9,11 +9,11 @@ export default {
   downstream: [
     {
       consumer: "consumer-entry-a.ts",
-      expectedErrorIncludes: ["error TS2742", "shared.d-"],
+      expectedErrorIncludes: ["cannot be named without a reference", "shared.d-"],
     },
     {
       consumer: "consumer-entry-b.ts",
-      expectedErrorIncludes: ["error TS2742", "shared.d-"],
+      expectedErrorIncludes: ["cannot be named without a reference", "shared.d-"],
     },
   ],
   rollupOptions: {
