@@ -105,9 +105,15 @@ export class ModuleDeclarationFixer {
     const jsExtMatch = absolutePath.match(/\.[cm]?js$/);
     const basePath = jsExtMatch ? absolutePath.slice(0, -jsExtMatch[0].length) : absolutePath;
 
-    // Try all file extensions that could appear as module IDs in Rollup's chunk metadata
-    const extensions = ["", ".d.ts", ".d.mts", ".d.cts", ".ts", ".mts", ".cts", ".js", ".mjs", ".cjs"];
-    const possiblePaths = extensions.map((ext) => basePath + ext);
+    // Try all file extensions that could appear as module IDs in Rollup's chunk metadata,
+    // probing both the path itself and a directory index
+    const extensions = ["", ".d.ts", ".d.mts", ".d.cts", ".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs", ".cjs"];
+    const possiblePaths: string[] = [];
+    for (const base of [basePath, `${basePath}/index`]) {
+      for (const ext of extensions) {
+        possiblePaths.push(base + ext);
+      }
+    }
 
     // Find which chunk contains this module
     for (const possiblePath of possiblePaths) {
