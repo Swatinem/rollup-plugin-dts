@@ -51,6 +51,35 @@ function getAugmentedNames(body: ts.ModuleBlock) {
   return names;
 }
 
+/**
+ * Rewrites relative `declare module './x'` specifiers in bundled output so they point
+ * at the chunk containing the target module, keeping module augmentations reachable
+ * for consumers.
+ *
+ * preprocess resolves each relative specifier lexically against its source file's
+ * directory and stamps it with a `dts-resolved:` marker comment that rides through
+ * bundling attached to its declaration; this fixer decodes the marker, locates the
+ * target chunk via Rollup's chunk metadata, and overwrites the specifier with a
+ * chunk-relative path.
+ *
+ * The rewrite is skipped (original specifier kept + warning) when:
+ * - the target module is not part of any output chunk (orphaned files, asset-style
+ *   declarations) — a dangling specifier stays inert, while rewriting it would merge
+ *   the augmentation into the wrong module;
+ * - the target chunk does not export every augmented name unchanged (aliased
+ *   re-exports, `Foo` → `Foo$1` deconfliction) — augmentation matches by exported
+ *   name, so retargeting the specifier alone would desynchronize the two.
+ *
+ * Scope: only `./`/`../` specifiers are handled. Bare package names must be preserved
+ * verbatim, since consumers resolve them by name. tsconfig-paths aliases
+ * (`declare module "@/foo"`) are a known limitation — they cannot be resolved
+ * lexically. Supporting them would mean: in preprocess, for specifiers matching a
+ * `compilerOptions.paths` pattern (never for other bare names), resolve with
+ * `ts.resolveModuleName` against the declaring file's compiler options (synchronous,
+ * unlike the plugin context's `resolve`), skip `isExternalLibraryImport` results, and
+ * stamp the resolved file name; the extension probe below already bridges the
+ * remaining `.d.ts`-versus-`.ts` module id gap.
+ */
 export class ModuleDeclarationFixer {
   private code: MagicString;
   private sourcemap: boolean;

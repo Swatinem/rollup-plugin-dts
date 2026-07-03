@@ -352,6 +352,11 @@ export function preProcess({ sourceFile, isEntry, isJSON }: PreProcessInput): Pr
   // Resolve relative module declarations to absolute paths
   // This allows correct chunk resolution later even when files from different
   // directories are bundled together
+  //
+  // Deliberately limited to `./` / `../` specifiers: bare names (`declare module "vue"`)
+  // must stay untouched since consumers resolve them by package name, and tsconfig-paths
+  // aliases cannot be resolved lexically (see ModuleDeclarationFixer for the full
+  // mechanism and what alias support would require)
   const sourceDir = path.dirname(sourceFile.fileName);
   for (const node of sourceFile.statements) {
     if (
