@@ -70,7 +70,10 @@ export class ModuleDeclarationFixer {
   ) {
     this.code = code;
     this.sourcemap = sourcemap;
-    this.source = parse(chunk.fileName, code.toString());
+    // Parse the MagicString's original text, not toString(): the code may already
+    // carry TypeOnlyFixer edits, but overwrite() coordinates always refer to the
+    // original string, so node positions must come from that same text
+    this.source = parse(chunk.fileName, code.original);
     this.chunkFileName = chunk.fileName;
     this.moduleToChunk = moduleToChunk;
     this.chunks = chunks;
