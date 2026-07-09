@@ -12,7 +12,7 @@ export default {
     },
     {
       consumer: "consumer-entry-h.ts",
-      expectedErrorIncludes: ["error TS2742"],
+      expectedErrorIncludes: ["cannot be named without a reference", "entry-b.d-"],
     },
   ],
   rollupOptions: {
