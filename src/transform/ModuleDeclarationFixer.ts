@@ -27,12 +27,66 @@ function normalizePath(p: string) {
   return p.split("\\").join("/");
 }
 
+/** Collect the names declared at the top level of an augmentation body. */
+function getAugmentedNames(body: ts.ModuleBlock) {
+  const names: string[] = [];
+  for (const statement of body.statements) {
+    if (
+      (ts.isInterfaceDeclaration(statement) ||
+        ts.isClassDeclaration(statement) ||
+        ts.isFunctionDeclaration(statement) ||
+        ts.isEnumDeclaration(statement) ||
+        ts.isTypeAliasDeclaration(statement)) &&
+      statement.name
+    ) {
+      names.push(statement.name.text);
+    } else if (ts.isVariableStatement(statement)) {
+      for (const declaration of statement.declarationList.declarations) {
+        if (ts.isIdentifier(declaration.name)) {
+          names.push(declaration.name.text);
+        }
+      }
+    }
+  }
+  return names;
+}
+
+/**
+ * Rewrites relative `declare module './x'` specifiers in bundled output so they point
+ * at the chunk containing the target module, keeping module augmentations reachable
+ * for consumers.
+ *
+ * preprocess resolves each relative specifier lexically against its source file's
+ * directory and stamps it with a `dts-resolved:` marker comment that rides through
+ * bundling attached to its declaration; this fixer decodes the marker, locates the
+ * target chunk via Rollup's chunk metadata, and overwrites the specifier with a
+ * chunk-relative path.
+ *
+ * The rewrite is skipped (original specifier kept + warning) when:
+ * - the target module is not part of any output chunk (orphaned files, asset-style
+ *   declarations) — a dangling specifier stays inert, while rewriting it would merge
+ *   the augmentation into the wrong module;
+ * - the target chunk does not export every augmented name unchanged (aliased
+ *   re-exports, `Foo` → `Foo$1` deconfliction) — augmentation matches by exported
+ *   name, so retargeting the specifier alone would desynchronize the two.
+ *
+ * Scope: only `./`/`../` specifiers are handled. Bare package names must be preserved
+ * verbatim, since consumers resolve them by name. tsconfig-paths aliases
+ * (`declare module "@/foo"`) are a known limitation — they cannot be resolved
+ * lexically. Supporting them would mean: in preprocess, for specifiers matching a
+ * `compilerOptions.paths` pattern (never for other bare names), resolve with
+ * `ts.resolveModuleName` against the declaring file's compiler options (synchronous,
+ * unlike the plugin context's `resolve`), skip `isExternalLibraryImport` results, and
+ * stamp the resolved file name; the extension probe below already bridges the
+ * remaining `.d.ts`-versus-`.ts` module id gap.
+ */
 export class ModuleDeclarationFixer {
   private code: MagicString;
   private sourcemap: boolean;
   private source: ts.SourceFile;
   private chunkFileName: string;
   private moduleToChunk: Map<string, string>;
+  private chunks: Record<string, RenderedChunk>;
   private warn: (message: string) => void;
 
   constructor(
@@ -40,13 +94,18 @@ export class ModuleDeclarationFixer {
     code: MagicString,
     sourcemap: boolean,
     moduleToChunk: Map<string, string>,
+    chunks: Record<string, RenderedChunk>,
     warn: (message: string) => void,
   ) {
     this.code = code;
     this.sourcemap = sourcemap;
-    this.source = parse(chunk.fileName, code.toString());
+    // Parse the MagicString's original text, not toString(): the code may already
+    // carry TypeOnlyFixer edits, but overwrite() coordinates always refer to the
+    // original string, so node positions must come from that same text
+    this.source = parse(chunk.fileName, code.original);
     this.chunkFileName = chunk.fileName;
     this.moduleToChunk = moduleToChunk;
+    this.chunks = chunks;
     this.warn = warn;
   }
 
@@ -66,20 +125,34 @@ export class ModuleDeclarationFixer {
         continue;
       }
 
-      const targetChunkName = this.getTargetChunkName(absolutePath);
+      const target = this.findTargetChunk(absolutePath);
 
-      const quote =
-        node.name.kind === ts.SyntaxKind.StringLiteral && "singleQuote" in node.name && node.name.singleQuote
-          ? "'"
-          : '"';
+      let specifier = node.name.getText();
+      if (target === null) {
+        // Keep the original specifier; consumers resolve it relative to the emitted
+        // chunk, where it will typically dangle (a no-op augmentation) rather than
+        // merge into the wrong module the way a current-chunk rewrite would
+        this.warn(
+          `declare module ${specifier} (${absolutePath}) could not be resolved to any output chunk, keeping the original specifier`,
+        );
+      } else if (!this.augmentationApplies(getAugmentedNames(node.body), target.moduleId, target.chunkFileName)) {
+        // Module augmentation matches by the target module's exported names; when the
+        // chunk renamed, dropped, or ambiguously exports an augmented name, retargeting
+        // the specifier would merge the augmentation into the wrong declaration
+        this.warn(
+          `declare module ${specifier} (${absolutePath}) augments names that the target chunk does not export unchanged, keeping the original specifier`,
+        );
+      } else {
+        const quote =
+          node.name.kind === ts.SyntaxKind.StringLiteral && "singleQuote" in node.name && node.name.singleQuote
+            ? "'"
+            : '"';
+        specifier = `${quote}${this.formatChunkReference(target.chunkFileName, target.jsExt)}${quote}`;
+      }
 
       const cleanedBetween = stripResolvedModuleComment(textBetween);
 
-      this.code.overwrite(
-        node.name.getStart(),
-        node.body.getStart(),
-        `${quote}${targetChunkName}${quote}${cleanedBetween}`,
-      );
+      this.code.overwrite(node.name.getStart(), node.body.getStart(), specifier + cleanedBetween);
       modified = true;
     }
 
@@ -90,31 +163,59 @@ export class ModuleDeclarationFixer {
   }
 
   /**
-   * Get the output chunk name for an absolute module path.
+   * Find the output chunk containing the module at an absolute path.
+   * Returns null when the module is not part of any output chunk.
    */
-  private getTargetChunkName(absolutePath: string): string {
+  private findTargetChunk(absolutePath: string): { chunkFileName: string; moduleId: string; jsExt?: string } | null {
     // Detect JS extension from the resolved path (present when the source uses ESM-style specifiers)
     const jsExtMatch = absolutePath.match(/\.[cm]?js$/);
     const basePath = jsExtMatch ? absolutePath.slice(0, -jsExtMatch[0].length) : absolutePath;
 
-    // Try all file extensions that could appear as module IDs in Rollup's chunk metadata
-    const extensions = ["", ".d.ts", ".d.mts", ".d.cts", ".ts", ".mts", ".cts", ".js", ".mjs", ".cjs"];
-    const possiblePaths = extensions.map((ext) => basePath + ext);
-
-    // Find which chunk contains this module
-    for (const possiblePath of possiblePaths) {
-      const chunkFileName = this.moduleToChunk.get(normalizePath(possiblePath));
-      if (chunkFileName) {
-        return this.formatChunkReference(chunkFileName, jsExtMatch?.[0]);
+    // Try all file extensions that could appear as module IDs in Rollup's chunk metadata,
+    // probing both the path itself and a directory index
+    const extensions = ["", ".d.ts", ".d.mts", ".d.cts", ".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs", ".cjs"];
+    const possiblePaths: string[] = [];
+    for (const base of [basePath, `${basePath}/index`]) {
+      for (const ext of extensions) {
+        possiblePaths.push(base + ext);
       }
     }
 
-    // Module is not found in any chunk, keep the current chunk name as a fallback
-    this.warn(
-      `declare module "${absolutePath}" could not be resolved to any output chunk, falling back to current chunk "${this.chunkFileName}"`,
-    );
+    // Find which chunk contains this module
+    for (const possiblePath of possiblePaths) {
+      const moduleId = normalizePath(possiblePath);
+      const chunkFileName = this.moduleToChunk.get(moduleId);
+      if (chunkFileName) {
+        return { chunkFileName, moduleId, jsExt: jsExtMatch?.[0] };
+      }
+    }
 
-    return this.formatChunkReference(this.chunkFileName, jsExtMatch?.[0]);
+    return null;
+  }
+
+  /**
+   * Check that every augmented name is exported from the target chunk under its
+   * original name. Augmentation matches by exported name, so a name the chunk
+   * dropped, re-exported under an alias, or deconflicted (`Foo` → `Foo$1` when two
+   * modules in the chunk export a `Foo`) would merge into the wrong declaration.
+   */
+  private augmentationApplies(names: string[], moduleId: string, chunkFileName: string): boolean {
+    const chunkInfo = this.chunks[chunkFileName];
+    if (!chunkInfo) {
+      return true;
+    }
+
+    const targetModule = Object.entries(chunkInfo.modules).find(([id]) => normalizePath(id) === moduleId)?.[1];
+
+    return names.every((name) => {
+      if (!targetModule?.renderedExports.includes(name) || !chunkInfo.exports.includes(name)) {
+        return false;
+      }
+      // A `name$<digits>` sibling export means this name was deconflicted within the
+      // chunk, and there is no way to tell which module's declaration kept the name
+      const deconflicted = new RegExp(`^${name.replace(/\$/g, "\\$")}\\$\\d+$`);
+      return !chunkInfo.exports.some((exportName) => deconflicted.test(exportName));
+    });
   }
 
   /**
