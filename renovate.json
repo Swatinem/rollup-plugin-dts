@@ -1,19 +1,25 @@
 {
   "extends": [
-    "config:base",
+    "config:recommended",
     "schedule:weekly",
     "group:allNonMajor",
     ":automergeMinor",
-    ":automergeBranchPush",
+    ":automergeBranch",
     ":automergeRequireAllStatusChecks"
   ],
   "rangeStrategy": "bump",
   "packageRules": [
     {
-      "description": "Ignore node and peerDependencies",
-      "matchPackageNames": ["node"],
+      "description": "Ignore Node engine updates",
       "matchManagers": ["npm"],
-      "matchDepTypes": ["engines", "peerDependencies"],
+      "matchDepTypes": ["engines"],
+      "matchDepNames": ["node"],
+      "enabled": false
+    },
+    {
+      "description": "Ignore peerDependencies",
+      "matchManagers": ["npm"],
+      "matchDepTypes": ["peerDependencies"],
       "enabled": false
     }
   ]
