@@ -109,7 +109,9 @@ export async function assertDownstream(
   downstream: DownstreamCase[],
   bless: boolean,
 ) {
-  const tscBin = path.resolve("node_modules/typescript/bin/tsc");
+  // Type-check the bundled output with the native TypeScript 7 compiler
+  // ("typescript" resolves to @typescript/typescript6, whose bin is `tsc6`).
+  const tscBin = path.resolve("node_modules/@typescript/native/bin/tsc");
 
   for (const testCase of downstream) {
     const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "rollup-plugin-dts-downstream-"));
