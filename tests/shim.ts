@@ -31,6 +31,15 @@ if (typeof dts.default !== "function") {
 }
 `;
 
+const CONSUMER_CONFIG = `import dts from "rollup-plugin-dts";
+
+export default {
+  input: "src/index.d.ts",
+  output: { file: "out/index.d.ts", format: "es" },
+  plugins: [dts()],
+};
+`;
+
 // use junctions so directory links work on Windows without elevated privileges
 async function link(target: string, linkPath: string) {
   await fs.mkdir(path.dirname(linkPath), { recursive: true });
@@ -46,8 +55,12 @@ async function createFixture(tempRoot: string) {
   await fs.writeFile(path.join(tempRoot, "src", "index.d.ts"), SAMPLE_DTS);
   await fs.writeFile(path.join(tempRoot, "consumer.mjs"), CONSUMER_MJS);
   await fs.writeFile(path.join(tempRoot, "consumer.cjs"), CONSUMER_CJS);
+  await fs.writeFile(path.join(tempRoot, "rollup.config.mjs"), CONSUMER_CONFIG);
 
   await fs.mkdir(pluginDir, { recursive: true });
+  // dist must be copied, not linked: Node resolves modules to their real path,
+  // so a linked dist would make the shim resolve `typescript` from this repo's
+  // node_modules and defeat the fixture isolation
   await fs.cp(path.resolve("dist"), path.join(pluginDir, "dist"), { recursive: true });
   await fs.writeFile(
     path.join(pluginDir, "package.json"),
@@ -93,6 +106,14 @@ export default (t: Harness) => {
       assert.ok(fallback.stdout.includes("interface Foo"), fallback.stdout);
       const fallbackCjs = runNode(tempRoot, ["consumer.cjs"]);
       assert.strictEqual(fallbackCjs.status, 0, fallbackCjs.stderr);
+
+      // the rollup cli loads the config file through its own bundling step,
+      // so also cover that path importing the plugin
+      const rollupBin = path.join(tempRoot, "node_modules", "rollup", "dist", "bin", "rollup");
+      const cli = runNode(tempRoot, [rollupBin, "--config", "--silent"]);
+      assert.strictEqual(cli.status, 0, `${cli.stdout}${cli.stderr}`);
+      const cliOutput = await fs.readFile(path.join(tempRoot, "out", "index.d.ts"), "utf-8");
+      assert.ok(cliOutput.includes("interface Foo"), cliOutput);
 
       // typescript@7 without the fallback: guided error
       await fs.rm(ts6Link, { recursive: true, force: true });
