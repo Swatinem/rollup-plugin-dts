@@ -63,6 +63,27 @@ plugins: [dts({
 })]
 ```
 
+## TypeScript 7 support
+
+TypeScript 7.0 (the native compiler) does not ship a compiler API, which this
+plugin relies on. When your project uses `typescript@7`, additionally install
+the official compatibility package that provides the TypeScript 6 API:
+
+    $ npm install --save-dev @typescript/typescript6
+
+The plugin uses the API from your `typescript` package when it provides one
+(TypeScript 4.5 – 6.x), and automatically falls back to
+`@typescript/typescript6` otherwise. Declaration files are parsed and emitted
+with the TypeScript 6 language behavior in that case, which is identical for
+declaration output. Once TypeScript 7.1+ ships its new compiler API, a future
+release will support it directly.
+
+Note that this plugin's public types reference the `typescript` package (e.g.,
+`ts.CompilerOptions`), which `typescript@7` does not currently provide. If you
+type-check a file that imports `rollup-plugin-dts` (such as `rollup.config.ts`)
+with TypeScript 7, enable [`skipLibCheck`](https://www.typescriptlang.org/tsconfig/#skipLibCheck)
+to avoid a spurious error inside the plugin's declaration file.
+
 ## Maintenance Mode
 
 This project is in _maintenance mode_. That means there will be no more active feature development.
