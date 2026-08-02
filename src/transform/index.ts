@@ -1,5 +1,5 @@
 import * as path from "node:path";
-import type { OutputBundle, Plugin, SourceMap } from "rollup";
+import type { OutputBundle, Plugin } from "rollup";
 import remapping from "@jridgewell/remapping";
 import type { RawSourceMap } from "@jridgewell/remapping";
 import { NamespaceFixer } from "./NamespaceFixer.js";
@@ -133,7 +133,7 @@ export const transform = (enableSourcemap: boolean) => {
         });
       }
 
-      return { code, ast: converted.ast as any, map: map as unknown as SourceMap };
+      return { code, ast: converted.ast as any, map };
     },
 
     renderChunk(inputCode, chunk, options, meta) {
