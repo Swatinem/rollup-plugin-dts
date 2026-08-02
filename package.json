@@ -55,10 +55,10 @@
     "@types/d3-drag": "^3.0.7",
     "@types/estree": "1.0.9",
     "@types/node": "^25.9.5",
-    "@types/react": "^19.2.17",
+    "@types/react": "^19.2.18",
     "@typescript/native": "npm:typescript@^7.0.2",
     "c8": "^12.0.0",
-    "rollup": "4.62.2",
+    "rollup": "4.62.4",
     "typescript": "npm:@typescript/typescript6@^6.0.2"
   },
   "peerDependencies": {
@@ -82,7 +82,7 @@
   },
   "overrides": {
     "c8": {
-      "yargs": "^18.0.0"
+      "yargs": "^18.1.0"
     }
   }
 }
