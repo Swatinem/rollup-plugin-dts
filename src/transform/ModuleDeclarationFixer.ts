@@ -1,7 +1,7 @@
 import * as path from "node:path";
 import ts from "typescript";
 import MagicString from "magic-string";
-import type { RenderedChunk } from "rollup";
+import type { RenderedChunk, SourceMapInput } from "rollup";
 import { parse } from "../helpers.js";
 
 const RESOLVED_MODULE_PREFIX = "dts-resolved:";
@@ -158,7 +158,7 @@ export class ModuleDeclarationFixer {
 
     return {
       code: this.code.toString(),
-      map: modified && this.sourcemap ? this.code.generateMap() : null,
+      map: modified && this.sourcemap ? (this.code.generateMap() as unknown as SourceMapInput) : null,
     };
   }
 
