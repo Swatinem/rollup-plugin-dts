@@ -17,7 +17,7 @@ function getCodeFrame(): typeof codeFrame.codeFrameColumns | undefined {
   return undefined;
 }
 
-function getLocation(node: ts.Node): codeFrame.SourceLocation {
+function getLocation(node: ts.Node) {
   const sourceFile = node.getSourceFile();
   const start = sourceFile.getLineAndCharacterOfPosition(node.getStart());
   const end = sourceFile.getLineAndCharacterOfPosition(node.getEnd());

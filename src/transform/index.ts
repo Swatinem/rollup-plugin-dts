@@ -92,7 +92,7 @@ export const transform = (enableSourcemap: boolean) => {
       const moduleId = Array.from(moduleIds).find((id) => trimExtension(id) === name);
       const isEntry = Boolean(moduleId && this.getModuleInfo(moduleId)?.isEntry);
       const isJSON = Boolean(moduleId && JSON_EXTENSIONS.test(moduleId));
-      const inputMapText = typeof inputMapTextOrOptions === 'string' ? inputMapTextOrOptions : undefined
+      const inputMapText = typeof inputMapTextOrOptions === "string" ? inputMapTextOrOptions : undefined;
 
       // Preserve original code for loadInputSourcemap() before preProcess strips sourceMappingURL
       const rawCode = code;
@@ -199,10 +199,7 @@ export const transform = (enableSourcemap: boolean) => {
     },
 
     async generateBundle(options, bundle) {
-      rewritePortableSharedChunkImportsInBundle(
-        bundle,
-        (message) => this.warn(message),
-      );
+      rewritePortableSharedChunkImportsInBundle(bundle, (message) => this.warn(message));
 
       // Fix sourcemap sources to point to original .ts files
       // When input .d.ts files have associated .d.ts.map files pointing to original .ts sources,
@@ -231,7 +228,9 @@ export const transform = (enableSourcemap: boolean) => {
           // Resolve sourceRoot: preserve URLs verbatim, resolve filesystem paths
           let sourceRoot: string;
           if (inputMap.sourceRoot) {
-            sourceRoot = isUrl(inputMap.sourceRoot) ? inputMap.sourceRoot : path.resolve(inputMapDir, inputMap.sourceRoot);
+            sourceRoot = isUrl(inputMap.sourceRoot)
+              ? inputMap.sourceRoot
+              : path.resolve(inputMapDir, inputMap.sourceRoot);
           } else {
             sourceRoot = inputMapDir;
           }
@@ -408,11 +407,7 @@ type SourcemapData = {
   names: string[];
 };
 
-function updateSourcemapAsset(
-  bundle: OutputBundle,
-  chunkFileName: string,
-  data: SourcemapData,
-) {
+function updateSourcemapAsset(bundle: OutputBundle, chunkFileName: string, data: SourcemapData) {
   const mapFileName = `${chunkFileName}.map`;
   const mapAsset = bundle[mapFileName];
   if (mapAsset && mapAsset.type === "asset") {
