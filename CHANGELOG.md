@@ -1,5 +1,11 @@
 # Changelog
 
+## 6.5.1
+
+**Fixes**:
+
+- Revert `magic-string` upgrade to restore cjs compatibility
+
 ## 6.5.0
 
 **Compatibility Notice**:
