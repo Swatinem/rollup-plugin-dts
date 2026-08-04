@@ -1,5 +1,26 @@
 # Changelog
 
+## 6.5.0
+
+**Compatibility Notice**:
+
+This release adds compatibility with TypeScript versions **6** and **7**.
+
+**Fixes**:
+
+- Fixes to `export type` handling
+- Fixes to `declare module` handling
+- Improve shared chunks imports
+- Support literal export specifiers
+
+**Thank you**:
+
+Features, fixes and improvements in this release have been contributed by:
+
+- [@privatenumber](https://github.com/privatenumber)
+- [@cueaz](https://github.com/cueaz)
+- [@igordanchenko](https://github.com/igordanchenko)
+
 ## 6.4.1
 
 **Fixes**:
