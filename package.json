@@ -54,7 +54,7 @@
     "@types/convert-source-map": "^2.0.3",
     "@types/d3-drag": "^3.0.7",
     "@types/estree": "1.0.9",
-    "@types/node": "^26.1.2",
+    "@types/node": "^26.2.0",
     "@types/react": "^19.2.18",
     "@typescript/native": "npm:typescript@^7.0.2",
     "c8": "^12.0.0",
