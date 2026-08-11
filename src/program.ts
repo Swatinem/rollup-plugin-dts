@@ -20,8 +20,6 @@ const DEFAULT_OPTIONS: ts.CompilerOptions = {
   checkJs: false,
   declarationMap: false,
   skipLibCheck: true,
-  // Ensure TS2742 errors are visible
-  preserveSymlinks: true,
   // Ensure we can parse the latest code
   target: ts.ScriptTarget.ESNext,
   // Allows importing `*.json`
