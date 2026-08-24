@@ -58,7 +58,7 @@
     "@types/react": "^19.2.18",
     "@typescript/native": "npm:typescript@^7.0.2",
     "c8": "^12.0.0",
-    "rollup": "4.62.4",
+    "rollup": "4.62.5",
     "typescript": "npm:@typescript/typescript6@^6.0.2"
   },
   "peerDependencies": {
