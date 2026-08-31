@@ -54,11 +54,11 @@
     "@types/convert-source-map": "^2.0.3",
     "@types/d3-drag": "^3.0.7",
     "@types/estree": "1.0.9",
-    "@types/node": "^26.2.0",
+    "@types/node": "^26.4.0",
     "@types/react": "^19.2.18",
     "@typescript/native": "npm:typescript@^7.0.2",
     "c8": "^12.0.0",
-    "rollup": "4.62.5",
+    "rollup": "4.63.1",
     "typescript": "npm:@typescript/typescript6@^6.0.2"
   },
   "peerDependencies": {
@@ -76,7 +76,7 @@
   },
   "dependencies": {
     "@jridgewell/remapping": "^2.3.5",
-    "@jridgewell/sourcemap-codec": "^1.5.5",
+    "@jridgewell/sourcemap-codec": "^1.6.0",
     "convert-source-map": "^2.0.0",
     "magic-string": "^0.30.21"
   },
