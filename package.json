@@ -54,11 +54,11 @@
     "@types/convert-source-map": "^2.0.3",
     "@types/d3-drag": "^3.0.7",
     "@types/estree": "1.0.9",
-    "@types/node": "^26.4.1",
-    "@types/react": "^19.2.18",
+    "@types/node": "^26.5.1",
+    "@types/react": "^19.3.0",
     "@typescript/native": "npm:typescript@^7.0.2",
     "c8": "^12.0.0",
-    "rollup": "4.63.1",
+    "rollup": "4.63.2",
     "typescript": "npm:@typescript/typescript6@^6.0.2"
   },
   "peerDependencies": {
