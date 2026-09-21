@@ -48,17 +48,17 @@
     "trailingComma": "all"
   },
   "devDependencies": {
-    "@babel/code-frame": "^8.0.0",
+    "@babel/code-frame": "^8.0.6",
     "@jridgewell/trace-mapping": "^0.3.31",
     "@types/babel__code-frame": "^7.27.0",
     "@types/convert-source-map": "^2.0.3",
     "@types/d3-drag": "^3.0.7",
     "@types/estree": "1.0.9",
-    "@types/node": "^26.5.1",
+    "@types/node": "^26.6.2",
     "@types/react": "^19.3.0",
     "@typescript/native": "npm:typescript@^7.0.2",
     "c8": "^12.0.0",
-    "rollup": "4.63.2",
+    "rollup": "4.63.4",
     "typescript": "npm:@typescript/typescript6@^6.0.2"
   },
   "peerDependencies": {
@@ -72,7 +72,7 @@
     }
   },
   "optionalDependencies": {
-    "@babel/code-frame": "^8.0.0"
+    "@babel/code-frame": "^8.0.6"
   },
   "dependencies": {
     "@jridgewell/remapping": "^2.3.5",
@@ -82,7 +82,7 @@
   },
   "overrides": {
     "c8": {
-      "yargs": "^18.1.0"
+      "yargs": "^18.2.0"
     }
   }
 }
