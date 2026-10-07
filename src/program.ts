@@ -28,7 +28,13 @@ const DEFAULT_OPTIONS: ts.CompilerOptions = {
   resolveJsonModule: true,
 };
 
-const configByPath = new Map<string, ts.ParsedCommandLine>();
+/** A parsed tsconfig and the directory that contains it. */
+interface CachedConfig {
+  config: ts.ParsedCommandLine;
+  dirName: string;
+}
+
+const configByPath = new Map<string, CachedConfig>();
 
 const logCache = (...args: unknown[]) => (process.env.DTS_LOG_CACHE ? console.log("[cache]", ...args) : null);
 
@@ -37,7 +43,7 @@ const logCache = (...args: unknown[]) => (process.env.DTS_LOG_CACHE ? console.lo
  *
  * It starts from the first path and walks up the directory tree until it reaches the second path.
  */
-function cacheConfig([fromPath, toPath]: [from: string, to: string], config: ts.ParsedCommandLine) {
+function cacheConfig([fromPath, toPath]: [from: string, to: string], config: CachedConfig) {
   logCache(fromPath);
   configByPath.set(fromPath, config);
   while (
@@ -90,15 +96,20 @@ export function getCompilerOptions(
     const configContents = ts.parseJsonConfigFileContent(config, ts.sys, dirName);
     if (overrideConfigPath) {
       // if a custom config is provided, we always only use that one
-      cacheConfig([overrideConfigPath, overrideConfigPath], configContents);
+      cacheConfig([overrideConfigPath, overrideConfigPath], { config: configContents, dirName });
     } else {
       // cache the config for all directories between input and resolved config path
-      cacheConfig([inputDirName, dirName], configContents);
+      cacheConfig([inputDirName, dirName], { config: configContents, dirName });
     }
   } else {
     logCache("HIT", cacheKey);
   }
-  const { fileNames, options, errors } = configByPath.get(cacheKey)!;
+  const cached = configByPath.get(cacheKey)!;
+  // Return the config directory on a cache hit too. `createPrograms` groups inputs by
+  // `dirName`, so returning the input's own directory here splits the inputs into many
+  // programs, and each program type-checks the shared files again.
+  dirName = cached.dirName;
+  const { fileNames, options, errors } = cached.config;
 
   dtsFiles = fileNames.filter((name) => DTS_EXTENSIONS.test(name));
   if (errors.length) {

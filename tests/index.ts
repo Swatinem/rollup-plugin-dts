@@ -1,5 +1,6 @@
 import downstream from "./downstream.js";
 import preprocess from "./preprocess.js";
+import programs from "./programs.js";
 import shim from "./shim.js";
 import sourcemap from "./sourcemap.js";
 import testcases from "./testcases.js";
@@ -12,6 +13,7 @@ async function main() {
 
   downstream(harness);
   preprocess(harness);
+  programs(harness);
   shim(harness);
   sourcemap(harness);
   testcases(harness);
