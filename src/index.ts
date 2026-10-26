@@ -160,7 +160,10 @@ const plugin: PluginImpl<Options> = (options = {}) => {
 
       const treatTsAsDts = () => {
         const declarationId = getDeclarationId(id);
-        const module = getModule(ctx, declarationId, code);
+        const declarationCode = ts.sys.readFile(declarationId);
+        if (declarationCode === undefined) return null;
+        this.addWatchFile(declarationId);
+        const module = getModule(ctx, declarationId, declarationCode);
         if (module) {
           watchFiles(module);
           return transformPlugin.transform.call(this, module.code, declarationId);
