@@ -81,8 +81,14 @@ export class DeclarationScope {
     if (id.type === "Identifier") {
       name = id.name;
     } else if (id.type === "MemberExpression") {
-      if (id.object.type === "Identifier") {
-        name = id.object.name;
+      const { object, property } = id;
+      if (object.type === "Identifier") {
+        name = object.name;
+        if (property.type === "Identifier" && this.scopes.some((scope) => scope.has(property.name))) {
+          // Keep the namespace qualifier: inlining its member would resolve
+          // to the shadowing local type instead of the imported declaration.
+          id = object;
+        }
       }
     }
     if (name) {

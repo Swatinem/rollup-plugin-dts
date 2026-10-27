@@ -158,10 +158,19 @@ export class NamespaceFixer {
       }
       const exports: Array<Export> = [];
       for (const prop of obj.properties) {
+        // Rollup uses getters for namespace members involved in a cycle.
+        const getterReturn = ts.isGetAccessorDeclaration(prop) && prop.body?.statements.length === 1
+          ? prop.body.statements[0]
+          : undefined;
+        let initializer = ts.isPropertyAssignment(prop) ? prop.initializer : undefined;
+        if (getterReturn && ts.isReturnStatement(getterReturn)) {
+          initializer = getterReturn.expression;
+        }
         if (
-          !ts.isPropertyAssignment(prop) ||
+          !prop.name ||
           !(ts.isIdentifier(prop.name) || ts.isStringLiteral(prop.name)) ||
-          (prop.name.text !== "__proto__" && !ts.isIdentifier(prop.initializer))
+          !initializer ||
+          (prop.name.text !== "__proto__" && !ts.isIdentifier(initializer))
         ) {
           throw new UnsupportedSyntaxError(prop, "Expected a property assignment");
         }
@@ -170,7 +179,7 @@ export class NamespaceFixer {
         }
         exports.push({
           exportedName: prop.name.text,
-          localName: prop.initializer.getText(),
+          localName: initializer.getText(),
         });
       }
 
