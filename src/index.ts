@@ -65,17 +65,11 @@ function getModule(
       program: existingProgram,
     };
   } else if (ts.sys.fileExists(fileName)) {
-    // For .d.ts files from external libraries (node_modules), return just the code without creating a program.
-    // The programs.find() above returns false for external library files (line 52-54), causing
-    // existingProgram to be undefined even though the file exists in a program. Without this check,
-    // we would create a new program for each external .d.ts file, causing memory exhaustion
-    // with large packages like type-fest (170+ files → 170+ programs → OOM).
+    // Selected declaration modules already contain the text to bundle, even
+    // when another resolver selected them before our external-library policy.
+    // Keep the existing-program lookup above for roots and watch dependencies.
     if (programs.length > 0 && DTS_EXTENSIONS.test(fileName)) {
-      // Apply this optimization when bundling external packages via includeExternal or respectExternal
-      const shouldBundleExternal = resolvedOptions.includeExternal.length > 0 || resolvedOptions.respectExternal;
-      if (shouldBundleExternal) {
-        return { code };
-      }
+      return { code };
     }
     const newProgram = createProgram(fileName, compilerOptions, tsconfig, resolvedOptions.sourcemap);
     programs.push(newProgram);
