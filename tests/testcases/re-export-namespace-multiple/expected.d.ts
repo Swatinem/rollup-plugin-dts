@@ -11,8 +11,7 @@ type defs_d_A = A;
 declare const defs_d_B: typeof B;
 type defs_d_C = C;
 declare const defs_d_C: typeof C;
-type defs_d_D = D;
-declare const defs_d_D: typeof D;
+import defs_d_D = D;
 declare const defs_d_E: typeof E;
 type defs_d_F = F;
 declare namespace defs_d {
