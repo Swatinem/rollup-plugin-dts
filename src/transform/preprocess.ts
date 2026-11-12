@@ -107,6 +107,14 @@ export function preProcess({ sourceFile, isEntry, isJSON }: PreProcessInput): Pr
             .forEach((element) => declaredNames.add(element.name.text))
         }
       }
+    } else if (ts.isImportEqualsDeclaration(node)) {
+      const name = node.name.text;
+      declaredNames.add(name);
+      // `export import A = B.C` exports the alias, like `import A = B.C; export { A }`
+      if (matchesModifier(node, ts.ModifierFlags.Export)) {
+        exportedNames.add(name);
+        fixModifiers(code, node);
+      }
     } else if (
       ts.isEnumDeclaration(node) ||
       ts.isFunctionDeclaration(node) ||
