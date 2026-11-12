@@ -15,6 +15,10 @@ import { UnsupportedSyntaxError } from "./errors.js";
  * between types and values, and some constructs like `class` are actually both.
  *
  * Types get a `type` alias, and values get a `declare const` alias.
+ * Names with a namespace meaning (namespaces and enums, plus anything merged
+ * with them) get an `import Alias_A = A` alias, which keeps every meaning.
+ * One name can have several declarations (e.g. `type A` and `const A`), so we
+ * collect the meanings of all of them.
  */
 
 interface Export {
@@ -22,7 +26,9 @@ interface Export {
   localName: string;
 }
 interface Item {
-  type: string;
+  type?: boolean;
+  value?: boolean;
+  namespace?: boolean;
   generics?: ts.NodeArray<ts.TypeParameterDeclaration>;
 }
 interface Namespace {
@@ -38,6 +44,16 @@ export class NamespaceFixer {
   findNamespaces() {
     const namespaces: Array<Namespace> = [];
     const items: { [key: string]: Item } = {};
+    // a name can be declared more than once (declaration merging), so merge the meanings
+    const addItem = (name: string, item: Item) => {
+      const prev = items[name];
+      items[name] = {
+        type: prev?.type || item.type,
+        value: prev?.value || item.value,
+        namespace: prev?.namespace || item.namespace,
+        generics: prev?.generics?.length ? prev.generics : item.generics,
+      };
+    };
 
     for (const node of this.sourceFile.statements) {
       const location = {
@@ -122,19 +138,20 @@ export class NamespaceFixer {
       }
 
       if (ts.isClassDeclaration(node)) {
-        items[node.name!.getText()] = { type: "class", generics: node.typeParameters };
+        addItem(node.name!.getText(), { type: true, value: true, generics: node.typeParameters });
       } else if (ts.isFunctionDeclaration(node)) {
         // a function has generics, but these don’t need to be specified explicitly,
         // since functions are treated as values.
-        items[node.name!.getText()] = { type: "function" };
+        addItem(node.name!.getText(), { value: true });
       } else if (ts.isInterfaceDeclaration(node)) {
-        items[node.name.getText()] = { type: "interface", generics: node.typeParameters };
+        addItem(node.name.getText(), { type: true, generics: node.typeParameters });
       } else if (ts.isTypeAliasDeclaration(node)) {
-        items[node.name.getText()] = { type: "type", generics: node.typeParameters };
+        addItem(node.name.getText(), { type: true, generics: node.typeParameters });
       } else if (ts.isModuleDeclaration(node) && ts.isIdentifier(node.name)) {
-        items[node.name.getText()] = { type: "namespace" };
+        addItem(node.name.getText(), { namespace: true });
       } else if (ts.isEnumDeclaration(node)) {
-        items[node.name.getText()] = { type: "enum" };
+        // an enum is a type, a value, and a namespace of its members
+        addItem(node.name.getText(), { namespace: true });
       }
       if (!ts.isVariableStatement(node)) {
         continue;
@@ -146,7 +163,7 @@ export class NamespaceFixer {
       const decl = declarations[0]!;
       const name = decl.name.getText();
       if (!decl.initializer || !ts.isCallExpression(decl.initializer)) {
-        items[name] = { type: "var" };
+        addItem(name, { value: true });
         continue;
       }
       const obj = decl.initializer.arguments[0]!;
@@ -204,21 +221,19 @@ export class NamespaceFixer {
 
       for (const { exportedName, localName } of ns.exports) {
         if (exportedName === localName) {
-          const { type, generics } = itemTypes[localName] || {};
-          if (type === "interface" || type === "type") {
-            // an interface is just a type
-            const typeParams = renderTypeParams(generics);
-            code += `type ${ns.name}_${exportedName}${typeParams.in} = ${localName}${typeParams.out};\n`;
-          } else if (type === "enum" || type === "class") {
-            // enums and classes are both types and values
-            const typeParams = renderTypeParams(generics);
-            code += `type ${ns.name}_${exportedName}${typeParams.in} = ${localName}${typeParams.out};\n`;
-            code += `declare const ${ns.name}_${exportedName}: typeof ${localName};\n`;
-          } else if (type === "namespace") {
-            // namespaces may contain both types and values
+          const item = itemTypes[localName];
+          if (item?.namespace) {
+            // namespaces and enums may contain both types and values,
+            // and an `import` alias keeps all meanings of the name
             code += `import ${ns.name}_${exportedName} = ${localName};\n`;
-          } else {
-            // functions and vars are just values
+            continue;
+          }
+          if (item?.type) {
+            const typeParams = renderTypeParams(item.generics);
+            code += `type ${ns.name}_${exportedName}${typeParams.in} = ${localName}${typeParams.out};\n`;
+          }
+          if (!item || item.value) {
+            // classes, functions and vars are values
             code += `declare const ${ns.name}_${exportedName}: typeof ${localName};\n`;
           }
         }
