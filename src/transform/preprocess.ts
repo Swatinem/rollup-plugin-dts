@@ -5,6 +5,7 @@ import { matchesModifier } from "./astHelpers.js";
 import { UnsupportedSyntaxError } from "./errors.js";
 import { createTypeOnlyName, createTypeOnlyReExportName } from './TypeOnlyFixer.js'
 import { encodeResolvedModule } from "./ModuleDeclarationFixer.js";
+import { qualifyShadowedGlobalTypeReferences } from "./globalTypeReferences.js";
 
 type Range = [start: number, end: number];
 
@@ -58,12 +59,17 @@ function preProcessNamespaceBody(body: ts.ModuleBlock | ts.ModuleDeclaration, co
 export function preProcess({ sourceFile, isEntry, isJSON }: PreProcessInput): PreProcessOutput {
   const code = new MagicString(sourceFile.getFullText());
 
+  qualifyShadowedGlobalTypeReferences(sourceFile, code);
+
   // Only treat as global module if it's not an entry point,
   // otherwise the final output will be mismatched with the entry.
   const treatAsGlobalModule = !isEntry && isGlobalModule(sourceFile)
 
-  /** All the names that are declared in the `SourceFile`. */
-  const declaredNames = new Set<string>();
+  /**
+   * All the names that are declared in the `SourceFile`, and `globalThis`,
+   * which qualified global type references use.
+   */
+  const declaredNames = new Set<string>(["globalThis"]);
   /** All the names that are exported. */
   const exportedNames = new Set<string>();
   /** The name of the default export. */
