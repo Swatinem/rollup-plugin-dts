@@ -924,6 +924,38 @@ export default (t: Harness) => {
     }
   });
 
+  t.test("sourcemap/multi-source-inline-import", async () => {
+    /**
+     * This test verifies that an identifier keeps its mapping when text before
+     * it on the same line was shortened in a multi-source chunk.
+     *
+     * server.ts has `import("./kind.js").Kind | Options`, which is bundled as
+     * `Kind | Options$1`. The input map's segments inside the removed
+     * `import("./kind.js").` must not be moved onto `Options$1`.
+     */
+
+    const dir = path.resolve(process.cwd(), "tests/sourcemap-fixtures/renamed");
+    const chunk = await bundleWithSourcemap(path.join(dir, "app.d.ts"));
+    const tracer = new TraceMap(chunk.map as any);
+    const lines = chunk.code.split("\n");
+
+    const lineIndex = lines.findIndex((l) => l.startsWith("type ServerMix = "));
+    assert.ok(lineIndex >= 0, `Could not find ServerMix in output code:\n${chunk.code}`);
+    assert.ok(!lines[lineIndex]!.includes("import("), `Expected the inline import() to be rewritten`);
+
+    const column = lines[lineIndex]!.indexOf("Options$1");
+    assert.ok(column >= 0, `Expected "Options$1" in "${lines[lineIndex]}"`);
+
+    const position = originalPositionFor(tracer, { line: lineIndex + 1, column });
+    assert.ok(position.source?.endsWith("server.ts"), `"Options$1" should map to server.ts, got ${position.source}`);
+    const sourceText = fs.readFileSync(path.join(dir, "../src/server.ts"), "utf8");
+    const sourceLine = sourceText.split("\n")[position.line! - 1] ?? "";
+    assert.ok(
+      sourceLine.slice(position.column!).startsWith("Options"),
+      `"Options$1" should map to "Options", but maps to "${sourceLine.slice(position.column!)}"`,
+    );
+  });
+
   t.test("sourcemap/ts-input-direct-compilation", async () => {
     /**
      * This test verifies that when bundling .ts files directly (not .d.ts),

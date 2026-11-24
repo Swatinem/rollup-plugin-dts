@@ -100,14 +100,16 @@ export function hydrateSourcemap(
  * Hydrate a sparse sourcemap that has multiple sources, before it is composed
  * with the input maps.
  *
- * Same anchor approach as `hydrateSourcemap`, but each anchor's source index picks
- * that source's input map, each segment takes its column delta from the closest
- * Rollup segment at or before it, and the hydrated segments point at the generated
- * columns of the input map instead of its original positions. Every segment then
- * lands exactly on an input segment, so @jridgewell/remapping can trace it.
+ * Each Rollup segment only says that the output from its column up to the next
+ * segment on the line was copied from its source column. The input map's
+ * segments inside that span are added at the same offset; segments that would
+ * land on or past the next Rollup segment point at text that was removed or
+ * rewritten (e.g. an inline `import('./x').T` shortened to `T`) and are skipped.
+ * Rollup's own segments are kept unchanged, and the added ones point at the
+ * generated columns of the input map, so @jridgewell/remapping can trace them.
  *
- * `inputMaps` is indexed like the sparse map's `sources`. Lines whose source has
- * no input map keep their sparse segments.
+ * `inputMaps` is indexed like the sparse map's `sources`. Segments whose source
+ * has no input map are kept as they are.
  */
 export function hydrateMultiSourceSourcemap(
   sparseMappings: string,
@@ -119,42 +121,26 @@ export function hydrateMultiSourceSourcemap(
   const outputLines = outputCode.split("\n");
 
   const hydratedMappings = sparseDecoded.map((sparseSegments, outLine) => {
-    const anchor = sparseSegments.find((segment) => segment.length >= 4);
-    if (!anchor) return sparseSegments;
-
-    const [, srcIdx, srcLine] = anchor as [number, number, number, number];
-    const inputSegments = inputDecoded[srcIdx]?.[srcLine];
-    if (!inputSegments || inputSegments.length === 0) return sparseSegments;
-
-    // Rollup starts a new segment wherever it changed the line, e.g. at both ends of a
-    // renamed identifier (`Options` -> `Options$1`), so the closest one at or before an
-    // input column gives the column offset for that part of the line.
-    const lineAnchors = sparseSegments.filter(
-      (segment) => segment.length >= 4 && segment[1] === srcIdx && segment[2] === srcLine,
-    ) as Array<[number, number, number, number]>;
-    const outputLine = outputLines[outLine] || "";
-
+    const lineLength = (outputLines[outLine] || "").length;
     const hydratedSegments: SourceMapSegment[] = [];
-    for (const [inputCol] of inputSegments) {
-      let [anchorOutCol, , , anchorSrcCol] = lineAnchors[0]!;
-      for (const [outCol, , , srcCol] of lineAnchors) {
-        if (srcCol <= inputCol && (srcCol >= anchorSrcCol || anchorSrcCol > inputCol)) {
-          anchorOutCol = outCol;
-          anchorSrcCol = srcCol;
-        }
+
+    sparseSegments.forEach((segment, index) => {
+      hydratedSegments.push(segment);
+      if (segment.length < 4) return;
+
+      const [outCol, srcIdx, srcLine, srcCol] = segment as [number, number, number, number];
+      const inputSegments = inputDecoded[srcIdx]?.[srcLine];
+      if (!inputSegments) return;
+
+      const next = sparseSegments[index + 1];
+      for (const [inputCol] of inputSegments) {
+        const adjustedCol = outCol + inputCol - srcCol;
+        if (inputCol <= srcCol || (next ? adjustedCol >= next[0] : adjustedCol > lineLength)) continue;
+        hydratedSegments.push([adjustedCol, srcIdx, srcLine, inputCol]);
       }
-      const adjustedCol = inputCol + anchorOutCol - anchorSrcCol;
-      if (adjustedCol < 0 || adjustedCol > outputLine.length) continue;
-      hydratedSegments.push([adjustedCol, srcIdx, srcLine, inputCol]);
-    }
+    });
 
-    if (hydratedSegments.length === 0) return sparseSegments;
-    hydratedSegments.sort((a, b) => a[0] - b[0]);
-
-    // Keep Rollup's segments left of the first hydrated one, so a declaration whose
-    // `export` keyword was stripped still maps from its first column.
-    const firstCol = hydratedSegments[0]![0];
-    return [...sparseSegments.filter((segment) => segment[0] < firstCol), ...hydratedSegments];
+    return hydratedSegments;
   });
 
   return encode(hydratedMappings);

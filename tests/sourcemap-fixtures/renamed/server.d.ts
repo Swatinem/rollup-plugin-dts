@@ -14,4 +14,5 @@ export interface Event {
     type: string;
 }
 export type ServerInput = Options | Config | State | Props | Event;
+export type ServerMix = import("./kind.js").Kind | Options;
 //# sourceMappingURL=server.d.ts.map
