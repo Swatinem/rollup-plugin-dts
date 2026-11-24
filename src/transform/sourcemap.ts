@@ -101,7 +101,8 @@ export function hydrateSourcemap(
  * with the input maps.
  *
  * Same anchor approach as `hydrateSourcemap`, but each anchor's source index picks
- * that source's input map, and the hydrated segments point at the generated
+ * that source's input map, each segment takes its column delta from the closest
+ * Rollup segment at or before it, and the hydrated segments point at the generated
  * columns of the input map instead of its original positions. Every segment then
  * lands exactly on an input segment, so @jridgewell/remapping can trace it.
  *
@@ -121,16 +122,28 @@ export function hydrateMultiSourceSourcemap(
     const anchor = sparseSegments.find((segment) => segment.length >= 4);
     if (!anchor) return sparseSegments;
 
-    const [anchorOutCol, srcIdx, srcLine, anchorSrcCol] = anchor as [number, number, number, number];
+    const [, srcIdx, srcLine] = anchor as [number, number, number, number];
     const inputSegments = inputDecoded[srcIdx]?.[srcLine];
     if (!inputSegments || inputSegments.length === 0) return sparseSegments;
 
-    const delta = anchorOutCol - anchorSrcCol;
+    // Rollup starts a new segment wherever it changed the line, e.g. at both ends of a
+    // renamed identifier (`Options` -> `Options$1`), so the closest one at or before an
+    // input column gives the column offset for that part of the line.
+    const lineAnchors = sparseSegments.filter(
+      (segment) => segment.length >= 4 && segment[1] === srcIdx && segment[2] === srcLine,
+    ) as Array<[number, number, number, number]>;
     const outputLine = outputLines[outLine] || "";
 
     const hydratedSegments: SourceMapSegment[] = [];
     for (const [inputCol] of inputSegments) {
-      const adjustedCol = inputCol + delta;
+      let [anchorOutCol, , , anchorSrcCol] = lineAnchors[0]!;
+      for (const [outCol, , , srcCol] of lineAnchors) {
+        if (srcCol <= inputCol && (srcCol >= anchorSrcCol || anchorSrcCol > inputCol)) {
+          anchorOutCol = outCol;
+          anchorSrcCol = srcCol;
+        }
+      }
+      const adjustedCol = inputCol + anchorOutCol - anchorSrcCol;
       if (adjustedCol < 0 || adjustedCol > outputLine.length) continue;
       hydratedSegments.push([adjustedCol, srcIdx, srcLine, inputCol]);
     }

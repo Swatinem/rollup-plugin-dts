@@ -137,7 +137,7 @@ For each output line:
 
 This works because TypeScript preserves line structure—declarations stay on their original lines through bundling. The anchor tells us "this output line came from source line N", and we know the input map has detailed per-identifier mappings for line N.
 
-When a chunk has several sources, the anchor's source index picks the input map to copy from, and the copied segments point at the input map's generated columns instead of its original positions. Remapping then composes this hydrated map with the input maps. Every segment lands exactly on an input segment, so none are dropped.
+When a chunk has several sources, the anchor's source index picks the input map to copy from, and the copied segments point at the input map's generated columns instead of its original positions. Remapping then composes this hydrated map with the input maps. Every segment lands exactly on an input segment, so none are dropped. A line can also be longer than its input line, because Rollup renames colliding identifiers (`Options` becomes `Options$1`). Rollup places a segment at both ends of each renamed identifier, so each copied segment takes its column delta from the closest Rollup segment at or before it.
 
 We defer sourcemap processing to `generateBundle` rather than `transform`. Even if we composed maps in `transform`, Rollup's bundling would still produce a sparse output map. Plus, `options.sourcemap` is an output option—not available in `transform`. By deferring, we also skip loading input sourcemaps entirely when sourcemaps are disabled.
 

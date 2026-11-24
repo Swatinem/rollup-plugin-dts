@@ -1,4 +1,5 @@
 import * as assert from "assert";
+import * as fs from "fs";
 import * as path from "path";
 import { rollup, type OutputChunk, type OutputAsset } from "rollup";
 import { decode, encode } from "@jridgewell/sourcemap-codec";
@@ -886,6 +887,41 @@ export default (t: Harness) => {
       `Start of the Helper line should map to utils.ts, but maps to ${position.source}. ` +
         `Mappings: ${chunk.map!.mappings}`,
     );
+  });
+
+  t.test("sourcemap/multi-source-renamed-identifiers", async () => {
+    /**
+     * This test verifies that every renamed identifier on a line keeps its own
+     * mapping when a chunk has multiple sources.
+     *
+     * server.ts and client.ts declare the same names, so Rollup renames one set
+     * (Options -> Options$1). Each rename makes the output line longer than the
+     * input line, so the column offset changes after every renamed identifier.
+     */
+
+    const dir = path.resolve(process.cwd(), "tests/sourcemap-fixtures/renamed");
+    const chunk = await bundleWithSourcemap(path.join(dir, "app.d.ts"));
+    const tracer = new TraceMap(chunk.map as any);
+    const lines = chunk.code.split("\n");
+
+    const lineIndex = lines.findIndex((l) => /^type \w+Input = /.test(l) && l.includes("$1"));
+    assert.ok(lineIndex >= 0, `Could not find a union of renamed identifiers in output code:\n${chunk.code}`);
+
+    const renamed = [...lines[lineIndex]!.matchAll(/(\w+)\$1/g)];
+    assert.strictEqual(renamed.length, 5, `Expected 5 renamed identifiers in "${lines[lineIndex]}"`);
+
+    for (const match of renamed) {
+      const position = originalPositionFor(tracer, { line: lineIndex + 1, column: match.index! });
+      assert.ok(position.source, `"${match[0]}" should be mapped. Mappings: ${chunk.map!.mappings}`);
+
+      const sourceText = fs.readFileSync(path.join(dir, "../src", path.basename(position.source)), "utf8");
+      const sourceLine = sourceText.split("\n")[position.line! - 1] ?? "";
+      assert.ok(
+        sourceLine.slice(position.column!).startsWith(match[1]!),
+        `"${match[0]}" should map to "${match[1]}", but maps to ` +
+          `"${sourceLine.slice(position.column!)}" in ${position.source}:${position.line}`,
+      );
+    }
   });
 
   t.test("sourcemap/ts-input-direct-compilation", async () => {
