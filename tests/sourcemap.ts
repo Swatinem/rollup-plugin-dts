@@ -1,4 +1,5 @@
 import * as assert from "assert";
+import * as fs from "fs";
 import * as path from "path";
 import { rollup, type OutputChunk, type OutputAsset } from "rollup";
 import { decode, encode } from "@jridgewell/sourcemap-codec";
@@ -748,8 +749,8 @@ export default (t: Harness) => {
      *   - User type mappings should point to user.ts (source index 0 or 1)
      *   - Post type mappings should point to post.ts (different source index)
      *
-     * This tests the remapping path (not hydration) since multiple sources
-     * cannot use the simple single-source optimization.
+     * This tests the remapping path since multiple sources cannot use the
+     * simple single-source optimization.
      */
 
     const dir = path.resolve(process.cwd(), "tests/sourcemap-fixtures/multi-source");
@@ -820,6 +821,138 @@ export default (t: Harness) => {
       postSourceIndex,
       `Post type should map to post.ts (index ${postSourceIndex}), ` +
         `but maps to source index ${postMappedSegment[1]}`,
+    );
+  });
+
+  t.test("sourcemap/multi-source-member-lines", async () => {
+    /**
+     * This test verifies that the inner lines of declarations keep their
+     * mappings when a chunk has multiple sources.
+     *
+     * Rollup only places segments at the start of each member line, where the
+     * input .d.ts.map has none, so tracing them through the input maps used to
+     * leave lines like "    name: string;" without any mapping.
+     */
+
+    const dir = path.resolve(process.cwd(), "tests/sourcemap-fixtures/multi-source");
+    const chunk = await bundleWithSourcemap(path.join(dir, "index.d.ts"));
+    const tracer = new TraceMap(chunk.map as any);
+    const lines = chunk.code.split("\n");
+
+    const members = [
+      { name: "name", source: "user.ts", line: 3 },
+      { name: "title", source: "post.ts", line: 3 },
+      { name: "authorId", source: "post.ts", line: 4 },
+    ];
+
+    for (const member of members) {
+      const lineIndex = lines.findIndex((l) => l.trimStart().startsWith(`${member.name}:`));
+      assert.ok(lineIndex >= 0, `Could not find "${member.name}" in output code`);
+
+      const column = lines[lineIndex]!.indexOf(member.name);
+      const position = originalPositionFor(tracer, { line: lineIndex + 1, column });
+
+      assert.ok(
+        position.source?.endsWith(member.source),
+        `"${member.name}" should map to ${member.source}, but maps to ${position.source}. ` +
+          `Mappings: ${chunk.map!.mappings}`,
+      );
+      assert.deepStrictEqual(
+        { line: position.line, column: position.column },
+        { line: member.line, column: 4 },
+        `"${member.name}" should map to its identifier in ${member.source}`,
+      );
+    }
+  });
+
+  t.test("sourcemap/multi-source-line-start", async () => {
+    /**
+     * This test verifies that a multi-source chunk keeps the mapping at the
+     * start of a declaration line when the input map has no segment there.
+     *
+     * The output line for Helper comes from "export type Helper = {" in utils.ts,
+     * and TypeScript's declaration map does not map the keyword that starts it.
+     */
+
+    const dir = path.resolve(process.cwd(), "tests/sourcemap-fixtures/mixed-inputs");
+    const chunk = await bundleWithSourcemap(path.join(dir, "index.ts"));
+    const tracer = new TraceMap(chunk.map as any);
+
+    const lineIndex = chunk.code.split("\n").findIndex((l) => l.includes("type Helper"));
+    assert.ok(lineIndex >= 0, `Could not find "type Helper" in output code`);
+
+    const position = originalPositionFor(tracer, { line: lineIndex + 1, column: 0 });
+    assert.ok(
+      position.source?.endsWith("utils.ts"),
+      `Start of the Helper line should map to utils.ts, but maps to ${position.source}. ` +
+        `Mappings: ${chunk.map!.mappings}`,
+    );
+  });
+
+  t.test("sourcemap/multi-source-renamed-identifiers", async () => {
+    /**
+     * This test verifies that every renamed identifier on a line keeps its own
+     * mapping when a chunk has multiple sources.
+     *
+     * server.ts and client.ts declare the same names, so Rollup renames one set
+     * (Options -> Options$1). Each rename makes the output line longer than the
+     * input line, so the column offset changes after every renamed identifier.
+     */
+
+    const dir = path.resolve(process.cwd(), "tests/sourcemap-fixtures/renamed");
+    const chunk = await bundleWithSourcemap(path.join(dir, "app.d.ts"));
+    const tracer = new TraceMap(chunk.map as any);
+    const lines = chunk.code.split("\n");
+
+    const lineIndex = lines.findIndex((l) => /^type \w+Input = /.test(l) && l.includes("$1"));
+    assert.ok(lineIndex >= 0, `Could not find a union of renamed identifiers in output code:\n${chunk.code}`);
+
+    const renamed = [...lines[lineIndex]!.matchAll(/(\w+)\$1/g)];
+    assert.strictEqual(renamed.length, 5, `Expected 5 renamed identifiers in "${lines[lineIndex]}"`);
+
+    for (const match of renamed) {
+      const position = originalPositionFor(tracer, { line: lineIndex + 1, column: match.index! });
+      assert.ok(position.source, `"${match[0]}" should be mapped. Mappings: ${chunk.map!.mappings}`);
+
+      const sourceText = fs.readFileSync(path.join(dir, "../src", path.basename(position.source)), "utf8");
+      const sourceLine = sourceText.split("\n")[position.line! - 1] ?? "";
+      assert.ok(
+        sourceLine.slice(position.column!).startsWith(match[1]!),
+        `"${match[0]}" should map to "${match[1]}", but maps to ` +
+          `"${sourceLine.slice(position.column!)}" in ${position.source}:${position.line}`,
+      );
+    }
+  });
+
+  t.test("sourcemap/multi-source-inline-import", async () => {
+    /**
+     * This test verifies that an identifier keeps its mapping when text before
+     * it on the same line was shortened in a multi-source chunk.
+     *
+     * server.ts has `import("./kind.js").Kind | Options`, which is bundled as
+     * `Kind | Options$1`. The input map's segments inside the removed
+     * `import("./kind.js").` must not be moved onto `Options$1`.
+     */
+
+    const dir = path.resolve(process.cwd(), "tests/sourcemap-fixtures/renamed");
+    const chunk = await bundleWithSourcemap(path.join(dir, "app.d.ts"));
+    const tracer = new TraceMap(chunk.map as any);
+    const lines = chunk.code.split("\n");
+
+    const lineIndex = lines.findIndex((l) => l.startsWith("type ServerMix = "));
+    assert.ok(lineIndex >= 0, `Could not find ServerMix in output code:\n${chunk.code}`);
+    assert.ok(!lines[lineIndex]!.includes("import("), `Expected the inline import() to be rewritten`);
+
+    const column = lines[lineIndex]!.indexOf("Options$1");
+    assert.ok(column >= 0, `Expected "Options$1" in "${lines[lineIndex]}"`);
+
+    const position = originalPositionFor(tracer, { line: lineIndex + 1, column });
+    assert.ok(position.source?.endsWith("server.ts"), `"Options$1" should map to server.ts, got ${position.source}`);
+    const sourceText = fs.readFileSync(path.join(dir, "../src/server.ts"), "utf8");
+    const sourceLine = sourceText.split("\n")[position.line! - 1] ?? "";
+    assert.ok(
+      sourceLine.slice(position.column!).startsWith("Options"),
+      `"Options$1" should map to "Options", but maps to "${sourceLine.slice(position.column!)}"`,
     );
   });
 

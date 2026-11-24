@@ -96,6 +96,56 @@ export function hydrateSourcemap(
   return encode(hydratedMappings);
 }
 
+/**
+ * Hydrate a sparse sourcemap that has multiple sources, before it is composed
+ * with the input maps.
+ *
+ * Each Rollup segment only says that the output from its column up to the next
+ * segment on the line was copied from its source column. The input map's
+ * segments inside that span are added at the same offset; segments that would
+ * land on or past the next Rollup segment point at text that was removed or
+ * rewritten (e.g. an inline `import('./x').T` shortened to `T`) and are skipped.
+ * Rollup's own segments are kept unchanged, and the added ones point at the
+ * generated columns of the input map, so @jridgewell/remapping can trace them.
+ *
+ * `inputMaps` is indexed like the sparse map's `sources`. Segments whose source
+ * has no input map are kept as they are.
+ */
+export function hydrateMultiSourceSourcemap(
+  sparseMappings: string,
+  inputMaps: Array<InputSourceMap | undefined>,
+  outputCode: string,
+): string {
+  const sparseDecoded = decode(sparseMappings);
+  const inputDecoded = inputMaps.map((inputMap) => (inputMap ? decode(inputMap.mappings) : undefined));
+  const outputLines = outputCode.split("\n");
+
+  const hydratedMappings = sparseDecoded.map((sparseSegments, outLine) => {
+    const lineLength = (outputLines[outLine] || "").length;
+    const hydratedSegments: SourceMapSegment[] = [];
+
+    sparseSegments.forEach((segment, index) => {
+      hydratedSegments.push(segment);
+      if (segment.length < 4) return;
+
+      const [outCol, srcIdx, srcLine, srcCol] = segment as [number, number, number, number];
+      const inputSegments = inputDecoded[srcIdx]?.[srcLine];
+      if (!inputSegments) return;
+
+      const next = sparseSegments[index + 1];
+      for (const [inputCol] of inputSegments) {
+        const adjustedCol = outCol + inputCol - srcCol;
+        if (inputCol <= srcCol || (next ? adjustedCol >= next[0] : adjustedCol > lineLength)) continue;
+        hydratedSegments.push([adjustedCol, srcIdx, srcLine, inputCol]);
+      }
+    });
+
+    return hydratedSegments;
+  });
+
+  return encode(hydratedMappings);
+}
+
 // Info needed to lazily load an input sourcemap
 export type SourcemapInfo = {
   fileName: string;
