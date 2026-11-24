@@ -96,6 +96,57 @@ export function hydrateSourcemap(
   return encode(hydratedMappings);
 }
 
+/**
+ * Hydrate a sparse sourcemap that has multiple sources, before it is composed
+ * with the input maps.
+ *
+ * Same anchor approach as `hydrateSourcemap`, but each anchor's source index picks
+ * that source's input map, and the hydrated segments point at the generated
+ * columns of the input map instead of its original positions. Every segment then
+ * lands exactly on an input segment, so @jridgewell/remapping can trace it.
+ *
+ * `inputMaps` is indexed like the sparse map's `sources`. Lines whose source has
+ * no input map keep their sparse segments.
+ */
+export function hydrateMultiSourceSourcemap(
+  sparseMappings: string,
+  inputMaps: Array<InputSourceMap | undefined>,
+  outputCode: string,
+): string {
+  const sparseDecoded = decode(sparseMappings);
+  const inputDecoded = inputMaps.map((inputMap) => (inputMap ? decode(inputMap.mappings) : undefined));
+  const outputLines = outputCode.split("\n");
+
+  const hydratedMappings = sparseDecoded.map((sparseSegments, outLine) => {
+    const anchor = sparseSegments.find((segment) => segment.length >= 4);
+    if (!anchor) return sparseSegments;
+
+    const [anchorOutCol, srcIdx, srcLine, anchorSrcCol] = anchor as [number, number, number, number];
+    const inputSegments = inputDecoded[srcIdx]?.[srcLine];
+    if (!inputSegments || inputSegments.length === 0) return sparseSegments;
+
+    const delta = anchorOutCol - anchorSrcCol;
+    const outputLine = outputLines[outLine] || "";
+
+    const hydratedSegments: SourceMapSegment[] = [];
+    for (const [inputCol] of inputSegments) {
+      const adjustedCol = inputCol + delta;
+      if (adjustedCol < 0 || adjustedCol > outputLine.length) continue;
+      hydratedSegments.push([adjustedCol, srcIdx, srcLine, inputCol]);
+    }
+
+    if (hydratedSegments.length === 0) return sparseSegments;
+    hydratedSegments.sort((a, b) => a[0] - b[0]);
+
+    // Keep Rollup's segments left of the first hydrated one, so a declaration whose
+    // `export` keyword was stripped still maps from its first column.
+    const firstCol = hydratedSegments[0]![0];
+    return [...sparseSegments.filter((segment) => segment[0] < firstCol), ...hydratedSegments];
+  });
+
+  return encode(hydratedMappings);
+}
+
 // Info needed to lazily load an input sourcemap
 export type SourcemapInfo = {
   fileName: string;

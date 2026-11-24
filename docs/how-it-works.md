@@ -137,6 +137,8 @@ For each output line:
 
 This works because TypeScript preserves line structure—declarations stay on their original lines through bundling. The anchor tells us "this output line came from source line N", and we know the input map has detailed per-identifier mappings for line N.
 
+When a chunk has several sources, the anchor's source index picks the input map to copy from, and the copied segments point at the input map's generated columns instead of its original positions. Remapping then composes this hydrated map with the input maps. Every segment lands exactly on an input segment, so none are dropped.
+
 We defer sourcemap processing to `generateBundle` rather than `transform`. Even if we composed maps in `transform`, Rollup's bundling would still produce a sparse output map. Plus, `options.sourcemap` is an output option—not available in `transform`. By deferring, we also skip loading input sourcemaps entirely when sourcemaps are disabled.
 
 ### Input paths
@@ -166,4 +168,4 @@ We strip `sourcesContent` entirely from output maps to stay compatible.
 
 - [`convert-source-map`](https://github.com/thlorenz/convert-source-map) — loads input sourcemaps (inline base64, URL-encoded, file references)
 - [`@jridgewell/sourcemap-codec`](https://github.com/jridgewell/sourcemap-codec) — decodes/encodes VLQ mappings
-- [`@jridgewell/remapping`](https://github.com/jridgewell/remapping) — composes sourcemaps for multi-source cases
+- [`@jridgewell/remapping`](https://github.com/jridgewell/remapping) — composes the hydrated map with the input maps for multi-source cases

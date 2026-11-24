@@ -748,8 +748,8 @@ export default (t: Harness) => {
      *   - User type mappings should point to user.ts (source index 0 or 1)
      *   - Post type mappings should point to post.ts (different source index)
      *
-     * This tests the remapping path (not hydration) since multiple sources
-     * cannot use the simple single-source optimization.
+     * This tests the remapping path since multiple sources cannot use the
+     * simple single-source optimization.
      */
 
     const dir = path.resolve(process.cwd(), "tests/sourcemap-fixtures/multi-source");
@@ -820,6 +820,71 @@ export default (t: Harness) => {
       postSourceIndex,
       `Post type should map to post.ts (index ${postSourceIndex}), ` +
         `but maps to source index ${postMappedSegment[1]}`,
+    );
+  });
+
+  t.test("sourcemap/multi-source-member-lines", async () => {
+    /**
+     * This test verifies that the inner lines of declarations keep their
+     * mappings when a chunk has multiple sources.
+     *
+     * Rollup only places segments at the start of each member line, where the
+     * input .d.ts.map has none, so tracing them through the input maps used to
+     * leave lines like "    name: string;" without any mapping.
+     */
+
+    const dir = path.resolve(process.cwd(), "tests/sourcemap-fixtures/multi-source");
+    const chunk = await bundleWithSourcemap(path.join(dir, "index.d.ts"));
+    const tracer = new TraceMap(chunk.map as any);
+    const lines = chunk.code.split("\n");
+
+    const members = [
+      { name: "name", source: "user.ts", line: 3 },
+      { name: "title", source: "post.ts", line: 3 },
+      { name: "authorId", source: "post.ts", line: 4 },
+    ];
+
+    for (const member of members) {
+      const lineIndex = lines.findIndex((l) => l.trimStart().startsWith(`${member.name}:`));
+      assert.ok(lineIndex >= 0, `Could not find "${member.name}" in output code`);
+
+      const column = lines[lineIndex]!.indexOf(member.name);
+      const position = originalPositionFor(tracer, { line: lineIndex + 1, column });
+
+      assert.ok(
+        position.source?.endsWith(member.source),
+        `"${member.name}" should map to ${member.source}, but maps to ${position.source}. ` +
+          `Mappings: ${chunk.map!.mappings}`,
+      );
+      assert.deepStrictEqual(
+        { line: position.line, column: position.column },
+        { line: member.line, column: 4 },
+        `"${member.name}" should map to its identifier in ${member.source}`,
+      );
+    }
+  });
+
+  t.test("sourcemap/multi-source-line-start", async () => {
+    /**
+     * This test verifies that a multi-source chunk keeps the mapping at the
+     * start of a declaration line when the input map has no segment there.
+     *
+     * The output line for Helper comes from "export type Helper = {" in utils.ts,
+     * and TypeScript's declaration map does not map the keyword that starts it.
+     */
+
+    const dir = path.resolve(process.cwd(), "tests/sourcemap-fixtures/mixed-inputs");
+    const chunk = await bundleWithSourcemap(path.join(dir, "index.ts"));
+    const tracer = new TraceMap(chunk.map as any);
+
+    const lineIndex = chunk.code.split("\n").findIndex((l) => l.includes("type Helper"));
+    assert.ok(lineIndex >= 0, `Could not find "type Helper" in output code`);
+
+    const position = originalPositionFor(tracer, { line: lineIndex + 1, column: 0 });
+    assert.ok(
+      position.source?.endsWith("utils.ts"),
+      `Start of the Helper line should map to utils.ts, but maps to ${position.source}. ` +
+        `Mappings: ${chunk.map!.mappings}`,
     );
   });
 

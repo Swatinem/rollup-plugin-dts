@@ -9,7 +9,13 @@ import { TypeOnlyFixer } from "./TypeOnlyFixer.js";
 import { parse, trimExtension, JSON_EXTENSIONS, DTS_EXTENSIONS } from "../helpers.js";
 import { ModuleDeclarationFixer } from "./ModuleDeclarationFixer.js";
 import MagicString from "magic-string";
-import { loadInputSourcemap, hydrateSourcemap, type InputSourceMap, type SourcemapInfo } from "./sourcemap.js";
+import {
+  loadInputSourcemap,
+  hydrateSourcemap,
+  hydrateMultiSourceSourcemap,
+  type InputSourceMap,
+  type SourcemapInfo,
+} from "./sourcemap.js";
 import { rewritePortableSharedChunkImportsInBundle } from "./sharedChunkPortability.js";
 
 /**
@@ -348,12 +354,23 @@ export const transform = (enableSourcemap: boolean) => {
           newMappings = hydrateSourcemap(chunk.map.mappings, singleInputMap, chunk.code);
           newNames = singleInputMap.names || [];
         } else {
+          // Remapping alone would drop Rollup's sparse segments that land before the first
+          // input segment of a line (e.g. column 0 of an indented class member), so hydrate
+          // them against each source's input map first, as in the single-source case.
+          const inputMaps = chunk.map.sources.map((source) =>
+            source && !isUrl(source) ? sourcesToRemap.get(path.resolve(chunkDir, source)) : undefined,
+          );
+          const hydratedMap = {
+            ...chunk.map,
+            mappings: hydrateMultiSourceSourcemap(chunk.map.mappings, inputMaps, chunk.code),
+          };
+
           // Track visited files to prevent infinite recursion.
           // When TypeScript compiles foo.ts → foo.d.ts + foo.d.ts.map, the map's sources
           // point back to foo.ts. If we return the same map when resolving foo.ts,
           // @jridgewell/remapping will recursively try to resolve foo.ts again → infinite loop.
           const visitedFiles = new Set<string>();
-          const remapped = remapping(chunk.map as unknown as RawSourceMap, (file) => {
+          const remapped = remapping(hydratedMap as unknown as RawSourceMap, (file) => {
             // File paths from remapping are relative to the chunk's output location
             const absolutePath = path.resolve(chunkDir, file);
 
