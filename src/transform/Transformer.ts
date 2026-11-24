@@ -19,13 +19,55 @@ export function convert({ sourceFile }: ConvertInput): ConvertOutput {
   return transformer.transform();
 }
 
+function collectTopLevelNames(sourceFile: ts.SourceFile): Set<string> {
+  const names = new Set<string>();
+  for (const stmt of sourceFile.statements) {
+    if (
+      (ts.isEnumDeclaration(stmt) ||
+        ts.isFunctionDeclaration(stmt) ||
+        ts.isClassDeclaration(stmt) ||
+        ts.isInterfaceDeclaration(stmt) ||
+        ts.isTypeAliasDeclaration(stmt) ||
+        ts.isModuleDeclaration(stmt) ||
+        ts.isImportEqualsDeclaration(stmt)) &&
+      stmt.name &&
+      ts.isIdentifier(stmt.name)
+    ) {
+      names.add(stmt.name.text);
+    } else if (ts.isVariableStatement(stmt)) {
+      for (const decl of stmt.declarationList.declarations) {
+        if (ts.isIdentifier(decl.name)) {
+          names.add(decl.name.text);
+        }
+      }
+    } else if (ts.isImportDeclaration(stmt) && stmt.importClause) {
+      const { name, namedBindings } = stmt.importClause;
+      if (name) {
+        names.add(name.text);
+      }
+      if (namedBindings) {
+        if (ts.isNamespaceImport(namedBindings)) {
+          names.add(namedBindings.name.text);
+        } else {
+          for (const el of namedBindings.elements) {
+            names.add(el.name.text);
+          }
+        }
+      }
+    }
+  }
+  return names;
+}
+
 class Transformer {
   ast: ESTree.Program;
 
   declarations = new Map<string, DeclarationScope>();
+  topLevelNames: Set<string>;
 
   constructor(public sourceFile: ts.SourceFile) {
     this.ast = createProgram(sourceFile);
+    this.topLevelNames = collectTopLevelNames(sourceFile);
     for (const stmt of sourceFile.statements) {
       this.convertStatement(stmt);
     }
@@ -44,7 +86,7 @@ class Transformer {
   createDeclaration(node: ts.Node, id?: ts.Identifier) {
     const range = { start: node.getFullStart(), end: node.getEnd() };
     if (!id) {
-      const scope = new DeclarationScope({ range });
+      const scope = new DeclarationScope({ range, topLevelNames: this.topLevelNames });
       this.pushStatement(scope.iife!);
       return scope;
     }
@@ -53,7 +95,7 @@ class Transformer {
     // We have re-ordered and grouped declarations in `reorderStatements`,
     // so we can assume same-name statements are next to each other, so we just
     // bump the `end` range.
-    const scope = new DeclarationScope({ id, range });
+    const scope = new DeclarationScope({ id, range, topLevelNames: this.topLevelNames });
     const existingScope = this.declarations.get(name);
     if (existingScope) {
       existingScope.pushIdentifierReference(id);

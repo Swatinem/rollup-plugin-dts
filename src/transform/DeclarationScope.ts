@@ -33,6 +33,8 @@ const IGNORE_TYPENODES = new Set([
 interface DeclarationScopeOptions {
   id?: ts.Identifier;
   range: Range;
+  /** Names bound at the top level of the module (declarations and imports). */
+  topLevelNames?: ReadonlySet<string>;
 }
 
 export class DeclarationScope {
@@ -40,7 +42,12 @@ export class DeclarationScope {
   iife?: ESTree.ExpressionStatement;
   private returnExpr: ESTree.ArrayExpression;
 
-  constructor({ id, range }: DeclarationScopeOptions) {
+  private topLevelNames: ReadonlySet<string>;
+  /** Local names already reserved via `reserveShadowingNames`. */
+  private reservedNames = new Set<string>();
+
+  constructor({ id, range, topLevelNames = new Set() }: DeclarationScopeOptions) {
+    this.topLevelNames = topLevelNames;
     if (id) {
       this.declaration = createDeclaration(id, range);
     } else {
@@ -56,11 +63,11 @@ export class DeclarationScope {
   /**
    * As we walk the AST, we need to keep track of type variable bindings that
    * shadow the outer identifiers. To achieve this, we keep a stack of scopes,
-   * represented as Sets of variable names.
+   * represented as Maps from variable name to its declaring identifier.
    */
-  scopes: Array<Set<string>> = [];
+  scopes: Array<Map<string, ts.Identifier>> = [];
   pushScope() {
-    this.scopes.push(new Set());
+    this.scopes.push(new Map());
   }
   popScope(n = 1) {
     for (let i = 0; i < n; i++) {
@@ -69,7 +76,37 @@ export class DeclarationScope {
   }
   pushTypeVariable(id: ts.Identifier) {
     const name = id.getText();
-    this.scopes[this.scopes.length - 1]?.add(name);
+    const scope = this.scopes[this.scopes.length - 1];
+    if (scope && !scope.has(name)) {
+      scope.set(name, id);
+    }
+  }
+
+  /**
+   * An outer reference made inside a scope that declares local names must not
+   * be renamed by rollup to one of these names, or it would resolve to the
+   * local declaration instead. E.g. `import { A as A_ }` is renamed to `A`, but
+   * inside `namespace B { type A = {} }` that name means `B.A`.
+   *
+   * Rollup only avoids names it knows to be used. So we reference each local
+   * name once as an undeclared (global) identifier, which makes rollup pick
+   * another name for any top-level binding that would collide with it.
+   * Rollup never renames globals, so the identifier text stays unchanged.
+   * Names bound at the module top level would not resolve to a global, so we
+   * leave them alone.
+   */
+  private reserveShadowingNames() {
+    for (const scope of this.scopes) {
+      for (const [name, id] of scope) {
+        if (this.reservedNames.has(name) || this.topLevelNames.has(name)) {
+          continue;
+        }
+        this.reservedNames.add(name);
+        const { ident, expr } = createReference(createIdentifier(id));
+        this.declaration.params.push(expr);
+        this.returnExpr.elements.push(ident);
+      }
+    }
   }
 
   pushReference(id: ESTree.Expression) {
@@ -100,6 +137,7 @@ export class DeclarationScope {
     }
     // `this` is a reserved keyword that retrains meaning in certain Type-only contexts, including classes
     if (name === "this") return;
+    this.reserveShadowingNames();
     const { ident, expr } = createReference(id);
 
     this.declaration.params.push(expr);
